@@ -232,7 +232,7 @@
                         </Grid>
 
                         <!-- 麥克風 -->
-                        <Button Grid.Column="2" Margin="10" Width="40" Height="40" Cursor="Hand">
+                        <Button Grid.Column="2" Margin="10" Width="40" Height="40" Cursor="Hand"  Command="{Binding MicrophoneCommand}">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Border Background="#333333" CornerRadius="20">
