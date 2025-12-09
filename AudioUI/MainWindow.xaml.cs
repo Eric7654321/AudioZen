@@ -61,7 +61,7 @@ namespace AudioUI
 
                     // 2. 轉換為 Base64
                     // StatusLabel.Content = "處理中...";
-                    string base64Audio = _GeminiService.ConvertFileToBase64("fixedCommand.wav"); // TODO: 要改回用audioPath
+                    string base64Audio = _GeminiService.ConvertFileToBase64(audioPath); // TODO: 要改回用audioPath
 
                     // 3. 發送給 Gemini 並取得 JSON
                     string rawJson = await _GeminiService.CallGeminiApiAsync(base64Audio, GEMINI_URL);
