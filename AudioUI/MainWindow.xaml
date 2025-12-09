@@ -7,6 +7,7 @@
         xmlns:icon="http://metro.mahapps.com/winfx/xaml/iconpacks"
         mc:Ignorable="d"
         Title="AI Audio Mixer" Height="700" Width="1129"
+        Icon="icon.ico"
         WindowStyle="None" AllowsTransparency="True" Background="#000000"
         ResizeMode="CanResizeWithGrip">
 
@@ -20,7 +21,8 @@
             <Setter Property="FontFamily" Value="Microsoft JhengHei UI"/>
         </Style>
 
-        <!-- 按鈕樣式 (共用) -->
+        <!-- ★★★ 修正後的 NavBtnStyle ★★★ -->
+        <!-- 解決 C# 設定顏色後 Hover 失效的問題 -->
         <Style x:Key="NavBtnStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#AAAAAA"/>
@@ -32,11 +34,18 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <!-- 1. 給 ContentPresenter 一個名字 (x:Name="Presenter") -->
+                            <!-- 2. 明確綁定 TextElement.Foreground，預設使用 Button 的顏色 -->
+                            <ContentPresenter x:Name="Presenter" 
+                                              HorizontalAlignment="Center" 
+                                              VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
                         </Border>
                         <ControlTemplate.Triggers>
+                            <!-- 3. 改成針對內部的 "Presenter" 設定顏色 -->
+                            <!-- 這樣就算 C# 把外層 Button 鎖死成灰色，這裡依然能強制變藍 -->
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Foreground" Value="White"/>
+                                <Setter TargetName="Presenter" Property="TextElement.Foreground" Value="#3399FF"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -44,12 +53,27 @@
             </Setter>
         </Style>
 
-        <!-- 視窗控制按鈕樣式 -->
+        <!-- 視窗控制按鈕樣式 (維持白色 Hover) -->
         <Style x:Key="WindowControlBtnStyle" TargetType="Button" BasedOn="{StaticResource NavBtnStyle}">
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Margin" Value="5,0"/>
             <Setter Property="Width" Value="35"/>
             <Setter Property="Height" Value="30"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="White"/>
+                                <!-- 這裡強制設回白色 -->
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <!-- 側邊欄樣式 -->
@@ -80,7 +104,7 @@
             </Setter>
         </Style>
 
-        <!-- 卡片樣式 (已修改：高度加大至 140，解決文字卡住問題) -->
+        <!-- 卡片樣式 (高度 140) -->
         <DataTemplate x:Key="AppCardTemplate">
             <Border Width="340" Height="140" 
                     BorderBrush="{Binding BorderColor}" 
@@ -91,10 +115,9 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Icon 區域 (自動切換) -->
+                    <!-- Icon -->
                     <Border Grid.Column="0" Background="#333333" Margin="0,0,15,0" CornerRadius="5">
                         <Grid>
-                            <!-- 1. 有圖片時顯示圖片 -->
                             <Image Source="{Binding Icon}" Stretch="Uniform" Width="50" Height="50" VerticalAlignment="Center" HorizontalAlignment="Center">
                                 <Image.Style>
                                     <Style TargetType="Image">
@@ -106,7 +129,6 @@
                                     </Style>
                                 </Image.Style>
                             </Image>
-                            <!-- 2. 沒圖片時顯示藍色螢幕圖示 (整體調整用) -->
                             <icon:PackIconMaterial Kind="Monitor" Width="50" Height="50" Foreground="#3399FF" VerticalAlignment="Center" HorizontalAlignment="Center">
                                 <icon:PackIconMaterial.Style>
                                     <Style TargetType="icon:PackIconMaterial">
@@ -122,7 +144,6 @@
                         </Grid>
                     </Border>
 
-                    <!-- 文字資訊 (間距加大) -->
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8" TextTrimming="CharacterEllipsis"/>
                         <Separator Background="#555555" Margin="0,0,0,8"/>
@@ -133,12 +154,65 @@
                 </Grid>
             </Border>
         </DataTemplate>
+
+        <!-- 裝置卡片樣式 -->
+        <DataTemplate x:Key="DeviceCardTemplate">
+            <Border Width="260" Height="320" 
+                    BorderBrush="#444444" 
+                    BorderThickness="1" Margin="15" Background="#1E1E1E" Cursor="Hand">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="BorderBrush" Value="#888888"/>
+                                <Setter Property="Background" Value="#252525"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+
+                <Grid Margin="20">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="{Binding Name}" FontSize="24" Foreground="White" FontWeight="Normal"/>
+                    <TextBlock Grid.Row="1" Text="{Binding Description}" FontSize="14" Foreground="#888888" Margin="0,5,0,0"/>
+
+                    <Grid Grid.Row="2" Margin="0,20,0,0">
+                        <Image Source="{Binding ImagePath}" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <Image.Style>
+                                <Style TargetType="Image">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ImagePath}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Image.Style>
+                        </Image>
+                        <icon:PackIconMaterial Kind="KeyboardVariant" Width="80" Height="80" Foreground="#444444" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <icon:PackIconMaterial.Style>
+                                <Style TargetType="icon:PackIconMaterial">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ImagePath}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </icon:PackIconMaterial.Style>
+                        </icon:PackIconMaterial>
+                    </Grid>
+                </Grid>
+            </Border>
+        </DataTemplate>
     </Window.Resources>
 
-    <!-- === 主要佈局 === -->
     <Grid>
         <Grid.ColumnDefinitions>
-            <!-- 修正：不需要 x:Name 了，因為我們現在不改寬度，而是隱藏內容 -->
             <ColumnDefinition Width="280"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
@@ -148,12 +222,12 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- === Logo (Row 0, Column 0) 跨兩行，這樣永遠都在 === -->
+        <!-- Logo -->
         <Grid Grid.Row="0" Grid.RowSpan="2" Grid.Column="0">
             <Image Source="icon.png" Width="80" Height="80" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Grid>
 
-        <!-- === 右上角視窗控制 === -->
+        <!-- Window Controls -->
         <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" WindowChrome.IsHitTestVisibleInChrome="True">
             <Button Style="{StaticResource WindowControlBtnStyle}" Padding="5">
                 <icon:PackIconMaterial Kind="Cog" Width="16" Height="16"/>
@@ -166,7 +240,7 @@
             <Button Content="✕" Style="{StaticResource WindowControlBtnStyle}" Command="{Binding CloseCommand}" Foreground="#FF6666"/>
         </StackPanel>
 
-        <!-- === 導航分頁 === -->
+        <!-- 導航列 -->
         <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="40,0,0,10">
             <Grid>
                 <Button x:Name="TabEntrance" Content="入 口" Click="Tab_Click" Tag="Entrance"
@@ -178,14 +252,16 @@
                         Style="{StaticResource NavBtnStyle}"/>
                 <Border x:Name="LineControl" VerticalAlignment="Bottom" Height="4" Background="#3399FF" Margin="20,0,20,-4" CornerRadius="2" Visibility="Hidden"/>
             </Grid>
-            <Button Content="裝 置" Style="{StaticResource NavBtnStyle}"/>
+            <Grid>
+                <Button x:Name="TabDevice" Content="裝 置" Click="Tab_Click" Tag="Device"
+                        Style="{StaticResource NavBtnStyle}"/>
+                <Border x:Name="LineDevice" VerticalAlignment="Bottom" Height="4" Background="#3399FF" Margin="20,0,20,-4" CornerRadius="2" Visibility="Hidden"/>
+            </Grid>
         </StackPanel>
 
-        <!-- 分隔線 -->
         <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Bottom" BorderBrush="#333333" BorderThickness="0,0,0,1"/>
 
-        <!-- === 左側邊欄 (Sidebar) === -->
-        <!-- 修正：加上 x:Name="SidebarBorder" 讓我們可以在 C# 切換它的 Visibility -->
+        <!-- 側邊欄 -->
         <Border x:Name="SidebarBorder" Grid.Row="2" Grid.Column="0" BorderBrush="#333333" BorderThickness="0,0,1,0">
             <ScrollViewer VerticalScrollBarVisibility="Hidden" Margin="15,20,15,20">
                 <StackPanel>
@@ -204,7 +280,7 @@
             </ScrollViewer>
         </Border>
 
-        <!-- === 內容區：入口頁面 (EntranceView) === -->
+        <!-- VIEW A: 入口 -->
         <Grid x:Name="EntranceView" Grid.Row="2" Grid.Column="1" ClipToBounds="True" Visibility="Visible">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,-50,0,0">
                 <TextBlock Text="早安您好 平安喜樂~" FontSize="32" Foreground="#AAAAAA" HorizontalAlignment="Center" Margin="0,0,0,40"/>
@@ -264,7 +340,6 @@
                 </Border>
             </StackPanel>
 
-            <!-- 抽屜 -->
             <StackPanel VerticalAlignment="Bottom">
                 <Grid HorizontalAlignment="Center">
                     <Polygon Points="0,25 10,0 70,0 80,25" Fill="#252525" HorizontalAlignment="Center"/>
@@ -286,22 +361,19 @@
             </StackPanel>
         </Grid>
 
-        <!-- === 內容區：控制頁面 (ControlView) === -->
-        <!-- 修正：Grid.Column="0" 且 ColumnSpan="2"，讓它跨越整個視窗寬度，但不會隱藏 Logo -->
+        <!-- VIEW B: 控制 -->
         <Grid x:Name="ControlView" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Visibility="Hidden" Margin="20,10,20,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- 1. 頂部工具列 -->
             <Grid Grid.Row="0" Margin="0,0,0,10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="350"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-
                 <Border Grid.Column="0" Background="#1E1E1E" CornerRadius="18" Height="40">
                     <Grid>
                         <TextBlock Text="搜尋:" Foreground="#666666" VerticalAlignment="Center" Margin="15,0" FontSize="16" IsHitTestVisible="False">
@@ -319,7 +391,6 @@
                         <TextBox x:Name="SearchBox" Background="Transparent" BorderThickness="0" Foreground="White" FontSize="16" VerticalContentAlignment="Center" Margin="15,0" CaretBrush="White"/>
                     </Grid>
                 </Border>
-
                 <Button Grid.Column="2" Content="調整錄音檔" Width="150" Height="40">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
@@ -331,8 +402,7 @@
                 </Button>
             </Grid>
 
-            <!-- 2. 主要內容 -->
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,0">
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <TextBlock Text="最近調整" FontSize="18" Foreground="#DDDDDD" Margin="5,10,0,10"/>
                     <ItemsControl ItemsSource="{Binding RecentAppList}" ItemTemplate="{StaticResource AppCardTemplate}">
@@ -342,16 +412,23 @@
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                     </ItemsControl>
-
                     <Separator Background="#333333" Margin="0,20"/>
-
                     <Grid Margin="5,0,0,10">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="排序模式: 名稱" FontSize="18" Foreground="#DDDDDD" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="SortModeText" Text="排序模式: 名稱 (A-Z)" FontSize="18" Foreground="#DDDDDD" VerticalAlignment="Center"/>
                         </StackPanel>
-                        <icon:PackIconMaterial Kind="ShareVariant" Foreground="White" Width="20" Height="20" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                        <Button HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,20,0" Background="Transparent" BorderThickness="0" Cursor="Hand" Click="SortBtn_Click">
+                            <icon:PackIconMaterial Kind="Sort" Foreground="White" Width="24" Height="24"/>
+                            <Button.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="名稱 (A -> Z)" Click="SortOption_Click" Tag="NameAsc"/>
+                                    <MenuItem Header="名稱 (Z -> A)" Click="SortOption_Click" Tag="NameDesc"/>
+                                    <Separator/>
+                                    <MenuItem Header="音量 (大 -> 小)" Click="SortOption_Click" Tag="VolumeDesc"/>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
                     </Grid>
-
                     <ItemsControl ItemsSource="{Binding AppList}" ItemTemplate="{StaticResource AppCardTemplate}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -364,5 +441,29 @@
             </ScrollViewer>
         </Grid>
 
+        <!-- VIEW C: 裝置 -->
+        <Grid x:Name="DeviceView" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Visibility="Hidden" Margin="20,10,20,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0" Margin="0,0,0,10">
+                <Border Background="#1E1E1E" CornerRadius="18" Height="40" HorizontalAlignment="Left" Width="350">
+                    <Grid>
+                        <TextBlock Text="搜尋裝置..." Foreground="#666666" VerticalAlignment="Center" Margin="15,0" FontSize="16"/>
+                        <TextBox Background="Transparent" BorderThickness="0" Foreground="White" FontSize="16" VerticalContentAlignment="Center" Margin="15,0" CaretBrush="White"/>
+                    </Grid>
+                </Border>
+            </Grid>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding DeviceList}" ItemTemplate="{StaticResource DeviceCardTemplate}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
     </Grid>
 </Window>

@@ -9,7 +9,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="hamster.png" />
+    <None Remove="icon.ico" />
     <None Remove="icon.png" />
+    <None Remove="keyboard.png" />
+    <None Remove="mouse.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,7 +28,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="hamster.png" />
+    <Resource Include="icon.ico" />
     <Resource Include="icon.png" />
+    <Resource Include="keyboard.png" />
+    <Resource Include="mouse.png" />
   </ItemGroup>
 
 </Project>
