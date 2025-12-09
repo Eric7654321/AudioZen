@@ -105,6 +105,28 @@
           }
         }
       },
+      "Microsoft.Win32.SystemEvents/10.0.0": {
+        "type": "package",
+        "compile": {
+          "lib/net8.0/Microsoft.Win32.SystemEvents.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/Microsoft.Win32.SystemEvents.dll": {
+            "related": ".xml"
+          }
+        },
+        "build": {
+          "buildTransitive/net8.0/_._": {}
+        },
+        "runtimeTargets": {
+          "runtimes/win/lib/net8.0/Microsoft.Win32.SystemEvents.dll": {
+            "assetType": "runtime",
+            "rid": "win"
+          }
+        }
+      },
       "NAudio/2.2.1": {
         "type": "package",
         "dependencies": {
@@ -222,6 +244,37 @@
           "lib/netstandard2.0/NAudio.WinMM.dll": {
             "related": ".xml"
           }
+        }
+      },
+      "System.Drawing.Common/10.0.0": {
+        "type": "package",
+        "dependencies": {
+          "Microsoft.Win32.SystemEvents": "10.0.0"
+        },
+        "compile": {
+          "lib/net8.0/System.Drawing.Common.dll": {
+            "related": ".pdb;.xml"
+          },
+          "lib/net8.0/System.Private.Windows.Core.dll": {
+            "related": ".xml"
+          },
+          "lib/net8.0/System.Private.Windows.GdiPlus.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/System.Drawing.Common.dll": {
+            "related": ".pdb;.xml"
+          },
+          "lib/net8.0/System.Private.Windows.Core.dll": {
+            "related": ".xml"
+          },
+          "lib/net8.0/System.Private.Windows.GdiPlus.dll": {
+            "related": ".xml"
+          }
+        },
+        "build": {
+          "buildTransitive/net8.0/_._": {}
         }
       },
       "System.Security.AccessControl/4.7.0": {
@@ -514,6 +567,41 @@
         "version.txt"
       ]
     },
+    "Microsoft.Win32.SystemEvents/10.0.0": {
+      "sha512": "bYdnhuD0XxcVTrxc8RyBjXo+AXYWJPnda3clhGz2Kakleyun1PyrzYV8RezT7ZYmR9OBSOgvpFQcvHo/K8Y90w==",
+      "type": "package",
+      "path": "microsoft.win32.systemevents/10.0.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "PACKAGE.md",
+        "THIRD-PARTY-NOTICES.TXT",
+        "buildTransitive/net461/Microsoft.Win32.SystemEvents.targets",
+        "buildTransitive/net462/_._",
+        "buildTransitive/net8.0/_._",
+        "buildTransitive/netcoreapp2.0/Microsoft.Win32.SystemEvents.targets",
+        "lib/net10.0/Microsoft.Win32.SystemEvents.dll",
+        "lib/net10.0/Microsoft.Win32.SystemEvents.xml",
+        "lib/net462/Microsoft.Win32.SystemEvents.dll",
+        "lib/net462/Microsoft.Win32.SystemEvents.xml",
+        "lib/net8.0/Microsoft.Win32.SystemEvents.dll",
+        "lib/net8.0/Microsoft.Win32.SystemEvents.xml",
+        "lib/net9.0/Microsoft.Win32.SystemEvents.dll",
+        "lib/net9.0/Microsoft.Win32.SystemEvents.xml",
+        "lib/netstandard2.0/Microsoft.Win32.SystemEvents.dll",
+        "lib/netstandard2.0/Microsoft.Win32.SystemEvents.xml",
+        "microsoft.win32.systemevents.10.0.0.nupkg.sha512",
+        "microsoft.win32.systemevents.nuspec",
+        "runtimes/win/lib/net10.0/Microsoft.Win32.SystemEvents.dll",
+        "runtimes/win/lib/net10.0/Microsoft.Win32.SystemEvents.xml",
+        "runtimes/win/lib/net8.0/Microsoft.Win32.SystemEvents.dll",
+        "runtimes/win/lib/net8.0/Microsoft.Win32.SystemEvents.xml",
+        "runtimes/win/lib/net9.0/Microsoft.Win32.SystemEvents.dll",
+        "runtimes/win/lib/net9.0/Microsoft.Win32.SystemEvents.xml",
+        "useSharedDesignerContext.txt"
+      ]
+    },
     "NAudio/2.2.1": {
       "sha512": "c0DzwiyyklM0TP39Y7RObwO3QkWecgM6H60ikiEnsV/aEAJPbj5MFCLaD8BSfKuZe0HGuh9GRGWWlJmSxDc9MA==",
       "type": "package",
@@ -622,6 +710,59 @@
         "naudio-icon.png",
         "naudio.winmm.2.2.1.nupkg.sha512",
         "naudio.winmm.nuspec"
+      ]
+    },
+    "System.Drawing.Common/10.0.0": {
+      "sha512": "kohT9ZZlkB5R5ifihCBnPJLdIUQGiTj1ZI6z4LKatr+F4MmIJJu7qQpBkqt9280ivtnSvlTx9qZEY+CpJ0zMkA==",
+      "type": "package",
+      "path": "system.drawing.common/10.0.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "LICENSE.TXT",
+        "PACKAGE.md",
+        "THIRD-PARTY-NOTICES.TXT",
+        "buildTransitive/net461/System.Drawing.Common.targets",
+        "buildTransitive/net462/_._",
+        "buildTransitive/net8.0/_._",
+        "buildTransitive/netcoreapp2.0/System.Drawing.Common.targets",
+        "lib/MonoAndroid10/_._",
+        "lib/MonoTouch10/_._",
+        "lib/net10.0/System.Drawing.Common.dll",
+        "lib/net10.0/System.Drawing.Common.pdb",
+        "lib/net10.0/System.Drawing.Common.xml",
+        "lib/net10.0/System.Private.Windows.Core.dll",
+        "lib/net10.0/System.Private.Windows.Core.xml",
+        "lib/net10.0/System.Private.Windows.GdiPlus.dll",
+        "lib/net10.0/System.Private.Windows.GdiPlus.xml",
+        "lib/net462/System.Drawing.Common.dll",
+        "lib/net462/System.Drawing.Common.pdb",
+        "lib/net462/System.Drawing.Common.xml",
+        "lib/net8.0/System.Drawing.Common.dll",
+        "lib/net8.0/System.Drawing.Common.pdb",
+        "lib/net8.0/System.Drawing.Common.xml",
+        "lib/net8.0/System.Private.Windows.Core.dll",
+        "lib/net8.0/System.Private.Windows.Core.xml",
+        "lib/net8.0/System.Private.Windows.GdiPlus.dll",
+        "lib/net8.0/System.Private.Windows.GdiPlus.xml",
+        "lib/net9.0/System.Drawing.Common.dll",
+        "lib/net9.0/System.Drawing.Common.pdb",
+        "lib/net9.0/System.Drawing.Common.xml",
+        "lib/net9.0/System.Private.Windows.Core.dll",
+        "lib/net9.0/System.Private.Windows.Core.xml",
+        "lib/net9.0/System.Private.Windows.GdiPlus.dll",
+        "lib/net9.0/System.Private.Windows.GdiPlus.xml",
+        "lib/netstandard2.0/System.Drawing.Common.dll",
+        "lib/netstandard2.0/System.Drawing.Common.pdb",
+        "lib/netstandard2.0/System.Drawing.Common.xml",
+        "lib/xamarinios10/_._",
+        "lib/xamarinmac20/_._",
+        "lib/xamarintvos10/_._",
+        "lib/xamarinwatchos10/_._",
+        "system.drawing.common.10.0.0.nupkg.sha512",
+        "system.drawing.common.nuspec",
+        "useSharedDesignerContext.txt"
       ]
     },
     "System.Security.AccessControl/4.7.0": {
@@ -836,28 +977,30 @@
       "HandyControl >= 3.5.1",
       "MahApps.Metro.IconPacks.Material >= 6.2.1",
       "NAudio >= 2.2.1",
+      "NAudio.Wasapi >= 2.2.1",
+      "System.Drawing.Common >= 10.0.0",
       "System.Speech >= 10.0.0",
       "System.Text.Json >= 8.0.5"
     ]
   },
   "packageFolders": {
-    "C:\\Users\\User\\.nuget\\packages\\": {},
-    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+    "C:\\Users\\user\\.nuget\\packages\\": {},
+    "D:\\develop\\visual studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\User\\source\\repos\\ZaWarudo87\\Equalizer_APO_with_Gen_AI\\AudioUI\\AudioUI\\AudioUI.csproj",
+      "projectUniqueName": "C:\\Users\\user\\Desktop\\真-學習資料\\HCI\\AudioUI\\AudioUI\\AudioUI.csproj",
       "projectName": "AudioUI",
-      "projectPath": "C:\\Users\\User\\source\\repos\\ZaWarudo87\\Equalizer_APO_with_Gen_AI\\AudioUI\\AudioUI\\AudioUI.csproj",
-      "packagesPath": "C:\\Users\\User\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\User\\source\\repos\\ZaWarudo87\\Equalizer_APO_with_Gen_AI\\AudioUI\\AudioUI\\obj\\",
+      "projectPath": "C:\\Users\\user\\Desktop\\真-學習資料\\HCI\\AudioUI\\AudioUI\\AudioUI.csproj",
+      "packagesPath": "C:\\Users\\user\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\user\\Desktop\\真-學習資料\\HCI\\AudioUI\\AudioUI\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
-        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        "D:\\develop\\visual studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\User\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\user\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
@@ -906,6 +1049,14 @@
             "target": "Package",
             "version": "[2.2.1, )"
           },
+          "NAudio.Wasapi": {
+            "target": "Package",
+            "version": "[2.2.1, )"
+          },
+          "System.Drawing.Common": {
+            "target": "Package",
+            "version": "[10.0.0, )"
+          },
           "System.Speech": {
             "target": "Package",
             "version": "[10.0.0, )"
@@ -934,7 +1085,7 @@
             "privateAssets": "none"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.306/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.308/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

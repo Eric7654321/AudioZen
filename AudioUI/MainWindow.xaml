@@ -20,7 +20,7 @@
             <Setter Property="FontFamily" Value="Microsoft JhengHei UI"/>
         </Style>
 
-        <!-- 1. 頂部導航按鈕樣式 (字體 28) -->
+        <!-- 按鈕樣式 (共用) -->
         <Style x:Key="NavBtnStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#AAAAAA"/>
@@ -44,7 +44,7 @@
             </Setter>
         </Style>
 
-        <!-- 2. 視窗控制按鈕樣式 -->
+        <!-- 視窗控制按鈕樣式 -->
         <Style x:Key="WindowControlBtnStyle" TargetType="Button" BasedOn="{StaticResource NavBtnStyle}">
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Margin" Value="5,0"/>
@@ -52,7 +52,7 @@
             <Setter Property="Height" Value="30"/>
         </Style>
 
-        <!-- 3. 側邊欄項目樣式 -->
+        <!-- 側邊欄樣式 -->
         <Style x:Key="SidebarItemStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#CCCCCC"/>
@@ -79,42 +79,82 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- 卡片樣式 (已修改：高度加大至 140，解決文字卡住問題) -->
+        <DataTemplate x:Key="AppCardTemplate">
+            <Border Width="340" Height="140" 
+                    BorderBrush="{Binding BorderColor}" 
+                    BorderThickness="1" Margin="10,10,10,20" Background="#1E1E1E">
+                <Grid Margin="15,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Icon 區域 (自動切換) -->
+                    <Border Grid.Column="0" Background="#333333" Margin="0,0,15,0" CornerRadius="5">
+                        <Grid>
+                            <!-- 1. 有圖片時顯示圖片 -->
+                            <Image Source="{Binding Icon}" Stretch="Uniform" Width="50" Height="50" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <Image.Style>
+                                    <Style TargetType="Image">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Icon}" Value="{x:Null}">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Image.Style>
+                            </Image>
+                            <!-- 2. 沒圖片時顯示藍色螢幕圖示 (整體調整用) -->
+                            <icon:PackIconMaterial Kind="Monitor" Width="50" Height="50" Foreground="#3399FF" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <icon:PackIconMaterial.Style>
+                                    <Style TargetType="icon:PackIconMaterial">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Icon}" Value="{x:Null}">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </icon:PackIconMaterial.Style>
+                            </icon:PackIconMaterial>
+                        </Grid>
+                    </Border>
+
+                    <!-- 文字資訊 (間距加大) -->
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8" TextTrimming="CharacterEllipsis"/>
+                        <Separator Background="#555555" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding VolumeText}" FontSize="15" Foreground="#BBBBBB" Margin="0,2"/>
+                        <TextBlock Text="{Binding ToneText}" FontSize="15" Foreground="#BBBBBB" Margin="0,2"/>
+                        <TextBlock Text="{Binding OtherText}" FontSize="15" Foreground="#BBBBBB" Margin="0,2"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
     </Window.Resources>
 
-    <!-- === 主要排版 Grid === -->
+    <!-- === 主要佈局 === -->
     <Grid>
         <Grid.ColumnDefinitions>
+            <!-- 修正：不需要 x:Name 了，因為我們現在不改寬度，而是隱藏內容 -->
             <ColumnDefinition Width="280"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
-
         <Grid.RowDefinitions>
             <RowDefinition Height="35"/>
             <RowDefinition Height="65"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- === 1. 左上角 Logo (修正為直接顯示原圖) === -->
+        <!-- === Logo (Row 0, Column 0) 跨兩行，這樣永遠都在 === -->
         <Grid Grid.Row="0" Grid.RowSpan="2" Grid.Column="0">
-            <!-- 
-               改用 Image 標籤直接顯示，不裁切。
-               Stretch="Uniform" 會保持原圖比例縮放塞進去。
-               如果你希望圖片大一點，可以把 Height/Width 調大，或者拿掉 Margin。
-            -->
-            <Image Source="icon.png" 
-                   Width="80" 
-                   Height="80" 
-                   Stretch="Uniform" 
-                   HorizontalAlignment="Center" 
-                   VerticalAlignment="Center"/>
+            <Image Source="icon.png" Width="80" Height="80" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Grid>
 
-        <!-- === 右上角視窗控制鈕 === -->
-        <StackPanel Grid.Row="0" Grid.Column="1" 
-                    Orientation="Horizontal" 
-                    HorizontalAlignment="Right" 
-                    VerticalAlignment="Top"
-                    WindowChrome.IsHitTestVisibleInChrome="True">
+        <!-- === 右上角視窗控制 === -->
+        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" WindowChrome.IsHitTestVisibleInChrome="True">
             <Button Style="{StaticResource WindowControlBtnStyle}" Padding="5">
                 <icon:PackIconMaterial Kind="Cog" Width="16" Height="16"/>
             </Button>
@@ -126,34 +166,31 @@
             <Button Content="✕" Style="{StaticResource WindowControlBtnStyle}" Command="{Binding CloseCommand}" Foreground="#FF6666"/>
         </StackPanel>
 
-        <!-- === 中間導航分頁 === -->
-        <StackPanel Grid.Row="1" Grid.Column="1" 
-                    Orientation="Horizontal" 
-                    VerticalAlignment="Bottom" 
-                    Margin="40,0,0,10">
+        <!-- === 導航分頁 === -->
+        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="40,0,0,10">
             <Grid>
-                <Button Content="入 口" Style="{StaticResource NavBtnStyle}" Foreground="#3399FF" FontWeight="Bold"/>
-                <Border VerticalAlignment="Bottom" Height="4" Background="#3399FF" Margin="20,0,20,-4" CornerRadius="2"/>
+                <Button x:Name="TabEntrance" Content="入 口" Click="Tab_Click" Tag="Entrance"
+                        Style="{StaticResource NavBtnStyle}" Foreground="#3399FF" FontWeight="Bold"/>
+                <Border x:Name="LineEntrance" VerticalAlignment="Bottom" Height="4" Background="#3399FF" Margin="20,0,20,-4" CornerRadius="2"/>
             </Grid>
-            <Button Content="控 制" Style="{StaticResource NavBtnStyle}"/>
+            <Grid>
+                <Button x:Name="TabControl" Content="控 制" Click="Tab_Click" Tag="Control"
+                        Style="{StaticResource NavBtnStyle}"/>
+                <Border x:Name="LineControl" VerticalAlignment="Bottom" Height="4" Background="#3399FF" Margin="20,0,20,-4" CornerRadius="2" Visibility="Hidden"/>
+            </Grid>
             <Button Content="裝 置" Style="{StaticResource NavBtnStyle}"/>
         </StackPanel>
 
-        <!-- === 分隔線 === -->
-        <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" 
-                VerticalAlignment="Bottom" 
-                BorderBrush="#333333" 
-                BorderThickness="0,0,0,1"/>
+        <!-- 分隔線 -->
+        <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Bottom" BorderBrush="#333333" BorderThickness="0,0,0,1"/>
 
-        <!-- === 左側邊欄內容 === -->
-        <Border Grid.Row="2" Grid.Column="0" BorderBrush="#333333" BorderThickness="0,0,1,0">
+        <!-- === 左側邊欄 (Sidebar) === -->
+        <!-- 修正：加上 x:Name="SidebarBorder" 讓我們可以在 C# 切換它的 Visibility -->
+        <Border x:Name="SidebarBorder" Grid.Row="2" Grid.Column="0" BorderBrush="#333333" BorderThickness="0,0,1,0">
             <ScrollViewer VerticalScrollBarVisibility="Hidden" Margin="15,20,15,20">
                 <StackPanel>
                     <Button Content="+ 新聊天" Style="{StaticResource SidebarItemStyle}" Foreground="White" FontWeight="Bold"/>
-
-                    <!-- 修正：心頻氣和 -->
                     <Button Content="心頻氣和是什麼" Style="{StaticResource SidebarItemStyle}"/>
-
                     <Separator Background="#333333" Margin="10,20"/>
                     <TextBlock Text="聊天紀錄" Foreground="#666666" FontSize="22" Margin="10,0,0,10"/>
                     <StackPanel>
@@ -167,21 +204,10 @@
             </ScrollViewer>
         </Border>
 
-        <!-- === 右側主內容區 === -->
-        <Grid Grid.Row="2" Grid.Column="1" ClipToBounds="True">
-            <!-- 
-               ClipToBounds="True" 很重要！
-               這樣當抽屜縮下去的時候，才不會跑到視窗外面或是蓋到底下的東西 
-            -->
-
-            <!-- 背景內容 (問候語 + 輸入框) -->
+        <!-- === 內容區：入口頁面 (EntranceView) === -->
+        <Grid x:Name="EntranceView" Grid.Row="2" Grid.Column="1" ClipToBounds="True" Visibility="Visible">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,-50,0,0">
-                <TextBlock Text="早安您好 平安喜樂~" 
-                           FontSize="32" 
-                           Foreground="#AAAAAA" 
-                           HorizontalAlignment="Center" 
-                           Margin="0,0,0,40"/>
-
+                <TextBlock Text="早安您好 平安喜樂~" FontSize="32" Foreground="#AAAAAA" HorizontalAlignment="Center" Margin="0,0,0,40"/>
                 <Border Background="#1E1E1E" CornerRadius="28" Width="600" Height="56">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -189,10 +215,7 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-
-                        <!-- 左側+號按鈕 -->
-                        <Button Grid.Column="0" Content="+" Foreground="#888888" FontSize="28" 
-                                Background="Transparent" BorderThickness="0" Margin="20,-6,10,5" Cursor="Hand">
+                        <Button Grid.Column="0" Content="+" Foreground="#888888" FontSize="28" Background="Transparent" BorderThickness="0" Margin="20,-6,10,5" Cursor="Hand">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Border Background="{TemplateBinding Background}">
@@ -201,8 +224,6 @@
                                 </ControlTemplate>
                             </Button.Template>
                         </Button>
-
-                        <!-- 中間輸入區 -->
                         <Grid Grid.Column="1" VerticalAlignment="Center">
                             <TextBlock Text="我想知道Reverb是什麼?" Foreground="#555555" FontSize="20" VerticalAlignment="Center" IsHitTestVisible="False">
                                 <TextBlock.Style>
@@ -230,9 +251,7 @@
                                 </TextBox.Style>
                             </TextBox>
                         </Grid>
-
-                        <!-- 麥克風 -->
-                        <Button Grid.Column="2" Margin="10" Width="40" Height="40" Cursor="Hand"  Command="{Binding MicrophoneCommand}">
+                        <Button Grid.Column="2" Margin="10" Width="40" Height="40" Cursor="Hand" Command="{Binding MicrophoneCommand}">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Border Background="#333333" CornerRadius="20">
@@ -245,90 +264,105 @@
                 </Border>
             </StackPanel>
 
-            <!-- 
-                === 底部抽屜區 (Bottom Drawer) === 
-                這是一個 StackPanel，包含「開關按鈕」和「狀態面板」。
-                VerticalAlignment="Bottom" 讓它固定在底部。
-            -->
+            <!-- 抽屜 -->
             <StackPanel VerticalAlignment="Bottom">
-
-                <!-- 1. 抽屜開關按鈕 (箭頭) -->
                 <Grid HorizontalAlignment="Center">
-                    <!-- 為了美觀，加一個梯形或是半圓形的背景在箭頭後面 (選用) -->
                     <Polygon Points="0,25 10,0 70,0 80,25" Fill="#252525" HorizontalAlignment="Center"/>
-
-                    <Button x:Name="DrawerBtn" 
-                            Click="DrawerBtn_Click"
-                            Style="{StaticResource NavBtnStyle}" 
-                            Margin="0,0,0,0"
-                            Width="80" Height="25">
-                        <!-- 給 Icon 一個名字，這樣我們可以在程式碼裡把箭頭轉向 -->
+                    <Button x:Name="DrawerBtn" Click="DrawerBtn_Click" Style="{StaticResource NavBtnStyle}" Margin="0" Width="80" Height="25">
                         <icon:PackIconMaterial x:Name="DrawerIcon" Kind="ChevronUp" Width="20" Height="20" Foreground="#888888"/>
                     </Button>
                 </Grid>
-
-                <!-- 2. 抽屜內容 (狀態面板) -->
-                <!-- 預設高度為 0 (隱藏)，背景色設深一點區隔 -->
                 <Border x:Name="StatusDrawer" Height="0" Background="#252525" BorderBrush="#333333" BorderThickness="0,1,0,0">
                     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="10">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-
-                            <!-- 卡片 1: Minecraft -->
-                            <Border Width="280" Height="100" BorderBrush="#555555" BorderThickness="1" Margin="10" Background="#1E1E1E">
-                                <Grid Margin="10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="80"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- App Icon (這裡用正方形模擬) -->
-                                    <Border Grid.Column="0" Background="#333333" Margin="0,0,10,0">
-                                        <!-- 用綠色方塊假裝是草方塊 -->
-                                        <icon:PackIconMaterial Kind="Minecraft" Width="50" Height="50" 
-                                                               Foreground="#55DD55" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                    </Border>
-
-                                    <!-- 文字資訊 -->
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="Minecraft" FontSize="18" Foreground="White" Margin="0,0,0,5"/>
-                                        <!-- 底線 -->
-                                        <Separator Background="#666666" Margin="0,0,0,5"/>
-                                        <TextBlock Text="音量縮放: 100%" FontSize="14" Foreground="#BBBBBB"/>
-                                        <TextBlock Text="音色調整: 無" FontSize="14" Foreground="#BBBBBB"/>
-                                        <TextBlock Text="其他: 無" FontSize="14" Foreground="#BBBBBB"/>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-
-                            <!-- 卡片 2: Google Meet -->
-                            <Border Width="280" Height="100" BorderBrush="#555555" BorderThickness="1" Margin="10" Background="#1E1E1E">
-                                <Grid Margin="10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="80"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- App Icon -->
-                                    <Border Grid.Column="0" Background="#333333" Margin="0,0,10,0">
-                                        <icon:PackIconMaterial Kind="Google" Width="50" Height="50" 
-                                                               Foreground="#4285F4" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                    </Border>
-
-                                    <!-- 文字資訊 -->
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="Google Meet" FontSize="18" Foreground="White" Margin="0,0,0,5"/>
-                                        <Separator Background="#666666" Margin="0,0,0,5"/>
-                                        <TextBlock Text="音量縮放: 0%" FontSize="14" Foreground="#BBBBBB"/>
-                                        <TextBlock Text="音色調整: 無" FontSize="14" Foreground="#BBBBBB"/>
-                                        <TextBlock Text="其他: 靜音" FontSize="14" Foreground="#BBBBBB"/>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-
-                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding AppList}" ItemTemplate="{StaticResource AppCardTemplate}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
                     </ScrollViewer>
                 </Border>
             </StackPanel>
         </Grid>
+
+        <!-- === 內容區：控制頁面 (ControlView) === -->
+        <!-- 修正：Grid.Column="0" 且 ColumnSpan="2"，讓它跨越整個視窗寬度，但不會隱藏 Logo -->
+        <Grid x:Name="ControlView" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Visibility="Hidden" Margin="20,10,20,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- 1. 頂部工具列 -->
+            <Grid Grid.Row="0" Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="350"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Background="#1E1E1E" CornerRadius="18" Height="40">
+                    <Grid>
+                        <TextBlock Text="搜尋:" Foreground="#666666" VerticalAlignment="Center" Margin="15,0" FontSize="16" IsHitTestVisible="False">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value="">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBox x:Name="SearchBox" Background="Transparent" BorderThickness="0" Foreground="White" FontSize="16" VerticalContentAlignment="Center" Margin="15,0" CaretBrush="White"/>
+                    </Grid>
+                </Border>
+
+                <Button Grid.Column="2" Content="調整錄音檔" Width="150" Height="40">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="#252525" CornerRadius="20" BorderBrush="#333333" BorderThickness="1">
+                                <TextBlock Text="{TemplateBinding Content}" Foreground="#DDDDDD" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </Grid>
+
+            <!-- 2. 主要內容 -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,0">
+                <StackPanel>
+                    <TextBlock Text="最近調整" FontSize="18" Foreground="#DDDDDD" Margin="5,10,0,10"/>
+                    <ItemsControl ItemsSource="{Binding RecentAppList}" ItemTemplate="{StaticResource AppCardTemplate}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+
+                    <Separator Background="#333333" Margin="0,20"/>
+
+                    <Grid Margin="5,0,0,10">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="排序模式: 名稱" FontSize="18" Foreground="#DDDDDD" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <icon:PackIconMaterial Kind="ShareVariant" Foreground="White" Width="20" Height="20" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding AppList}" ItemTemplate="{StaticResource AppCardTemplate}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                    <Border Height="50"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
     </Grid>
 </Window>

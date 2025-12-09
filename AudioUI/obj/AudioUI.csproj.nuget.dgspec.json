@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\User\\source\\repos\\ZaWarudo87\\Equalizer_APO_with_Gen_AI\\AudioUI\\AudioUI\\AudioUI.csproj": {}
+    "C:\\Users\\user\\Desktop\\真-學習資料\\HCI\\AudioUI\\AudioUI\\AudioUI.csproj": {}
   },
   "projects": {
-    "C:\\Users\\User\\source\\repos\\ZaWarudo87\\Equalizer_APO_with_Gen_AI\\AudioUI\\AudioUI\\AudioUI.csproj": {
+    "C:\\Users\\user\\Desktop\\真-學習資料\\HCI\\AudioUI\\AudioUI\\AudioUI.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\User\\source\\repos\\ZaWarudo87\\Equalizer_APO_with_Gen_AI\\AudioUI\\AudioUI\\AudioUI.csproj",
+        "projectUniqueName": "C:\\Users\\user\\Desktop\\真-學習資料\\HCI\\AudioUI\\AudioUI\\AudioUI.csproj",
         "projectName": "AudioUI",
-        "projectPath": "C:\\Users\\User\\source\\repos\\ZaWarudo87\\Equalizer_APO_with_Gen_AI\\AudioUI\\AudioUI\\AudioUI.csproj",
-        "packagesPath": "C:\\Users\\User\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\User\\source\\repos\\ZaWarudo87\\Equalizer_APO_with_Gen_AI\\AudioUI\\AudioUI\\obj\\",
+        "projectPath": "C:\\Users\\user\\Desktop\\真-學習資料\\HCI\\AudioUI\\AudioUI\\AudioUI.csproj",
+        "packagesPath": "C:\\Users\\user\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\user\\Desktop\\真-學習資料\\HCI\\AudioUI\\AudioUI\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+          "D:\\develop\\visual studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\User\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\user\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -66,6 +66,14 @@
               "target": "Package",
               "version": "[2.2.1, )"
             },
+            "NAudio.Wasapi": {
+              "target": "Package",
+              "version": "[2.2.1, )"
+            },
+            "System.Drawing.Common": {
+              "target": "Package",
+              "version": "[10.0.0, )"
+            },
             "System.Speech": {
               "target": "Package",
               "version": "[10.0.0, )"
@@ -94,7 +102,7 @@
               "privateAssets": "none"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.306/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.308/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
