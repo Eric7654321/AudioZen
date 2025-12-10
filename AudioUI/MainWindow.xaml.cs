@@ -13,6 +13,10 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using WpfApp1;
 using Path = System.IO.Path;
+using System.IO; // 新增：用於 Directory.CreateDirectory
+using System.Collections.Generic; // 可能用到 List<T>
+using System.Linq;
+using System;
 
 namespace AudioUI
 {
@@ -32,7 +36,21 @@ namespace AudioUI
         public string ImagePath { get; set; } = ""; // 圖片路徑 (需設定為 Resource)
     }
 
-    public partial class MainWindow : Window
+    // 新增：鍵位資料模型（簡單、與 XAML 綁定相容）
+    public class KeyBindingModel
+    {
+        public string KeyLabel { get; set; } = "";
+        public string EffectName { get; set; } = "";
+    }
+
+    // 新增：快捷項目模型（顯示於左側 ShortcutList）
+    public class ShortcutItem
+    {
+        public string Title { get; set; } = "";
+        public string SubTitle { get; set; } = "";
+    }
+
+    public partial class MainWindow : Window, INotifyPropertyChanged
     {
         private bool isDrawerOpen = false;
         private AudioSessionService _AudioService = new AudioSessionService();
@@ -46,6 +64,27 @@ namespace AudioUI
         // 3. ★★★ 新增：硬體裝置列表 (裝置頁面) ★★★
         public ObservableCollection<DeviceInfoModel> DeviceList { get; set; } = new ObservableCollection<DeviceInfoModel>();
 
+        // 新增：目前選取的裝置（供 XAML 綁定 SelectedDevice.Name）
+        private DeviceInfoModel? _selectedDevice;
+        public DeviceInfoModel? SelectedDevice
+        {
+            get => _selectedDevice;
+            set
+            {
+                if (_selectedDevice != value)
+                {
+                    _selectedDevice = value;
+                    OnPropertyChanged(nameof(SelectedDevice));
+                }
+            }
+        }
+
+        // 新增：鍵盤鍵位集合（右側鍵盤視圖綁定）
+        public ObservableCollection<KeyBindingModel> KeyBindings { get; } = new ObservableCollection<KeyBindingModel>();
+
+        // 新增：左側快捷清單（綁定 ShortcutList）
+        public ObservableCollection<ShortcutItem> ShortcutList { get; } = new ObservableCollection<ShortcutItem>();
+
         // 目前的排序模式
         private SortMode _currentSortMode = SortMode.NameAsc;
 
@@ -56,7 +95,7 @@ namespace AudioUI
         public ICommand MicrophoneCommand { get; }
 
         // Gemini 相關
-        private const string API_KEY = "AIzaSyBJe-x4R2675FWctAAY3UrfW8hM1z9taoE";
+        private const string API_KEY = "AIzaSyAbcdVglE0htVqhzzajRshijkK41qBblPg";
         private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + API_KEY;
         GeminiServices _GeminiService = new GeminiServices();
         GeminiParser _GeminiParser = new GeminiParser();
@@ -73,7 +112,60 @@ namespace AudioUI
 
             MicrophoneCommand = new RelayCommand(async _ =>
             {
-                // ... (保留原本的錄音邏輯) ...
+                string audioPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "command.wav");
+                // 改為放到 config 資料夾下的 config.txt
+                string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "config.txt");
+
+                // 確保資料夾存在（第一次執行會建立）
+                try
+                {
+                    var dir = Path.GetDirectoryName(configPath);
+                    if (!string.IsNullOrEmpty(dir))
+                        Directory.CreateDirectory(dir);
+                }
+                catch
+                {
+                    // 忽略目錄建立失敗（後續寫入會失敗並由例外處理）
+                }
+
+                try
+                {
+                    _TtsService.Stop();
+                    // 1. 錄製音訊
+                     await _GeminiService.RecordAudioAsync(audioPath, 5000);
+
+                    // 2. 轉換為 Base64
+                    string base64Audio = _GeminiService.ConvertFileToBase64("fixedCommand.wav"); // TODO: 改回 audioPath
+
+                    // 3. 發送給 Gemini
+                    string rawJson = await _GeminiService.CallGeminiApiAsync(base64Audio, GEMINI_URL);
+                    Console.WriteLine("回傳json:\n" + rawJson);
+
+                    // 4. 解析並寫入 Config
+                    if (!string.IsNullOrEmpty(rawJson))
+                    {
+                        string aiMessage = await Task.Run(() =>
+                            _GeminiParser.ParseAndWriteConfig(rawJson, configPath));
+
+                        if (!string.IsNullOrEmpty(aiMessage))
+                        {
+                            await _TtsService.SpeakAsync(aiMessage);
+                        }
+
+                        // ★★★ 寫入後，順便刷新卡片狀態 ★★★
+                        RefreshAudioApps();
+
+                        MessageBox.Show("已成功生成並應用新的等化器設定！", "成功");
+                    }
+                    else
+                    {
+                        MessageBox.Show("API 回傳為空或是解析失敗。", "錯誤");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"發生錯誤: {ex.Message}", "例外狀況");
+                }
                 Console.WriteLine("Microphone button clicked!");
             });
 
@@ -327,5 +419,92 @@ namespace AudioUI
                 remove => CommandManager.RequerySuggested -= value;
             }
         }
+
+        // 新增：當使用者點擊 DeviceCard（DataTemplate 的 Border）時會觸發
+        private void DeviceCard_Click(object sender, MouseButtonEventArgs e)
+        {
+            // 取得該卡片的 DataContext（應是 DeviceInfoModel）
+            if (sender is FrameworkElement fe && fe.DataContext is DeviceInfoModel dev)
+            {
+                // 設定選取的裝置以供 UI 綁定
+                SelectedDevice = dev;
+
+                // 根據裝置名稱最小化填充鍵位與快捷清單（只做必要的初始化）
+                KeyBindings.Clear();
+                ShortcutList.Clear();
+
+                if (dev.Name == "自定義宏鍵盤")
+                {
+                    // 以 3x4 排列建立 12 個鍵 (示範資料，與畫面一致)
+                    KeyBindings.Add(new KeyBindingModel { KeyLabel = "Rollback", EffectName = "btn10" });
+                    KeyBindings.Add(new KeyBindingModel { KeyLabel = "Mute", EffectName = "未配置" });
+                    KeyBindings.Add(new KeyBindingModel { KeyLabel = "", EffectName = "" });
+
+                    KeyBindings.Add(new KeyBindingModel { KeyLabel = "", EffectName = "" });
+                    KeyBindings.Add(new KeyBindingModel { KeyLabel = "", EffectName = "" });
+                    KeyBindings.Add(new KeyBindingModel { KeyLabel = "Preset42", EffectName = "btn09" });
+
+                    KeyBindings.Add(new KeyBindingModel { KeyLabel = "", EffectName = "" });
+                    KeyBindings.Add(new KeyBindingModel { KeyLabel = "", EffectName = "" });
+                    KeyBindings.Add(new KeyBindingModel { KeyLabel = "", EffectName = "" });
+
+                    KeyBindings.Add(new KeyBindingModel { KeyLabel = "", EffectName = "" });
+                    KeyBindings.Add(new KeyBindingModel { KeyLabel = "", EffectName = "" });
+                    KeyBindings.Add(new KeyBindingModel { KeyLabel = "", EffectName = "" });
+
+                    // 左側快捷清單示意
+                    ShortcutList.Add(new ShortcutItem { Title = "Rollback — btn10", SubTitle = "回覆上一個操作" });
+                    ShortcutList.Add(new ShortcutItem { Title = "Mute — 未配置", SubTitle = "靜音所有音訊輸出" });
+                    ShortcutList.Add(new ShortcutItem { Title = "Screen — 未配置", SubTitle = "呼叫軟體介面(再按一次退出)" });
+                    ShortcutList.Add(new ShortcutItem { Title = "Preset42 — btn09", SubTitle = "輸出音訊42.mp3" });
+                }
+                else
+                {
+                    // 其他裝置，清單保持空或顯示基本資訊
+                    for (int i = 0; i < 12; i++)
+                        KeyBindings.Add(new KeyBindingModel { KeyLabel = "", EffectName = "" });
+
+                    ShortcutList.Add(new ShortcutItem { Title = dev.Name, SubTitle = dev.Description });
+                }
+
+                // 顯示 Detail Panel（在 XAML 中命名為 DeviceDetailPanel）
+                if (this.FindName("DeviceDetailPanel") is FrameworkElement panel)
+                {
+                    panel.Visibility = Visibility.Visible;
+                }
+            }
+        }
+
+        private void KeyButton_Click(object sender, RoutedEventArgs e)
+        {
+            // 如果按鈕有 Tag 並綁定到 KeyBindingModel，就顯示綁定資訊
+            if (sender is Button btn && btn.Tag is KeyBindingModel kb)
+            {
+                if (string.IsNullOrEmpty(kb.EffectName))
+                {
+                    MessageBox.Show($"按鍵 {kb.KeyLabel} 尚未綁定效果。", "未配置");
+                }
+                else
+                {
+                    MessageBox.Show($"按鍵 {kb.KeyLabel} 綁定: {kb.EffectName}", "按鍵已綁定");
+                }
+                return;
+            }
+
+            // 若不是從鍵盤按鈕觸發，保守地呼叫原有行為（若你先前使用 RefreshAudioApps）
+            try
+            {
+                RefreshAudioApps();
+            }
+            catch
+            {
+                // 忽略以免引發新錯誤
+            }
+        }
+
+        // INotifyPropertyChanged 實作（供 SelectedDevice 綁定更新）
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged(string propertyName) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

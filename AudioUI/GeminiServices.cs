@@ -7,6 +7,8 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.IO;
+using System.Net;
+using System.Net.Http.Headers;
 
 namespace WpfApp1
 {
@@ -112,36 +114,82 @@ namespace WpfApp1
         "  \"preamp_db\": float, " +
         "  \"graphic_eq_string\": \"string (The formatted frequency-gain pairs separated by semicolons)\" " +
         "}";
-        public async Task<string> CallGeminiApiAsync(string base64Audio,string url)
+        public async Task<string> CallGeminiApiAsync(string base64Audio, string url)
         {
-            using (var client = new HttpClient())
-            {
+            using var client = new HttpClient() { Timeout = TimeSpan.FromSeconds(30) };
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("AudioUI/1.0");
 
-                // 建構 JSON Payload (使用匿名物件讓 System.Text.Json 自動序列化)
-                var payload = new
+            // 建構 JSON Payload (使用匿名物件讓 System.Text.Json 自動序列化)
+            var payload = new
+            {
+                generationConfig = new { responseMimeType = "application/json" },
+                contents = new[]
                 {
-                    generationConfig = new { responseMimeType = "application/json" },
-                    contents = new[]
+                    new
                     {
-                        new
+                        parts = new object[]
                         {
-                            parts = new object[]
-                            {
-                                new { text = optimizeText },
-                                new { inlineData = new { mimeType = "audio/wav", data = base64Audio } }
-                            }
+                            new { text = optimizeText },
+                            new { inlineData = new { mimeType = "audio/wav", data = base64Audio } }
                         }
                     }
-                };
+                }
+            };
 
-                string jsonContent = JsonSerializer.Serialize(payload);
-                var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+            string jsonContent = JsonSerializer.Serialize(payload);
+            var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync(url, httpContent);
-                response.EnsureSuccessStatusCode();
+            // 重試機制
+            const int maxRetries = 3;
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                HttpResponseMessage response = null!;
+                string responseBody = "";
+                try
+                {
+                    response = await client.PostAsync(url, httpContent);
+                    responseBody = await response.Content.ReadAsStringAsync();
 
-                return await response.Content.ReadAsStringAsync();
+                    if (response.IsSuccessStatusCode)
+                    {
+                        return responseBody;
+                    }
+
+                    // 若為 5xx 或 429 (rate limit) 或 503，嘗試重試
+                    if ((int)response.StatusCode >= 500 || response.StatusCode == HttpStatusCode.TooManyRequests || response.StatusCode == HttpStatusCode.ServiceUnavailable)
+                    {
+                        // 若已是最後一次重試，拋出包含 body 的例外，便於診斷
+                        if (attempt == maxRetries)
+                        {
+                            throw new HttpRequestException($"API 無法服務 (狀態碼: {(int)response.StatusCode} {response.ReasonPhrase}). Response body: {responseBody}");
+                        }
+
+                        // 等待指數退避
+                        int delayMs = (int)Math.Pow(2, attempt) * 1000;
+                        await Task.Delay(delayMs);
+                        continue;
+                    }
+
+                    // 其他非成功回應（例如 4xx），直接拋出詳細例外
+                    throw new HttpRequestException($"API 請求失敗 (狀態碼: {(int)response.StatusCode} {response.ReasonPhrase}). Response body: {responseBody}");
+                }
+                catch (TaskCanceledException ex) when (!ex.CancellationToken.IsCancellationRequested)
+                {
+                    // timeout
+                    if (attempt == maxRetries) throw new TimeoutException("API 請求逾時。", ex);
+                    await Task.Delay((int)Math.Pow(2, attempt) * 1000);
+                    continue;
+                }
+                catch (Exception)
+                {
+                    // 若是最後一次重試，rethrow，否則等待再重試
+                    if (attempt == maxRetries) throw;
+                    await Task.Delay((int)Math.Pow(2, attempt) * 1000);
+                }
             }
+
+            throw new InvalidOperationException("不可達的程式路徑：CallGeminiApiAsync 重試機制異常結束。");
         }
     }
 }

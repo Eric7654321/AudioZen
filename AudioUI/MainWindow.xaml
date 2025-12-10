@@ -155,11 +155,13 @@
             </Border>
         </DataTemplate>
 
-        <!-- 裝置卡片樣式 -->
+        <!-- 裝置卡片樣式 （加入點擊事件處理） -->
         <DataTemplate x:Key="DeviceCardTemplate">
+            <!-- 在 Border 上加 MouseLeftButtonUp，minimal change -->
             <Border Width="260" Height="320" 
                     BorderBrush="#444444" 
-                    BorderThickness="1" Margin="15" Background="#1E1E1E" Cursor="Hand">
+                    BorderThickness="1" Margin="15" Background="#1E1E1E" Cursor="Hand"
+                    MouseLeftButtonUp="DeviceCard_Click">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Style.Triggers>
@@ -455,14 +457,77 @@
                     </Grid>
                 </Border>
             </Grid>
+
+            <!-- 裝置卡片列表（點擊卡片會觸發 DeviceCard_Click） -->
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding DeviceList}" ItemTemplate="{StaticResource DeviceCardTemplate}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel Orientation="Horizontal"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
+                <StackPanel>
+                    <ItemsControl ItemsSource="{Binding DeviceList}" ItemTemplate="{StaticResource DeviceCardTemplate}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+
+                    <!-- 新增容器後保留原本 DeviceDetailPanel（內容完全不變） -->
+                    <Grid x:Name="DeviceDetailPanel" Visibility="Collapsed" Margin="10,20,10,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="320"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- 左側：裝置資訊 + 快捷鍵清單 -->
+                        <StackPanel Grid.Column="0" Margin="8">
+                            <TextBlock Text="裝置" FontSize="20" Foreground="White" Margin="4"/>
+                            <TextBlock Text="{Binding SelectedDevice.Name}" FontSize="16" Foreground="#DDDDDD" Margin="4,2,0,8"/>
+                            <TextBlock Text="自定義宏鍵盤" FontSize="20" Foreground="White" Margin="4,8,0,6"/>
+                            <ListBox ItemsSource="{Binding ShortcutList}" Background="Transparent" BorderThickness="0" Foreground="White" Margin="4" >
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="6">
+                                            <TextBlock Text="{Binding Title}" FontSize="18" Foreground="White"/>
+                                            <TextBlock Text="{Binding SubTitle}" FontSize="13" Foreground="#888888" Margin="0,4,0,8"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+
+                        <!-- 右側：鍵盤顯示區（3 x 4）-->
+                        <Border Grid.Column="1" Margin="12" Background="#111111" CornerRadius="12" Padding="12" BorderBrush="#444444" BorderThickness="1">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Text="鍵盤" FontSize="18" Foreground="White"/>
+
+                                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Margin="0,12,0,0">
+                                    <UniformGrid Columns="3" Rows="4" HorizontalAlignment="Center" VerticalAlignment="Top">
+                                        <ItemsControl ItemsSource="{Binding KeyBindings}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Margin="8" Padding="8" Click="KeyButton_Click" Tag="{Binding}">
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding KeyLabel}" FontSize="16" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding EffectName}" FontSize="12" HorizontalAlignment="Center" Foreground="#AAAAAA" Margin="0,6,0,0"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                        </ItemsControl>
+                                    </UniformGrid>
+                                </ScrollViewer>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </StackPanel>
             </ScrollViewer>
         </Grid>
     </Grid>
