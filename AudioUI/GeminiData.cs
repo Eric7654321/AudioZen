@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace WpfApp1
+namespace AudioUI
 {
     // --- 1. Gemini API 回傳的結構 (外層) ---
 
@@ -35,10 +35,19 @@ namespace WpfApp1
         [JsonPropertyName("message_for_user")]
         public string MessageForUser { get; set; }
 
+        [JsonPropertyName("configs")]
+        public List<EqConfigItem> Configs { get; set; }
+    }
+
+    public class EqConfigItem
+    {
+        // 目標代號：all, first, second, third
+        [JsonPropertyName("target")]
+        public string Target { get; set; }
+
         [JsonPropertyName("preamp_db")]
         public double PreampDb { get; set; }
 
-        // 這裡改為接收字串，因為現在是用 GraphicEQ 格式
         [JsonPropertyName("graphic_eq_string")]
         public string GraphicEqString { get; set; }
     }

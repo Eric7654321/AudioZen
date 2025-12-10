@@ -1,7 +1,7 @@
 ﻿using System.Speech.Synthesis; 
 using System.Threading.Tasks;
 
-namespace WpfApp1
+namespace AudioUI
 {
     public class TtsService
     {

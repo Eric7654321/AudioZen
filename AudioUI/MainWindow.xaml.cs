@@ -11,10 +11,9 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using WpfApp1;
 using Path = System.IO.Path;
-using System.IO; // 新增：用於 Directory.CreateDirectory
-using System.Collections.Generic; // 可能用到 List<T>
+using System.IO; 
+using System.Collections.Generic;
 using System.Linq;
 using System;
 
@@ -131,36 +130,7 @@ namespace AudioUI
                 try
                 {
                     _TtsService.Stop();
-                    // 1. 錄製音訊
-                     await _GeminiService.RecordAudioAsync(audioPath, 5000);
-
-                    // 2. 轉換為 Base64
-                    string base64Audio = _GeminiService.ConvertFileToBase64("fixedCommand.wav"); // TODO: 改回 audioPath
-
-                    // 3. 發送給 Gemini
-                    string rawJson = await _GeminiService.CallGeminiApiAsync(base64Audio, GEMINI_URL);
-                    Console.WriteLine("回傳json:\n" + rawJson);
-
-                    // 4. 解析並寫入 Config
-                    if (!string.IsNullOrEmpty(rawJson))
-                    {
-                        string aiMessage = await Task.Run(() =>
-                            _GeminiParser.ParseAndWriteConfig(rawJson, configPath));
-
-                        if (!string.IsNullOrEmpty(aiMessage))
-                        {
-                            await _TtsService.SpeakAsync(aiMessage);
-                        }
-
-                        // ★★★ 寫入後，順便刷新卡片狀態 ★★★
-                        RefreshAudioApps();
-
-                        MessageBox.Show("已成功生成並應用新的等化器設定！", "成功");
-                    }
-                    else
-                    {
-                        MessageBox.Show("API 回傳為空或是解析失敗。", "錯誤");
-                    }
+                    await _GeminiService.RecordAndProcessAsync(5000, audioPath, configPath);
                 }
                 catch (Exception ex)
                 {

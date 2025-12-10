@@ -6,55 +6,71 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions; // 建議加入這個處理 JSON 雜訊
 
-namespace WpfApp1
+namespace AudioUI
 {
     public class GeminiParser
     {
         // --- 功能 4: 解析回傳並寫入 Config ---
         // 新增 deviceName 參數，預設為 null (不寫入)
-        public string ParseAndWriteConfig(string rawResponse, string outputPath, string deviceName = null)
+        public string ParseAndWriteConfig(string rawResponse, string outputPath, Dictionary<string, string> deviceMap)
         {
-            // 1. 解析 Gemini 的外層 JSON
-            // 使用 CaseInsensitive 設定以防萬一
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var geminiResponse = JsonSerializer.Deserialize<GeminiResponse>(rawResponse, options);
 
             if (geminiResponse?.Candidates == null || geminiResponse.Candidates.Count == 0)
-                throw new Exception("No candidates found in Gemini response.");
+                throw new Exception("No candidates found.");
 
-            // 2. 取出內層的文字
             string innerJsonText = geminiResponse.Candidates[0].Content.Parts[0].Text;
 
-            // [重要] 清理 Markdown 標記
-            // 有時候 AI 會回傳 ```json ... ```，這會導致解析失敗，這裡做簡單的清理
+            // 清理 Markdown
             innerJsonText = innerJsonText.Replace("```json", "").Replace("```", "").Trim();
 
-            // 3. 解析內層 JSON (對應新的 EqConfig 結構)
-            var eqConfig = JsonSerializer.Deserialize<EqConfig>(innerJsonText, options);
+            // 解析新的結構
+            var eqResponse = JsonSerializer.Deserialize<EqConfig>(innerJsonText, options);
 
-            // 4. 寫入檔案
-            using (StreamWriter sw = new StreamWriter(outputPath, false))
+            using (StreamWriter sw = new StreamWriter(outputPath, false)) // false 表示覆寫檔案
             {
-                // 寫入 Preamp (注意：Equalizer APO 接受 "Preamp: -3 dB" 格式)
-                // 這裡我們確保寫入格式為小數點後 1 位或 2 位，視需求而定
-                sw.WriteLine($"Preamp: {eqConfig.PreampDb} dB");
-
-                // 如果有指定 Device 名稱，則寫入
-                if (!string.IsNullOrWhiteSpace(deviceName))
+                if (eqResponse.Configs != null)
                 {
-                    sw.WriteLine($"Device: {deviceName}");
-                }
+                    foreach (var config in eqResponse.Configs)
+                    {
+                        // 1. 處理 Device 行
+                        string targetKey = config.Target?.ToLower();
 
-                // 寫入 GraphicEQ
-                // AI 回傳的 graphic_eq_string 已經是 "25 2.2; 40 1.6; ..." 的格式
-                if (!string.IsNullOrEmpty(eqConfig.GraphicEqString))
-                {
-                    sw.WriteLine($"GraphicEQ: {eqConfig.GraphicEqString}");
+                        if (targetKey == "all")
+                        {
+                            // 如果是 all，通常不需要指定 Device，或者您可以根據需求決定是否要重置 Device 選擇
+                            // 這裡示範：寫入一行註解，或者什麼都不寫代表全域
+                             sw.WriteLine("# Global Setting");
+                        }
+                        else if (!string.IsNullOrEmpty(targetKey) && deviceMap.ContainsKey(targetKey))
+                        {
+                            // 根據 map 寫入實際裝置名稱
+                            sw.WriteLine($"Device: {deviceMap[targetKey]}");
+                        }
+                        else
+                        {
+                            // 如果 AI 回傳了 first 但 map 裡沒有，可以選擇跳過或記錄錯誤
+                            // 這裡選擇寫入一個預設註解以供除錯
+                            sw.WriteLine($"# Unknown Target: {targetKey}");
+                        }
+
+                        // 2. 寫入 Preamp
+                        sw.WriteLine($"Preamp: {config.PreampDb} dB");
+
+                        // 3. 寫入 GraphicEQ
+                        if (!string.IsNullOrEmpty(config.GraphicEqString))
+                        {
+                            sw.WriteLine($"GraphicEQ: {config.GraphicEqString}");
+                        }
+
+                        // 4. 加入一個空行分隔不同裝置的設定 (可選)
+                        sw.WriteLine();
+                    }
                 }
             }
 
-            // 回傳給 TTS 的訊息
-            return eqConfig.MessageForUser;
+            return eqResponse.MessageForUser;
         }
     }
 }
