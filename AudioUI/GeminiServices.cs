@@ -263,7 +263,6 @@ namespace AudioUI
 
         public async Task ConfigRollback(string IdString, string configPath)
         {
-            _MappingManager.PopFront(IdString);
             if (_MappingManager.GetFront(IdString) == "")
             {
                 await _TtsService.SpeakAsync("已經沒有更早的設定可以還原"); // constant
@@ -310,8 +309,7 @@ namespace AudioUI
                 // 套用到目前config
                 string configPath = Path.Combine(".", "config", "config.txt"); // constant
                 string situationIdString = situationId.ToString();
-                _MappingManager.PushFront(situationIdString, eqConfigPath);
-
+                
                 File.Copy(eqConfigPath, configPath, overwrite: true);
 
                 // 5. 使用 TTS 播放回應訊息
@@ -319,13 +317,26 @@ namespace AudioUI
 
                 await _TtsService.SpeakAsync("是否需要調整回原本的內容"); // constant
 
-                // 輸入需要還原
-                MessageBox.Show(_MappingManager.MapList[0].FileNames.Count.ToString());
-                if (false)
+                bool needRollback = false; // simulate user input
+                // 如果對輸入不滿意
+                if (needRollback)
                 {
                     // rollback
-                    await ConfigRollback(situationIdString, configPath);
+                    await ConfigRollback("-1", configPath);
                 }
+                else
+                {
+                    _MappingManager.PushFront("-1", eqConfigPath);
+                }
+                // 詢問是否需要儲存成preset
+                await _TtsService.SpeakAsync("是否需要將此設定儲存成preset"); // constant
+                bool needSavePreset = true; // simulate user input
+                if (needSavePreset)
+                {
+                    _MappingManager.PushFront(situationIdString, eqConfigPath);
+                }
+
+                // 儲存 mapping
                 _MappingManager.SaveToJson();
             }
             return;
