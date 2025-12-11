@@ -112,8 +112,10 @@ namespace AudioUI
             MicrophoneCommand = new RelayCommand(async _ =>
             {
                 string audioPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "command.wav");
-                // 改為放到 config 資料夾下的 config.txt
-                string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "config.txt");
+                // 在檔名加入 timestamp，格式為 yyyyMMdd_HHmmss（例如: config_20251211_153045.txt）
+                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                string configFileName = $"config_{timestamp}.txt";
+                string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", configFileName);
 
                 // 確保資料夾存在（第一次執行會建立）
                 try

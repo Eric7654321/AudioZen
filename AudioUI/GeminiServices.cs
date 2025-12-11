@@ -15,52 +15,65 @@ namespace AudioUI
     public class GeminiServices
     {
         // --- 功能 1: 使用 NAudio 錄音 ---
-        public Task RecordAudioAsync(string filePath, int durationMs)
+        public Task<string> RecordAudioAsync(string filePath, int durationMs)
         {
-            var tcs = new TaskCompletionSource<bool>();
+            // 1. 改成 TaskCompletionSource<string> 以便回傳字串
+            var tcs = new TaskCompletionSource<string>();
 
-            // 設定錄音格式 (44.1kHz, Mono)
-            // 為了相容性和檔案大小，這裡使用 16-bit PCM (Gemini 吃這個沒問題)
             var waveFormat = new WaveFormat(44100, 16, 1);
-
             var waveIn = new WaveInEvent();
             waveIn.WaveFormat = waveFormat;
 
             var writer = new WaveFileWriter(filePath, waveIn.WaveFormat);
 
-            // 當有聲音資料進來時寫入檔案
             waveIn.DataAvailable += (s, a) =>
             {
                 writer.Write(a.Buffer, 0, a.BytesRecorded);
             };
 
-            // 當錄音停止時，釋放資源
+            // 2. 將讀取檔案與回傳結果的邏輯移到 RecordingStopped 事件中
             waveIn.RecordingStopped += (s, a) =>
             {
-                writer.Dispose();
-                waveIn.Dispose();
-                tcs.SetResult(true); // 通知 Task 完成
+                try
+                {
+                    // 必須先 Dispose 釋放檔案鎖定 (File Lock)
+                    writer.Dispose();
+                    waveIn.Dispose();
+
+                    // 檢查錄音過程是否有錯誤
+                    if (a.Exception != null)
+                    {
+                        tcs.SetException(a.Exception);
+                        return;
+                    }
+
+                    // 此時檔案已經存檔完畢且解除鎖定，可以安全讀取
+                    byte[] bytes = File.ReadAllBytes(filePath);
+                    string returnString = Convert.ToBase64String(bytes);
+
+                    // 設定 Task 完成並回傳字串
+                    tcs.SetResult(returnString);
+                }
+                catch (Exception ex)
+                {
+                    // 捕捉讀檔過程可能發生的錯誤
+                    tcs.SetException(ex);
+                }
             };
 
             waveIn.StartRecording();
 
-            // 設定一個計時器來停止錄音
+            // 設定計時器，時間到停止錄音 (這會觸發上面的 RecordingStopped 事件)
             Task.Delay(durationMs).ContinueWith(_ =>
             {
                 waveIn.StopRecording();
             });
 
+            // 回傳 Task，等待 RecordingStopped 裡的 SetResult 被呼叫
             return tcs.Task;
         }
 
-        // --- 功能 2: 檔案轉 Base64 ---
-        public string ConvertFileToBase64(string filePath)
-        {
-            byte[] bytes = File.ReadAllBytes(filePath);
-            return Convert.ToBase64String(bytes);
-        }
 
-        
 
         // --- 功能 3: 呼叫 Gemini API ---
         string optimizeText =
@@ -198,11 +211,11 @@ namespace AudioUI
                 { "second", "Headphones (HyperX Cloud II)" },  // 第二個裝置的真實名稱
                 { "third", "VG279Q (NVIDIA High Definition Audio)" } // 第三個裝置
             };  
-            // 1. 錄音 5 秒
-            await RecordAudioAsync(audioFilePath, recordMs);
+            // 第一次回應
+            _TtsService.SpeakAsync("請開始說出您的音效調整需求，錄音將持續五秒鐘。").Wait();
 
-            // 2. 將錄音檔轉 Base64
-            string audioBase64 = ConvertFileToBase64("fixedCommand.wav");
+            // 1. 錄音 5 秒
+            string audioBase64 = await RecordAudioAsync(audioFilePath, recordMs);
 
             // 3. 呼叫 Gemini API
             string geminiResponse = await CallGeminiApiAsync(audioBase64, GEMINI_URL);

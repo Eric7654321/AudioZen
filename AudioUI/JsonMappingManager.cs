@@ -11,15 +11,14 @@ namespace AudioUI
     public class FileMapItem
     {
         public string Id { get; set; }
-        public string FileName { get; set; }
+        public List<string> FileNames { get; set; } = new List<string>();
     }
 
-    // 管理類別：負責邏輯處理
     public class MappingManager
     {
         private string _filePath = "file_mapping.json"; // 預設存檔路徑
 
-        // 這是我們在記憶體中的資料清單
+        // 這是記憶體中的資料清單
         public List<FileMapItem> MapList { get; private set; }
 
         public MappingManager()
@@ -28,43 +27,41 @@ namespace AudioUI
         }
 
         // 新增資料 (防止 ID 重複)
-        public bool AddItem(string id, string fileName)
-        {
-            if (MapList.Any(x => x.Id == id))
-            {
-                return false; // ID 已存在
-            }
-
-            MapList.Add(new FileMapItem { Id = id, FileName = fileName });
-            return true;
-        }
-
-        public bool AddItemForce(string id, string fileName)
+        public void PushFront(string id, string fileName)
         {
             var item = MapList.FirstOrDefault(x => x.Id == id);
-            if (item != null)
+
+            if (item == null) // 沒有找到結果
             {
-                item.FileName = fileName; // 修改
+                item = new FileMapItem { Id = id };
+                MapList.Add(item);
             }
-            else
-            {
-                MapList.Add(new FileMapItem { Id = id, FileName = fileName }); // 新增
-            }
-            return true;
+
+            // 插入到最前面
+            item.FileNames.Insert(0, fileName);
         }
 
-        public bool ModifyItem(string id, string newFileName)
+        public string PopFront(string id)
         {
             var item = MapList.FirstOrDefault(x => x.Id == id);
-            if (item != null)
+
+            if (item != null && item.FileNames.Count > 0)
             {
-                item.FileName = newFileName;
-                return true;
+                string poppedFileName = item.FileNames[0];
+                item.FileNames.RemoveAt(0); // 移除最新的
+                return poppedFileName;
             }
-            return false; // 找不到該 ID
+
+            return null; // 找不到 ID 或列表是空的
         }
-        
-        // 存檔 (Serialize to JSON)
+
+        public string GetFileNameById(string id)
+        {
+            var item = MapList.FirstOrDefault(x => x.Id == id);
+            return item != null ? item.FileNames[0] : "";
+        }
+
+        // 存檔
         public void SaveToJson(string filePath)
         {
             filePath = filePath ?? _filePath;
@@ -107,13 +104,6 @@ namespace AudioUI
             {
                 MessageBox.Show($"讀檔失敗: {ex.Message}");
             }
-        }
-
-        // 根據 ID 查詢檔名
-        public string GetFileNameById(string id)
-        {
-            var item = MapList.FirstOrDefault(x => x.Id == id);
-            return item != null ? item.FileName : null;
         }
     }
 }
