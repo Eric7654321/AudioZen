@@ -984,23 +984,23 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\user\\.nuget\\packages\\": {},
-    "D:\\develop\\visual studio\\Shared\\NuGetPackages": {}
+    "C:\\Users\\User\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\user\\Desktop\\真-學習資料\\HCI\\AudioUI\\AudioUI\\AudioUI.csproj",
+      "projectUniqueName": "C:\\Users\\User\\source\\repos\\ZaWarudo87\\Equalizer_APO_with_Gen_AI\\AudioUI\\AudioUI\\AudioUI.csproj",
       "projectName": "AudioUI",
-      "projectPath": "C:\\Users\\user\\Desktop\\真-學習資料\\HCI\\AudioUI\\AudioUI\\AudioUI.csproj",
-      "packagesPath": "C:\\Users\\user\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\user\\Desktop\\真-學習資料\\HCI\\AudioUI\\AudioUI\\obj\\",
+      "projectPath": "C:\\Users\\User\\source\\repos\\ZaWarudo87\\Equalizer_APO_with_Gen_AI\\AudioUI\\AudioUI\\AudioUI.csproj",
+      "packagesPath": "C:\\Users\\User\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\User\\source\\repos\\ZaWarudo87\\Equalizer_APO_with_Gen_AI\\AudioUI\\AudioUI\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
-        "D:\\develop\\visual studio\\Shared\\NuGetPackages"
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\user\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\User\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
@@ -1085,7 +1085,7 @@
             "privateAssets": "none"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.308/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.306/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

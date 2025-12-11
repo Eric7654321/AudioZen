@@ -78,7 +78,7 @@ namespace AudioUI
 
 
         // --- 功能 3: 呼叫 Gemini API ---
-        string optimizeText =
+        string optimizeText = // constant
         "You are an audio engineer. Listen to the user's voice command. " +
         "Based on the request, generate an Equalizer APO configuration. " +
         "You manage 4 specific targets: " +
@@ -261,7 +261,20 @@ namespace AudioUI
             return eqResponse.MessageForUser;
         }
 
-        private const string API_KEY = "AIzaSyBJe-x4R2675FWctAAY3UrfW8hM1z9taoE";
+        public async Task ConfigRollback(string IdString, string configPath)
+        {
+            _MappingManager.PopFront(IdString);
+            if (_MappingManager.GetFront(IdString) == "")
+            {
+                await _TtsService.SpeakAsync("已經沒有更早的設定可以還原"); // constant
+                return;
+            }
+            string originconfigPath = _MappingManager.GetFront(IdString);
+            File.Copy(originconfigPath, configPath, overwrite: true);
+        }
+
+
+        private const string API_KEY = "AIzaSyBJe-x4R2675FWctAAY3UrfW8hM1z9taoE"; // constant
         private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + API_KEY;
         TtsService _TtsService = new TtsService();
         MappingManager _MappingManager = new MappingManager();
@@ -273,18 +286,18 @@ namespace AudioUI
         {
             var myDeviceMap = new Dictionary<string, string>
 {
-                { "first", "Speakers (Realtek(R) Audio)" },    // 第一個裝置的真實名稱
+                { "first", "Speakers (Realtek(R) Audio)" },    // 第一個裝置的真實名稱  // constant
                 { "second", "Headphones (HyperX Cloud II)" },  // 第二個裝置的真實名稱
                 { "third", "VG279Q (NVIDIA High Definition Audio)" } // 第三個裝置
             };  
             // 第一次回應
-            _TtsService.SpeakAsync("請問​今天​需要​我​幫忙​做​什​麼").Wait();
+            await _TtsService.SpeakAsync("請問​今天​需要​我​幫忙​做​什​麼"); // constant
 
             // 錄音recordMs 毫秒
             string audioBase64 = await RecordAudioAsync(audioFilePath, recordMs);
 
             // 提示正在解析
-            _TtsService.SpeakAsync("正在解析中").Wait();
+            await _TtsService.SpeakAsync("正在解析中"); // constant
 
             // 3. 呼叫 Gemini API
             string geminiResponse = await CallGeminiApiAsync(audioBase64, GEMINI_URL);
@@ -295,7 +308,7 @@ namespace AudioUI
                 string ttsMessage = ParseAndWriteConfig(geminiResponse, eqConfigPath, myDeviceMap);
 
                 // 套用到目前config
-                string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "config.txt");
+                string configPath = Path.Combine(".", "config", "config.txt"); // constant
                 string situationIdString = situationId.ToString();
                 _MappingManager.PushFront(situationIdString, eqConfigPath);
 
@@ -304,24 +317,16 @@ namespace AudioUI
                 // 5. 使用 TTS 播放回應訊息
                 await _TtsService.SpeakAsync(ttsMessage);
 
-                await _TtsService.SpeakAsync("是否需要調整回原本的內容");
+                await _TtsService.SpeakAsync("是否需要調整回原本的內容"); // constant
 
                 // 輸入需要還原
-                MessageBox.Show(_MappingManager.MapList.Count.ToString());
-                if (_MappingManager.MapList[0].FileNames.Count >= 2)
+                MessageBox.Show(_MappingManager.MapList[0].FileNames.Count.ToString());
+                if (false)
                 {
-                    MessageBox.Show(_MappingManager.MapList[0].Id.ToString());
-                    _MappingManager.PopFront(situationIdString);
-                    if (_MappingManager.GetFront(situationIdString) == "")
-                    {
-                        await _TtsService.SpeakAsync("已經沒有更早的設定可以還原");
-                        return;
-                    }
-                    string originconfigPath = _MappingManager.GetFront(situationIdString);
-                    MessageBox.Show(originconfigPath);
-                    File.Copy(originconfigPath, configPath, overwrite: true);
+                    // rollback
+                    await ConfigRollback(situationIdString, configPath);
                 }
-
+                _MappingManager.SaveToJson();
             }
             return;
         }

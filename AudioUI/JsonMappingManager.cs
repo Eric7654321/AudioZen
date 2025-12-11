@@ -16,7 +16,7 @@ namespace AudioUI
 
     public class MappingManager
     {
-        private string _filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "file_mapping.json");
+        private string _filePath = Path.Combine(".", "config", "file_mapping.json"); // constant
         public List<FileMapItem> MapList { get; private set; }
 
         public MappingManager()
@@ -80,7 +80,6 @@ namespace AudioUI
                 var options = new JsonSerializerOptions { WriteIndented = true };
                 string jsonString = JsonSerializer.Serialize(MapList, options);
                 File.WriteAllText(_filePath, jsonString);
-                MessageBox.Show($"存檔成功！\n路徑: {Path.GetFullPath(_filePath)}");
             }
             catch (Exception ex)
             {

@@ -45,6 +45,10 @@ namespace AudioUI
     {
         private bool isDrawerOpen = false;
         private AudioSessionService _AudioService = new AudioSessionService();
+        private GeminiServices _GeminiService = new GeminiServices();
+        private TtsService _TtsService = new TtsService();
+        private MappingManager _MappingManager = new MappingManager();
+
 
         // 集合資料
         public ObservableCollection<AudioAppModel> AppList { get; set; } = new ObservableCollection<AudioAppModel>();
@@ -68,11 +72,6 @@ namespace AudioUI
         public ICommand CloseCommand { get; }
         public ICommand MicrophoneCommand { get; }
 
-        // Gemini 相關
-        private const string API_KEY = "AIzaSyDFsJVgaUMsAkrggexB1mOGP1-4cTXf_-s";
-        private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + API_KEY;
-        GeminiServices _GeminiService = new GeminiServices();
-        TtsService _TtsService = new TtsService();
 
         public MainWindow()
         {
@@ -86,10 +85,10 @@ namespace AudioUI
             MicrophoneCommand = new RelayCommand(async _ =>
             {
                 // 保留原本錄音邏輯
-                string audioPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "command.wav");
+                string audioPath = Path.Combine(".","config", "command.wav"); // constant
                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                 string configFileName = $"config_{timestamp}.txt";
-                string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", configFileName);
+                string configPath = Path.Combine(".","config", configFileName);
 
                 try
                 {
