@@ -21,8 +21,7 @@
             <Setter Property="FontFamily" Value="Microsoft JhengHei UI"/>
         </Style>
 
-        <!-- ★★★ 修正後的 NavBtnStyle ★★★ -->
-        <!-- 解決 C# 設定顏色後 Hover 失效的問題 -->
+        <!-- NavBtnStyle -->
         <Style x:Key="NavBtnStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#AAAAAA"/>
@@ -34,16 +33,9 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}">
-                            <!-- 1. 給 ContentPresenter 一個名字 (x:Name="Presenter") -->
-                            <!-- 2. 明確綁定 TextElement.Foreground，預設使用 Button 的顏色 -->
-                            <ContentPresenter x:Name="Presenter" 
-                                              HorizontalAlignment="Center" 
-                                              VerticalAlignment="Center"
-                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                            <ContentPresenter x:Name="Presenter" HorizontalAlignment="Center" VerticalAlignment="Center" TextElement.Foreground="{TemplateBinding Foreground}"/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <!-- 3. 改成針對內部的 "Presenter" 設定顏色 -->
-                            <!-- 這樣就算 C# 把外層 Button 鎖死成灰色，這裡依然能強制變藍 -->
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Presenter" Property="TextElement.Foreground" Value="#3399FF"/>
                             </Trigger>
@@ -53,7 +45,7 @@
             </Setter>
         </Style>
 
-        <!-- 視窗控制按鈕樣式 (維持白色 Hover) -->
+        <!-- WindowControlBtnStyle -->
         <Style x:Key="WindowControlBtnStyle" TargetType="Button" BasedOn="{StaticResource NavBtnStyle}">
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Margin" Value="5,0"/>
@@ -68,7 +60,6 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Foreground" Value="White"/>
-                                <!-- 這裡強制設回白色 -->
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -76,7 +67,7 @@
             </Setter>
         </Style>
 
-        <!-- 側邊欄樣式 -->
+        <!-- SidebarItemStyle -->
         <Style x:Key="SidebarItemStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#CCCCCC"/>
@@ -104,18 +95,14 @@
             </Setter>
         </Style>
 
-        <!-- 卡片樣式 (高度 140) -->
+        <!-- AppCardTemplate -->
         <DataTemplate x:Key="AppCardTemplate">
-            <Border Width="340" Height="140" 
-                    BorderBrush="{Binding BorderColor}" 
-                    BorderThickness="1" Margin="10,10,10,20" Background="#1E1E1E">
+            <Border Width="340" Height="140" BorderBrush="{Binding BorderColor}" BorderThickness="1" Margin="10,10,10,20" Background="#1E1E1E">
                 <Grid Margin="15,15">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="80"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-
-                    <!-- Icon -->
                     <Border Grid.Column="0" Background="#333333" Margin="0,0,15,0" CornerRadius="5">
                         <Grid>
                             <Image Source="{Binding Icon}" Stretch="Uniform" Width="50" Height="50" VerticalAlignment="Center" HorizontalAlignment="Center">
@@ -143,7 +130,6 @@
                             </icon:PackIconMaterial>
                         </Grid>
                     </Border>
-
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8" TextTrimming="CharacterEllipsis"/>
                         <Separator Background="#555555" Margin="0,0,0,8"/>
@@ -155,61 +141,56 @@
             </Border>
         </DataTemplate>
 
-        <!-- 裝置卡片樣式 （加入點擊事件處理） -->
+        <!-- DeviceCardTemplate (列表頁) -->
         <DataTemplate x:Key="DeviceCardTemplate">
-            <!-- 在 Border 上加 MouseLeftButtonUp，minimal change -->
-            <Border Width="260" Height="320" 
-                    BorderBrush="#444444" 
-                    BorderThickness="1" Margin="15" Background="#1E1E1E" Cursor="Hand"
-                    MouseLeftButtonUp="DeviceCard_Click">
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Style.Triggers>
+            <Button Click="DeviceCard_Click" Cursor="Hand" Margin="15" Padding="0" Background="Transparent" BorderThickness="0">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="CardBorder" Width="260" Height="320" BorderBrush="#444444" BorderThickness="1" Background="#1E1E1E">
+                            <Grid Margin="20">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Text="{Binding Name}" FontSize="24" Foreground="White" FontWeight="Normal"/>
+                                <TextBlock Grid.Row="1" Text="{Binding Description}" FontSize="14" Foreground="#888888" Margin="0,5,0,0"/>
+                                <Grid Grid.Row="2" Margin="0,20,0,0">
+                                    <Image Source="{Binding ImagePath}" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <Image.Style>
+                                            <Style TargetType="Image">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ImagePath}" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Image.Style>
+                                    </Image>
+                                    <icon:PackIconMaterial Kind="KeyboardVariant" Width="80" Height="80" Foreground="#444444" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <icon:PackIconMaterial.Style>
+                                            <Style TargetType="icon:PackIconMaterial">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ImagePath}" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </icon:PackIconMaterial.Style>
+                                    </icon:PackIconMaterial>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="BorderBrush" Value="#888888"/>
-                                <Setter Property="Background" Value="#252525"/>
+                                <Setter TargetName="CardBorder" Property="BorderBrush" Value="#888888"/>
+                                <Setter TargetName="CardBorder" Property="Background" Value="#252525"/>
                             </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
-
-                <Grid Margin="20">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0" Text="{Binding Name}" FontSize="24" Foreground="White" FontWeight="Normal"/>
-                    <TextBlock Grid.Row="1" Text="{Binding Description}" FontSize="14" Foreground="#888888" Margin="0,5,0,0"/>
-
-                    <Grid Grid.Row="2" Margin="0,20,0,0">
-                        <Image Source="{Binding ImagePath}" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <Image.Style>
-                                <Style TargetType="Image">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding ImagePath}" Value="{x:Null}">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Image.Style>
-                        </Image>
-                        <icon:PackIconMaterial Kind="KeyboardVariant" Width="80" Height="80" Foreground="#444444" VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <icon:PackIconMaterial.Style>
-                                <Style TargetType="icon:PackIconMaterial">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding ImagePath}" Value="{x:Null}">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </icon:PackIconMaterial.Style>
-                        </icon:PackIconMaterial>
-                    </Grid>
-                </Grid>
-            </Border>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
         </DataTemplate>
     </Window.Resources>
 
@@ -242,29 +223,26 @@
             <Button Content="✕" Style="{StaticResource WindowControlBtnStyle}" Command="{Binding CloseCommand}" Foreground="#FF6666"/>
         </StackPanel>
 
-        <!-- 導航列 -->
+        <!-- Tabs -->
         <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="40,0,0,10">
             <Grid>
-                <Button x:Name="TabEntrance" Content="入 口" Click="Tab_Click" Tag="Entrance"
-                        Style="{StaticResource NavBtnStyle}" Foreground="#3399FF" FontWeight="Bold"/>
+                <Button x:Name="TabEntrance" Content="入 口" Click="Tab_Click" Tag="Entrance" Style="{StaticResource NavBtnStyle}" Foreground="#3399FF" FontWeight="Bold"/>
                 <Border x:Name="LineEntrance" VerticalAlignment="Bottom" Height="4" Background="#3399FF" Margin="20,0,20,-4" CornerRadius="2"/>
             </Grid>
             <Grid>
-                <Button x:Name="TabControl" Content="控 制" Click="Tab_Click" Tag="Control"
-                        Style="{StaticResource NavBtnStyle}"/>
+                <Button x:Name="TabControl" Content="控 制" Click="Tab_Click" Tag="Control" Style="{StaticResource NavBtnStyle}"/>
                 <Border x:Name="LineControl" VerticalAlignment="Bottom" Height="4" Background="#3399FF" Margin="20,0,20,-4" CornerRadius="2" Visibility="Hidden"/>
             </Grid>
             <Grid>
-                <Button x:Name="TabDevice" Content="裝 置" Click="Tab_Click" Tag="Device"
-                        Style="{StaticResource NavBtnStyle}"/>
+                <Button x:Name="TabDevice" Content="裝 置" Click="Tab_Click" Tag="Device" Style="{StaticResource NavBtnStyle}"/>
                 <Border x:Name="LineDevice" VerticalAlignment="Bottom" Height="4" Background="#3399FF" Margin="20,0,20,-4" CornerRadius="2" Visibility="Hidden"/>
             </Grid>
         </StackPanel>
 
         <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Bottom" BorderBrush="#333333" BorderThickness="0,0,0,1"/>
 
-        <!-- 側邊欄 -->
-        <Border x:Name="SidebarBorder" Grid.Row="2" Grid.Column="0" BorderBrush="#333333" BorderThickness="0,0,1,0">
+        <!-- Sidebar TODO --> 
+        <Border x:Name="SidebarBorder" Grid.Row="2" Grid.Column="0" BorderBrush="#333333" BorderThickness="0,0,1,0" >
             <ScrollViewer VerticalScrollBarVisibility="Hidden" Margin="15,20,15,20">
                 <StackPanel>
                     <Button Content="+ 新聊天" Style="{StaticResource SidebarItemStyle}" Foreground="White" FontWeight="Bold"/>
@@ -282,7 +260,7 @@
             </ScrollViewer>
         </Border>
 
-        <!-- VIEW A: 入口 -->
+        <!-- VIEW A: Entrance -->
         <Grid x:Name="EntranceView" Grid.Row="2" Grid.Column="1" ClipToBounds="True" Visibility="Visible">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,-50,0,0">
                 <TextBlock Text="早安您好 平安喜樂~" FontSize="32" Foreground="#AAAAAA" HorizontalAlignment="Center" Margin="0,0,0,40"/>
@@ -341,7 +319,6 @@
                     </Grid>
                 </Border>
             </StackPanel>
-
             <StackPanel VerticalAlignment="Bottom">
                 <Grid HorizontalAlignment="Center">
                     <Polygon Points="0,25 10,0 70,0 80,25" Fill="#252525" HorizontalAlignment="Center"/>
@@ -363,13 +340,12 @@
             </StackPanel>
         </Grid>
 
-        <!-- VIEW B: 控制 -->
+        <!-- VIEW B: Control -->
         <Grid x:Name="ControlView" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Visibility="Hidden" Margin="20,10,20,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-
             <Grid Grid.Row="0" Margin="0,0,0,10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="350"/>
@@ -403,7 +379,6 @@
                     </Button.Template>
                 </Button>
             </Grid>
-
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <TextBlock Text="最近調整" FontSize="18" Foreground="#DDDDDD" Margin="5,10,0,10"/>
@@ -443,24 +418,30 @@
             </ScrollViewer>
         </Grid>
 
-        <!-- VIEW C: 裝置 -->
+        <!-- VIEW C: Device (修復版) -->
         <Grid x:Name="DeviceView" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Visibility="Hidden" Margin="20,10,20,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
+                <!-- 0: 搜尋列 -->
                 <RowDefinition Height="*"/>
+                <!-- 1: 內容區 -->
             </Grid.RowDefinitions>
+
+            <!-- 1. 搜尋列 -->
             <Grid Grid.Row="0" Margin="0,0,0,10">
                 <Border Background="#1E1E1E" CornerRadius="18" Height="40" HorizontalAlignment="Left" Width="350">
                     <Grid>
-                        <TextBlock Text="搜尋裝置..." Foreground="#666666" VerticalAlignment="Center" Margin="15,0" FontSize="16"/>
+                        <TextBlock Text="搜尋裝置..." Foreground="#666666" VerticalAlignment="Center" Margin="15,0" FontSize="16" IsHitTestVisible="False"/>
                         <TextBox Background="Transparent" BorderThickness="0" Foreground="White" FontSize="16" VerticalContentAlignment="Center" Margin="15,0" CaretBrush="White"/>
                     </Grid>
                 </Border>
             </Grid>
 
-            <!-- 裝置卡片列表（點擊卡片會觸發 DeviceCard_Click） -->
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                <StackPanel>
+            <!-- 2. 內容區 (使用 Grid 重疊大法) -->
+            <Grid Grid.Row="1">
+                <!-- 層級 A: 裝置列表 (底層) -->
+                <!-- 注意：ZIndex=0，預設 Visible -->
+                <ScrollViewer x:Name="DeviceListContainer" Panel.ZIndex="0" VerticalScrollBarVisibility="Auto" Visibility="Visible">
                     <ItemsControl ItemsSource="{Binding DeviceList}" ItemTemplate="{StaticResource DeviceCardTemplate}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -468,67 +449,112 @@
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                     </ItemsControl>
+                </ScrollViewer>
 
-                    <!-- 新增容器後保留原本 DeviceDetailPanel（內容完全不變） -->
-                    <Grid x:Name="DeviceDetailPanel" Visibility="Collapsed" Margin="10,20,10,10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="320"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
+                <!-- 層級 B: 裝置詳情頁 (上層) -->
+                <!-- 關鍵修正 1: Visibility="Collapsed" (預設隱藏) -->
+                <!-- 關鍵修正 2: Background="#000000" (確保顯示時不透明，蓋住下面的列表) -->
+                <!-- 關鍵修正 3: Panel.ZIndex="1" (確保浮在列表上面) -->
+                <Grid x:Name="DeviceDetailPanel" Panel.ZIndex="1" Visibility="Collapsed" Background="#000000">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="320"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-                        <!-- 左側：裝置資訊 + 快捷鍵清單 -->
-                        <StackPanel Grid.Column="0" Margin="8">
-                            <TextBlock Text="裝置" FontSize="20" Foreground="White" Margin="4"/>
-                            <TextBlock Text="{Binding SelectedDevice.Name}" FontSize="16" Foreground="#DDDDDD" Margin="4,2,0,8"/>
-                            <TextBlock Text="自定義宏鍵盤" FontSize="20" Foreground="White" Margin="4,8,0,6"/>
-                            <ListBox ItemsSource="{Binding ShortcutList}" Background="Transparent" BorderThickness="0" Foreground="White" Margin="4" >
+                    <!-- 左側選單 -->
+                    <Border Grid.Column="0" BorderBrush="#333333" BorderThickness="0,0,1,0" Margin="0,0,10,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Margin="10,0,0,10">
+                                <Button Content="← 返回列表" Click="BackToDeviceList_Click" 
+                                HorizontalAlignment="Left" Foreground="#3399FF" Background="Transparent" BorderThickness="0" Cursor="Hand" FontSize="16"/>
+                                <TextBlock Text="{Binding SelectedDeviceName}" FontSize="28" Foreground="White" FontWeight="Bold" Margin="0,10,0,10"/>
+                            </StackPanel>
+
+                            <ListBox Grid.Row="1" ItemsSource="{Binding KeyBindings}" Background="Transparent" BorderThickness="0" Padding="0">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Padding" Value="15,12"/>
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="Cursor" Value="Hand"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border Background="{TemplateBinding Background}" BorderBrush="#333333" BorderThickness="0,0,0,1">
+                                                        <ContentPresenter/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="#1A1A1A"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter Property="Background" Value="#252525"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <StackPanel Margin="6">
-                                            <TextBlock Text="{Binding Title}" FontSize="18" Foreground="White"/>
-                                            <TextBlock Text="{Binding SubTitle}" FontSize="13" Foreground="#888888" Margin="0,4,0,8"/>
+                                        <StackPanel>
+                                            <TextBlock FontSize="20" Foreground="White" Margin="0,0,0,5">
+                                        <Run Text="{Binding ActionName}"/>
+                                        <Run Text=" - " Foreground="#888888"/>
+                                        <Run Text="{Binding BoundKey}" Foreground="#3399FF"/>
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding Description}" FontSize="14" Foreground="#888888"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
-                        </StackPanel>
+                        </Grid>
+                    </Border>
 
-                        <!-- 右側：鍵盤顯示區（3 x 4）-->
-                        <Border Grid.Column="1" Margin="12" Background="#111111" CornerRadius="12" Padding="12" BorderBrush="#444444" BorderThickness="1">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                </Grid.RowDefinitions>
-
-                                <TextBlock Text="鍵盤" FontSize="18" Foreground="White"/>
-
-                                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Margin="0,12,0,0">
-                                    <UniformGrid Columns="3" Rows="4" HorizontalAlignment="Center" VerticalAlignment="Top">
-                                        <ItemsControl ItemsSource="{Binding KeyBindings}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Button Margin="8" Padding="8" Click="KeyButton_Click" Tag="{Binding}">
-                                                        <StackPanel>
-                                                            <TextBlock Text="{Binding KeyLabel}" FontSize="16" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="{Binding EffectName}" FontSize="12" HorizontalAlignment="Center" Foreground="#AAAAAA" Margin="0,6,0,0"/>
-                                                        </StackPanel>
-                                                    </Button>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <StackPanel/>
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                        </ItemsControl>
-                                    </UniformGrid>
-                                </ScrollViewer>
+                    <!-- 右側鍵盤圖 -->
+                    <Grid Grid.Column="1" Background="#050505" ClipToBounds="True">
+                        <Image Source="keyboard.png" Stretch="Uniform" Opacity="1.0" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        <Viewbox Stretch="Uniform">
+                            <Grid Width="600" Height="600">
+                                <!-- 这里的 Margin 根據你的圖片微調 -->
+                                <ItemsControl ItemsSource="{Binding MacroKeys}" Margin="140,80,120,100">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="3" Rows="4"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Click="KeyButton_Click" Tag="{Binding}" Margin="8" Cursor="Hand" Background="Transparent" BorderThickness="0">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="BtnBorder" CornerRadius="15" BorderBrush="White" BorderThickness="2" Background="#33000000">
+                                                            <Viewbox>
+                                                                <TextBlock Text="{Binding DisplayText}" Foreground="White" FontWeight="Bold" Margin="5"/>
+                                                            </Viewbox>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="BtnBorder" Property="Background" Value="#663399FF"/>
+                                                                <Setter TargetName="BtnBorder" Property="BorderBrush" Value="#3399FF"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </Grid>
-                        </Border>
+                        </Viewbox>
                     </Grid>
-                </StackPanel>
-            </ScrollViewer>
+                </Grid>
+            </Grid>
         </Grid>
     </Grid>
 </Window>
