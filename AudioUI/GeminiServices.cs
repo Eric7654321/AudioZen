@@ -1,14 +1,16 @@
-﻿using NAudio.Wave;
+﻿using HandyControl.Controls;
+using HandyControl.Tools.Extension;
+using NAudio.Wave;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.IO;
-using System.Net;
-using System.Net.Http.Headers;
 
 namespace AudioUI
 {
@@ -109,7 +111,7 @@ namespace AudioUI
         "25, 40, 63, 100, 160, 250, 400, 630, 1000, 1600, 2500, 4000, 6300, 10000, 16000. " +
         "Rules for generation: " +
         "1. Determine the gain (dB) for each band based on the user's intent and return in floating number. " +
-        "Besides, the gain should be larger than 7.0dB, or just remain no gain."+ // TODO: 改成其他合適的數字
+        "Besides, the gain should be larger than 7.0dB, or just remain no gain."+
         "2. Calculate 'preamp_db'. logic: Identify the maximum positive gain among all bands. " +
         "The preamp_db must be negative and its absolute value must be greater than or equal to that maximum gain (e.g., if max gain is +15.2dB, preamp must be -15.2dB or lower, like -15.8dB). " +
         "3. Construct 'graphic_eq_string' in the format: '25 [gain]; 40 [gain]; ...' " +
@@ -197,13 +199,77 @@ namespace AudioUI
             throw new InvalidOperationException("不可達的程式路徑：CallGeminiApiAsync 重試機制異常結束。");
         }
 
-        private const string API_KEY = "AIzaSyAbcdVglE0htVqhzzajRshijkK41qBblPg";
+        // --- 功能 4: 解析回傳並寫入 Config ---
+        public string ParseAndWriteConfig(string rawResponse, string outputPath, Dictionary<string, string> deviceMap)
+        {
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var geminiResponse = JsonSerializer.Deserialize<GeminiResponse>(rawResponse, options);
+
+            if (geminiResponse?.Candidates == null || geminiResponse.Candidates.Count == 0)
+                throw new Exception("No candidates found.");
+
+            string innerJsonText = geminiResponse.Candidates[0].Content.Parts[0].Text;
+
+            // 清理 Markdown
+            innerJsonText = innerJsonText.Replace("```json", "").Replace("```", "").Trim();
+
+            // 解析新的結構
+            var eqResponse = JsonSerializer.Deserialize<EqConfig>(innerJsonText, options);
+
+            using (StreamWriter sw = new StreamWriter(outputPath, false)) // false 表示覆寫檔案
+            {
+                if (eqResponse.Configs != null)
+                {
+                    foreach (var config in eqResponse.Configs)
+                    {
+                        // 1. 處理 Device 行
+                        string targetKey = config.Target?.ToLower();
+
+                        if (targetKey == "all")
+                        {
+                            // 如果是 all，通常不需要指定 Device，或者您可以根據需求決定是否要重置 Device 選擇
+                            // 這裡示範：寫入一行註解，或者什麼都不寫代表全域
+                            sw.WriteLine("# Global Setting");
+                        }
+                        else if (!string.IsNullOrEmpty(targetKey) && deviceMap.ContainsKey(targetKey))
+                        {
+                            // 根據 map 寫入實際裝置名稱
+                            sw.WriteLine($"Device: {deviceMap[targetKey]}");
+                        }
+                        else
+                        {
+                            // 如果 AI 回傳了 first 但 map 裡沒有，可以選擇跳過或記錄錯誤
+                            // 這裡選擇寫入一個預設註解以供除錯
+                            sw.WriteLine($"# Unknown Target: {targetKey}");
+                        }
+
+                        // 2. 寫入 Preamp
+                        sw.WriteLine($"Preamp: {config.PreampDb} dB");
+
+                        // 3. 寫入 GraphicEQ
+                        if (!string.IsNullOrEmpty(config.GraphicEqString))
+                        {
+                            sw.WriteLine($"GraphicEQ: {config.GraphicEqString}");
+                        }
+
+                        // 4. 加入一個空行分隔不同裝置的設定 (可選)
+                        sw.WriteLine();
+                    }
+                }
+            }
+
+            return eqResponse.MessageForUser;
+        }
+
+        private const string API_KEY = "AIzaSyBJe-x4R2675FWctAAY3UrfW8hM1z9taoE";
         private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + API_KEY;
-        GeminiParser _GeminiParser = new GeminiParser();
         TtsService _TtsService = new TtsService();
+        MappingManager _MappingManager = new MappingManager();
 
-
-        public async Task RecordAndProcessAsync(int recordMs,string audioFilePath, string eqConfigPath)
+        /// <summary>
+        /// 完整的進行一次錄音、分析與寫入的過程 (goal 1)
+        /// </summary>
+        public async Task RecordAndProcessAsync(int situationId, int recordMs,string audioFilePath, string eqConfigPath)
         {
             var myDeviceMap = new Dictionary<string, string>
 {
@@ -212,10 +278,13 @@ namespace AudioUI
                 { "third", "VG279Q (NVIDIA High Definition Audio)" } // 第三個裝置
             };  
             // 第一次回應
-            _TtsService.SpeakAsync("請開始說出您的音效調整需求，錄音將持續五秒鐘。").Wait();
+            _TtsService.SpeakAsync("請問​今天​需要​我​幫忙​做​什​麼").Wait();
 
-            // 1. 錄音 5 秒
+            // 錄音recordMs 毫秒
             string audioBase64 = await RecordAudioAsync(audioFilePath, recordMs);
+
+            // 提示正在解析
+            _TtsService.SpeakAsync("正在解析中").Wait();
 
             // 3. 呼叫 Gemini API
             string geminiResponse = await CallGeminiApiAsync(audioBase64, GEMINI_URL);
@@ -223,10 +292,36 @@ namespace AudioUI
             if (!string.IsNullOrEmpty(geminiResponse))
             {
                 // 4. 解析回傳並寫入 Config
-                string ttsMessage = _GeminiParser.ParseAndWriteConfig(geminiResponse, eqConfigPath, myDeviceMap);
+                string ttsMessage = ParseAndWriteConfig(geminiResponse, eqConfigPath, myDeviceMap);
+
+                // 套用到目前config
+                string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "config.txt");
+                string situationIdString = situationId.ToString();
+                _MappingManager.PushFront(situationIdString, eqConfigPath);
+
+                File.Copy(eqConfigPath, configPath, overwrite: true);
 
                 // 5. 使用 TTS 播放回應訊息
                 await _TtsService.SpeakAsync(ttsMessage);
+
+                await _TtsService.SpeakAsync("是否需要調整回原本的內容");
+
+                // 輸入需要還原
+                MessageBox.Show(_MappingManager.MapList.Count.ToString());
+                if (_MappingManager.MapList[0].FileNames.Count >= 2)
+                {
+                    MessageBox.Show(_MappingManager.MapList[0].Id.ToString());
+                    _MappingManager.PopFront(situationIdString);
+                    if (_MappingManager.GetFront(situationIdString) == "")
+                    {
+                        await _TtsService.SpeakAsync("已經沒有更早的設定可以還原");
+                        return;
+                    }
+                    string originconfigPath = _MappingManager.GetFront(situationIdString);
+                    MessageBox.Show(originconfigPath);
+                    File.Copy(originconfigPath, configPath, overwrite: true);
+                }
+
             }
             return;
         }

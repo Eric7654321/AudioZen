@@ -94,10 +94,9 @@ namespace AudioUI
         public ICommand MicrophoneCommand { get; }
 
         // Gemini 相關
-        private const string API_KEY = "AIzaSyAbcdVglE0htVqhzzajRshijkK41qBblPg";
+        private const string API_KEY = "AIzaSyDFsJVgaUMsAkrggexB1mOGP1-4cTXf_-s";
         private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + API_KEY;
         GeminiServices _GeminiService = new GeminiServices();
-        GeminiParser _GeminiParser = new GeminiParser();
         TtsService _TtsService = new TtsService();
 
         public MainWindow()
@@ -132,7 +131,7 @@ namespace AudioUI
                 try
                 {
                     _TtsService.Stop();
-                    await _GeminiService.RecordAndProcessAsync(5000, audioPath, configPath);
+                    await _GeminiService.RecordAndProcessAsync(0, 5000, audioPath, configPath);
                 }
                 catch (Exception ex)
                 {
