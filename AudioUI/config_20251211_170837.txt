@@ -1,0 +1,4 @@
+Device: Speakers (Realtek(R) Audio)
+Preamp: -6 dB
+GraphicEQ: Filter 1: ON PK 25 Hz Gain 6 dB; Filter 2: ON PK 40 Hz Gain 6 dB; Filter 3: ON PK 63 Hz Gain 6 dB; Filter 4: ON PK 100 Hz Gain 4 dB; Filter 5: ON PK 160 Hz Gain 2 dB; Filter 6: ON PK 250 Hz Gain 0 dB; Filter 7: ON PK 400 Hz Gain 0 dB; Filter 8: ON PK 630 Hz Gain 0 dB; Filter 9: ON PK 1000 Hz Gain 0 dB; Filter 10: ON PK 1600 Hz Gain 0 dB; Filter 11: ON PK 2500 Hz Gain 0 dB; Filter 12: ON PK 4000 Hz Gain 2 dB; Filter 13: ON PK 6300 Hz Gain 3 dB; Filter 14: ON PK 10000 Hz Gain 3 dB; Filter 15: ON PK 16000 Hz Gain 1 dB
+
