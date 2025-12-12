@@ -13,6 +13,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.Toolkit.Uwp.Notifications;
 
 namespace AudioUI
 {
@@ -73,7 +74,7 @@ namespace AudioUI
         public ICommand CloseCommand { get; }
         public ICommand MicrophoneCommand { get; }
 
-
+        
         public MainWindow()
         {
             InitializeComponent();
@@ -96,7 +97,11 @@ namespace AudioUI
                     var dir = Path.GetDirectoryName(configPath);
                     if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
+                    bool isAccepted = await _GeminiService.SendNotificationAndWaitAsync();
+                    MessageBox.Show(isAccepted.ToString());
+
                     _TtsService.Stop();
+
                     //var targetProcess = Process.GetProcessesByName("chrome");
                     //await Task.Run(() =>
                     //{
