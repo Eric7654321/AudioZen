@@ -100,6 +100,85 @@ namespace AudioUI
 "   - WRONG FORMAT: 'Filter: ON PK Fc 25 Hz...' (DO NOT USE THIS). " +
 "   - FORBIDDEN WORDS: 'Filter', 'ON', 'PK', 'Fc', 'Hz', 'Gain', 'Q', ':'. " +
 "   - ONLY use numbers, spaces, and semicolons. " +
+        "4. Construct 'Meldaproduction Compressor VST' JSON -- comp_json." +
+        "    - Please fill in the values." +
+        "    - Format:" +
+        "    [" +
+        "        { \"raw_key\": \"A#\", \"value\": 1 }," +
+        "        { \"raw_key\": \"A#gain\", \"value\": (float, -24.0 to 24.0) }," +
+        "        { \"raw_key\": \"A#outputgain\", \"value\": (float, -24.0 to 24.0) }," +
+        "        { \"raw_key\": \"A#attack\", \"value\": (float, 0.0 to 1.0) }," +
+        "        { \"raw_key\": \"A#release\", \"value\": (float, 0.0 to 1.0) }," +
+        "        { \"raw_key\": \"A#rmslength\", \"value\": (float, 0.0 to 0.1) }," +
+        "        { \"raw_key\": \"A#threshold\", \"value\": (float, 0.01 to 1.0) }," +
+        "        { \"raw_key\": \"A#ratio\", \"value\": (float, 1.0 to 20.0) }," +
+        "        { \"raw_key\": \"A#kneemode\", \"value\": (string, \"Hard\" or \"Linear\" or \"Soft\") }," +
+        "        { \"raw_key\": \"A#kneesize\", \"value\": (float, 0.0 to 1.0) }," +
+        "        { \"raw_key\": \"A#maximize\", \"value\": (0 or 1) }," +
+        "        { \"raw_key\": \"A#customshape\", \"value\": (0 or 1) }," +
+        "        { \"raw_key\": \"AVersion\", \"value\": 1115136 }," +
+        "        { \"raw_key\": \"AMIDIProgramChangeEnable\", \"value\": 0 }," +
+        "        { \"raw_key\": \"AProgramChangeCategorizer\", \"value\": 0 }," +
+        "        { \"raw_key\": \"AEditorSize\", \"value\": \"901,527\" }," +
+        "        { \"raw_key\": \"AControllersEnabled\", \"value\": 0 }," +
+        "        { \"raw_key\": \"APluginToolbarCollapsed\", \"value\": 255 }," +
+        "        { \"raw_key\": \"AMaxLFOBlockSize\", \"value\": 32 }," +
+        "        { \"raw_key\": \"ALRSplitterSize1\", \"value\": 534.0 }," +
+        "        { \"raw_key\": \"ALRSplitterSize2\", \"value\": 306.0 }," +
+        "        { \"raw_key\": \"ASideChainEnable\", \"value\": (0 or 1) }," +
+        "        { \"raw_key\": \"ASideChainMinFrequency\", \"value\": (float, 20.0 to 19999.99999999998) }," +
+        "        { \"raw_key\": \"ASideChainMaxFrequency\", \"value\": (float, 20.0 to 19999.99999999998) }," +
+        "        { \"raw_key\": \"Ahalfgain\", \"value\": 0 }," +
+        "        { \"raw_key\": \"Aamplituderatio\", \"value\": 0 }," +
+        "        { \"raw_key\": \"Xgraph\", \"value\": None }," +
+        "        { \"raw_key\": \"Mode\", \"value\": \"Normal\" }, " +
+        "        { \"raw_key\": \"XPoint\", \"value\": None }," +
+        "        { \"raw_key\": \"FlagsB\", \"value\": 143 }," +
+        "        { \"raw_key\": \"/XPoint\", \"value\": None }," +
+        "        { \"raw_key\": \"x\", \"value\": (float, 0.01 to 1.0) }," +
+        "        { \"raw_key\": \"Ay\", \"value\": (float, 0.01 to 1.0) }," +
+        "        { \"raw_key\": \"AFlagsB\", \"value\": 140 }," +
+        "        { \"raw_key\": \"/XPoint\", \"value\": None }," +
+        "        { \"raw_key\": \"x\", \"value\": (float, 0.01 to 1.0) }," +
+        "        { \"raw_key\": \"Ay\", \"value\": (float, 0.01 to 1.0) }," +
+        "        { \"raw_key\": \"AFlagsB\", \"value\": 141 }," +
+        "    ]" +
+        "5. Construct 'Meldaproduction CharmVerb VST' JSON -- reverb_json." +
+        "    - Please fill in the values." +
+        "    - Format:" +
+        "    [" +
+        "        { \"raw_key\": \"A#\", \"value\": 1 }," +
+        "        { \"raw_key\": \"A#DryWet\", \"value\": (float, 0.0 to 1.0) }," +
+        "        { \"raw_key\": \"A#Length\", \"value\": (float, 0.1 to 60.0) }," +
+        "        { \"raw_key\": \"A#Size\", \"value\": (float, 0.0 to 1.0) }," +
+        "        { \"raw_key\": \"A#LPF\", \"value\": (float, 3.0 to 3.3010299956639813 }," +
+        "        { \"raw_key\": \"A#HPF\", \"value\": (float, 3.0 to 3.3010299956639813 }," +
+        "        { \"raw_key\": \"A#Predelay\", \"value\": (float, 0.0 to 1.0) }," +
+        "        { \"raw_key\": \"A#Gain\", \"value\": (float, -24.0 to 24.0) }," +
+        "        { \"raw_key\": \"A#Widening\", \"value\": (float, -1.0 to 2.0) }," +
+        "        { \"raw_key\": \"A#DampLowF\", \"value\": (float, 20.0 to 19999.99999999998) }," +
+        "        { \"raw_key\": \"A#DampLowG\", \"value\": (float, -20.0 to 0.0) }," +
+        "        { \"raw_key\": \"A#DampLowQ\", \"value\": (float, 0.05 to 0.7071067811865476) }," +
+        "        { \"raw_key\": \"A#DampHighF\", \"value\": (float, 20.0 to 19999.99999999998) }," +
+        "        { \"raw_key\": \"A#DampHighG\", \"value\": (float, -20.0 to 0.0) }," +
+        "        { \"raw_key\": \"A#DampHighQ\", \"value\": (float, 0.05 to 0.7071067811865476) }," +
+        "        { \"raw_key\": \"A#DesignerCollapsed\", \"value\": 0 }," +
+        "        { \"raw_key\": \"A#Complexity\", \"value\": (int 1 to 64) }," +
+        "        { \"raw_key\": \"A#Modulation\", \"value\": (float, 0.0 to 1.0) }," +
+        "        { \"raw_key\": \"A#Seed\", \"value\": 1791916693 }," +
+        "        { \"raw_key\": \"A#DelayMin\", \"value\": (float, 0.0 to 1.0) }," +
+        "        { \"raw_key\": \"A#DelayMax\", \"value\": (float, 0.0 to 1.0) }," +
+        "        { \"raw_key\": \"A#FocusDelay\", \"value\": (float, -4.0 to 4.0) }," +
+        "        { \"raw_key\": \"A#WidthDelay\", \"value\": (float, 0.0 to 1.0) }," +
+        "        { \"raw_key\": \"A#OrderDelay\", \"value\": (string, \"Up\" or \"Up (2 sets)\" or \"Up (3 sets)\" or \"Up (4 sets)\" or \"Down\" or \"Down (2 sets)\" or \"Down (3 sets)\" or \"Down (4 sets)\" or \"Random\") }," +
+        "        { \"raw_key\": \"A#ModulationRate\", \"value\": (float, 0.010000000000000004 to 10.0) }," +
+        "        { \"raw_key\": \"AVersion\", \"value\": 1115136 }," +
+        "        { \"raw_key\": \"AMIDIProgramChangeEnable\", \"value\": 0 }," +
+        "        { \"raw_key\": \"AProgramChangeCategorizer\", \"value\": 0 }," +
+        "        { \"raw_key\": \"AEditorSize\", \"value\": 751573 }," +
+        "        { \"raw_key\": \"APluginToolbarCollapsed\", \"value\": 255 }," +
+        "        { \"raw_key\": \"AMaxLFOBlockSize\", \"value\": 32 }," +
+        "    ]" +
         "WARNING: Output ONLY a JSON object with this exact structure: " +
         "{ " +
         "  \"message_for_user\": \"string (Explain in 15 words in Traditional Chinese)\", " +
@@ -108,6 +187,8 @@ namespace AudioUI
         "      \"target\": \"all\"|\"first\"|\"second\"|\"third\", " +
         "      \"preamp_db\": float, " +
         "      \"graphic_eq_string\": \"string\" " +
+        "      \"comp_json\": [ ... ], " +
+        "      \"reverb_json\": [ ... ] " +
         "    } " +
         "  ] " +
         "}";
@@ -128,6 +209,8 @@ namespace AudioUI
         "{ " +
         "  \"message_for_user\": \"string (Explain briefly what you changed in 15 words in Traditional Chinese)\", " +
         "  \"preamp_db\": float, " +
+        "  \"graphic_eq_string\": \"string (The formatted frequency-gain pairs separated by semicolons)\" " +
+        "  \"graphic_eq_string\": \"string (The formatted frequency-gain pairs separated by semicolons)\" " +
         "  \"graphic_eq_string\": \"string (The formatted frequency-gain pairs separated by semicolons)\" " +
         "}";
         public async Task<string> CallGeminiApiAsync(string userSpeech, string url)
@@ -313,6 +396,20 @@ namespace AudioUI
                             sw.WriteLine($"GraphicEQ: {config.GraphicEqString}");
                         }
 
+                        if (config.CompJson != null && config.CompJson.Count > 0)
+                        {
+                            string header = "MBXXMCompressorsettings";
+                            string base64String = MeldaEncoder.EncodeMeldaChunk(header, config.CompJson);
+                            sw.WriteLine($"VSTPlugin: Library \"C:\\Program Files\\VstPlugins\\MeldaProduction\\Dynamics\\MCompressor.dll\" ChunkData \"{base64String}\"");
+                        }
+
+                        if (config.ReverbJson != null && config.ReverbJson.Count > 0)
+                        {
+                            string header = "MBXXMCharmVerbsettings";
+                            string base64String = MeldaEncoder.EncodeMeldaChunk(header, config.ReverbJson);
+                            sw.WriteLine($"VSTPlugin: Library \"C:\\Program Files\\VstPlugins\\MeldaProduction\\Reverb\\MCharmVerb.dll\" ChunkData \"{base64String}\"");
+                        }
+
                         // 4. 加入一個空行分隔不同裝置的設定 (可選)
                         sw.WriteLine();
                     }
@@ -405,7 +502,7 @@ namespace AudioUI
 
 
 
-        private const string API_KEY = "AIzaSyCMRnOADLA-VpgjY0e9dfAPLAkd-LApf_8"; // constant
+        private const string API_KEY = "AIzaSyC58BU_c7KfydnxiAGXWNn7Ry220kmFsZo"; // constant AIzaSyCMRnOADLA-VpgjY0e9dfAPLAkd-LApf_8
         private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + API_KEY;
         TtsService _TtsService = new TtsService();
         MappingManager _MappingManager = new MappingManager();
