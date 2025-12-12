@@ -18,7 +18,7 @@ namespace AudioUI
     {
         public string Id { get; set; }
         // 支援多個檔名
-        public List<FileCreateData> FileNames { get; set; } = new List<FileCreateData>();
+        public List<FileCreateData> FileDatas { get; set; } = new List<FileCreateData>();
     }
 
     public class MappingManager
@@ -33,7 +33,7 @@ namespace AudioUI
 
         // 功能：PushFront (加入到最上面)
         // 邏輯：如果 ID 不存在則建立，存在則將檔名插入到 Index 0
-        public void PushFront(string id, FileCreateData fileName)
+        public void PushFront(string id, FileCreateData fileData)
         {
             var item = MapList.FirstOrDefault(x => x.Id == id);
 
@@ -45,7 +45,7 @@ namespace AudioUI
 
             // 核心邏輯：插入到最前面 (最新排到最舊)
             // 這裡可以選擇是否允許重複檔名，目前設定為允許
-            item.FileNames.Insert(0, fileName);
+            item.FileDatas.Insert(0, fileData);
         }
 
         // 功能：PopFront (取出並移除最上面的)
@@ -53,12 +53,12 @@ namespace AudioUI
         public FileCreateData PopFront(string id)
         {
             var item = MapList.FirstOrDefault(x => x.Id == id);
-            if (item != null && item.FileNames.Count > 0)
+            if (item != null && item.FileDatas.Count > 0)
             {
-                FileCreateData poppedFileName = item.FileNames[0];
-                item.FileNames.RemoveAt(0);
+                FileCreateData poppedFileName = item.FileDatas[0];
+                item.FileDatas.RemoveAt(0);
                 // 若移除後已無檔名，移除整個項目（避免留下空的 Id）
-                if (item.FileNames.Count == 0)
+                if (item.FileDatas.Count == 0)
                 {
                     MapList.Remove(item);
                 }
@@ -75,8 +75,8 @@ namespace AudioUI
         {
             var item = MapList.FirstOrDefault(x => x.Id == id);
             if (item == null) return null;
-            if (item.FileNames == null || item.FileNames.Count == 0) return null;
-            return item.FileNames[0];
+            if (item.FileDatas == null || item.FileDatas.Count == 0) return null;
+            return item.FileDatas[0];
         }
 
         // 存檔

@@ -12,6 +12,7 @@ using System.IO;
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace AudioUI
 {
@@ -96,7 +97,22 @@ namespace AudioUI
                     if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
                     _TtsService.Stop();
-
+                    //var targetProcess = Process.GetProcessesByName("chrome");
+                    //await Task.Run(() =>
+                    //{
+                    //    try
+                    //    {
+                    //        PerProcessAudioRecorder.RecordProcessToWave(
+                    //            targetProcess[0],
+                    //            Path.Combine(".", "config", "record"),
+                    //            TimeSpan.FromSeconds(3));
+                    //    }
+                    //    catch (Exception ex)
+                    //    {
+                    //        // 這裡捕捉錯誤並 Invoke 回 UI 顯示
+                    //        Dispatcher.Invoke(() => MessageBox.Show($"錄音失敗: {ex.Message}"));
+                    //    }
+                    //});
                     await _GeminiService.RecordAndProcessAsync(0, 5000, audioPath, configPath);
                 }
                 catch (Exception ex)

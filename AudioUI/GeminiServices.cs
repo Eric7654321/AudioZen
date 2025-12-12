@@ -351,7 +351,7 @@ namespace AudioUI
                 { "third", "VG279Q (NVIDIA High Definition Audio)" } // 第三個裝置
             };  
             // 第一次回應
-            await _TtsService.SpeakAsync("請問​今天​需要​我​幫忙​做​什​麼"); // constant
+            await _TtsService.SpeakAsync("請問您想如何調整音訊設定"); // constant
 
             // 錄音recordMs 毫秒
             string audioBase64 = await RecordAudioAsync(audioFilePath, recordMs);
@@ -369,6 +369,8 @@ namespace AudioUI
                 // 4. 解析回傳並寫入 Config
                 string ttsMessage = ParseAndWriteConfig(geminiResponse, eqConfigPath, myDeviceMap);
                 int retryCount = 0;
+
+                // 處理geminiResponse的無效回應
                 while (ttsMessage=="-1" && retryCount < 3)
                 {
                     geminiResponse = await CallGeminiApiAsync(transcribedText, GEMINI_URL);

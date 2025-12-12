@@ -9,6 +9,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
+using System.Windows;
 
 namespace AudioUI
 {
@@ -24,6 +25,31 @@ namespace AudioUI
             new Guid("C8ADBD64-E71E-48A0-A4DE-185C395CD317");
 
         private const string VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK = "VAD\\Process_Loopback";
+
+        private static WaveFormatEx CreateLoopbackFormat()
+        {
+            const ushort WAVE_FORMAT_PCM = 0x0001;
+
+            ushort channels = 2;
+            uint sampleRate = 44100;
+            ushort bits = 16;
+
+            ushort blockAlign = (ushort)(channels * (bits / 8));
+            uint avgBytes = sampleRate * blockAlign;
+
+            return new WaveFormatEx
+            {
+                wFormatTag = WAVE_FORMAT_PCM,
+                nChannels = channels,
+                nSamplesPerSec = sampleRate,
+                nBlockAlign = blockAlign,
+                nAvgBytesPerSec = avgBytes,
+                wBitsPerSample = bits,
+                cbSize = 0
+            };
+        }
+
+
 
         public static void RecordProcessToWave(
             Process process,
@@ -50,7 +76,6 @@ namespace AudioUI
                     throw new NotSupportedException(
                         "Per-process loopback 錄音需要 Windows 10 build 20348 以上或 Windows 11。");
                 }
-
                 RecordDeviceLoopbackInternal(process, filePath, duration);
             }
         }
@@ -74,21 +99,33 @@ namespace AudioUI
             // 1. 啟用 per-process loopback 對應的 IAudioClient
             IAudioClient audioClient = ActivateAudioClientForProcess((uint)process.Id);
 
-            // 官方 ApplicationLoopback 範例使用固定 PCM 格式
-            WaveFormatEx format = CreateDefaultPcmFormat();
-            int bytesPerFrame = format.nBlockAlign;
+            // --- 修正開始 ---
 
-            long hnsBufferDuration = 0;
+            // 2. 取得系統混音格式 (Mix Format)，而不是自己瞎猜 44100Hz
+            // 這能解決 0x88890021 (Buffer Size Not Aligned) 的大部分問題
+
+            MessageBox.Show("test");
+            WaveFormatEx format = CreateLoopbackFormat();
+            MessageBox.Show("test");
+
+            // 計算 Frame 大小 (通常 Float 是 32bit * 2ch = 8 bytes)
+            int bytesPerFrame = (format.wBitsPerSample / 8) * format.nChannels;
+
+            long hnsBufferDuration = 10000000; // 建議給予明確的 Buffer (例如 1秒 = 10,000,000 hnsecs)，或者填 0 讓系統決定
             long hnsPeriodicity = 0;
 
+            // 3. Initialize 修正
+            // 關鍵錯誤修正：這裡必須加上 AudioClientStreamFlags.Loopback
             CheckHr(audioClient.Initialize(
                     AudioClientShareMode.Shared,
-                    AudioClientStreamFlags.None,
+                    AudioClientStreamFlags.Loopback, // <--- 原本是 None，改成 Loopback
                     hnsBufferDuration,
                     hnsPeriodicity,
                     ref format,
                     IntPtr.Zero),
                 "IAudioClient.Initialize (process loopback) failed.");
+
+            // --- 修正結束 ---
 
             uint bufferFrameCount;
             CheckHr(audioClient.GetBufferSize(out bufferFrameCount), "GetBufferSize failed.");
@@ -360,14 +397,21 @@ namespace AudioUI
         {
             using (var bw = new BinaryWriter(stream, System.Text.Encoding.ASCII, leaveOpen: true))
             {
+                // 我們只寫最基本的 16 bytes (不包含 cbSize 和任何附加欄位)
                 uint fmtChunkSize = 16;
-                uint riffChunkSize =
-                    (uint)(4 + 8 + fmtChunkSize + 8 + dataLengthBytes);
 
+                uint riffChunkSize = (uint)(
+                    4 +              // "WAVE"
+                    8 + fmtChunkSize + // "fmt " + size + data
+                    8 + dataLengthBytes // "data" + size + data
+                );
+
+                // RIFF header
                 bw.Write(new[] { (byte)'R', (byte)'I', (byte)'F', (byte)'F' });
                 bw.Write(riffChunkSize);
                 bw.Write(new[] { (byte)'W', (byte)'A', (byte)'V', (byte)'E' });
 
+                // fmt chunk
                 bw.Write(new[] { (byte)'f', (byte)'m', (byte)'t', (byte)' ' });
                 bw.Write(fmtChunkSize);
 
@@ -377,8 +421,9 @@ namespace AudioUI
                 bw.Write(format.nAvgBytesPerSec);
                 bw.Write(format.nBlockAlign);
                 bw.Write(format.wBitsPerSample);
-                bw.Write(format.cbSize);
+                // **這裡不要寫 cbSize，也不要寫任何附加欄位**
 
+                // data chunk
                 bw.Write(new[] { (byte)'d', (byte)'a', (byte)'t', (byte)'a' });
                 bw.Write((uint)dataLengthBytes);
             }
