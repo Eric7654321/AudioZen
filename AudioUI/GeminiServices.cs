@@ -361,7 +361,7 @@ namespace AudioUI
 
             // 3. 呼叫 Gemini API
             string transcribedText = await TranscribeWithGeminiAsync(audioBase64, GEMINI_URL); // STT
-            MessageBox.Show(transcribedText);
+            System.Windows.MessageBox.Show(transcribedText);
             string geminiResponse = await CallGeminiApiAsync(transcribedText, GEMINI_URL);
 
             if (!string.IsNullOrEmpty(geminiResponse))

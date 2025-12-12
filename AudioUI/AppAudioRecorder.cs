@@ -104,9 +104,9 @@ namespace AudioUI
             // 2. 取得系統混音格式 (Mix Format)，而不是自己瞎猜 44100Hz
             // 這能解決 0x88890021 (Buffer Size Not Aligned) 的大部分問題
 
-            MessageBox.Show("test");
+            System.Windows.MessageBox.Show("test");
             WaveFormatEx format = CreateLoopbackFormat();
-            MessageBox.Show("test");
+            System.Windows.MessageBox.Show("test");
 
             // 計算 Frame 大小 (通常 Float 是 32bit * 2ch = 8 bytes)
             int bytesPerFrame = (format.wBitsPerSample / 8) * format.nChannels;

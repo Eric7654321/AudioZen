@@ -90,7 +90,7 @@ namespace AudioUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"存檔失敗: {ex.Message}");
+                System.Windows.MessageBox.Show($"存檔失敗: {ex.Message}");
             }
         }
 
@@ -101,7 +101,7 @@ namespace AudioUI
             {
                 if (!File.Exists(_filePath))
                 {
-                    MessageBox.Show("找不到存檔檔案。");
+                    System.Windows.MessageBox.Show("找不到存檔檔案。");
                     return;
                 }
 
@@ -111,12 +111,12 @@ namespace AudioUI
                 if (loadedData != null)
                 {
                     MapList = loadedData;
-                    MessageBox.Show("讀檔成功！");
+                    System.Windows.MessageBox.Show("讀檔成功！");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"讀檔失敗: {ex.Message}");
+                System.Windows.MessageBox.Show($"讀檔失敗: {ex.Message}");
             }
         }
     }
