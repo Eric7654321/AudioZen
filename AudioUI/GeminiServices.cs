@@ -1,5 +1,6 @@
 ﻿using HandyControl.Controls;
 using HandyControl.Tools.Extension;
+using Microsoft.Toolkit.Uwp.Notifications;
 using NAudio.Wave;
 using System;
 using System.Collections.Generic;
@@ -13,6 +14,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using Microsoft.Toolkit.Uwp.Notifications;
 
 namespace AudioUI
 {
@@ -332,6 +334,76 @@ namespace AudioUI
             string originconfigPath = _MappingManager.GetFront(IdString).FileName;
             File.Copy(originconfigPath, configPath, overwrite: true);
         }
+
+        /// <summary>
+        /// 發送通知並「非同步等待」使用者回應
+        /// </summary>
+        /// <returns>Task<bool>: True=接受, False=拒絕或超時</returns>
+        public async Task<bool> SendNotificationAndWaitAsync()
+        {
+            // 1. 建立一個任務完成來源，用來當作暫停點
+            var tcs = new TaskCompletionSource<bool>();
+
+            // 2. 定義臨時的事件處理邏輯
+            // 這裡我們用 lambda 抓取回傳結果
+            void handler(ToastNotificationActivatedEventArgsCompat e)
+            {
+                var args = ToastArguments.Parse(e.Argument);
+
+                // 檢查是否有 action 參數
+                if (args.TryGetValue("action", out string action))
+                {
+                    // 根據使用者的選擇設定結果
+                    if (action == "yes")
+                    {
+                        tcs.TrySetResult(true);
+                    }
+                    else
+                    {
+                        tcs.TrySetResult(false);
+                    }
+                }
+            };
+
+            // 3. 註冊事件監聽
+            ToastNotificationManagerCompat.OnActivated += handler;
+
+            try
+            {
+                // 4. 建構並發送通知
+                new ToastContentBuilder()
+                    .AddText("確認通知")
+                    .AddText("請問您是否接受調整？")
+                    .AddButton(new ToastButton("是", "action=yes"))
+                    .AddButton(new ToastButton("否", "action=no"))
+                    .Show();
+
+                // 5. 等待使用者回應，或是等待 10 秒超時 (避免程式永遠卡住)
+                // Task.WhenAny 會回傳最先完成的那個 Task
+                var completedTask = await Task.WhenAny(tcs.Task, Task.Delay(10000));
+
+                if (completedTask == tcs.Task)
+                {
+                    // 使用者在時間內回應了
+                    return await tcs.Task;
+                }
+                else
+                {
+                    // 超時了 (使用者沒點)
+                    // 這裡可以選擇清除通知，避免過期點擊
+                    ToastNotificationManagerCompat.History.Clear();
+                    return false; // 預設回傳 false
+                }
+            }
+            finally
+            {
+                // 6. 重要：無論結果如何，一定要取消註冊事件，避免記憶體洩漏或重複觸發
+                ToastNotificationManagerCompat.OnActivated -= handler;
+            }
+        }
+
+
+
 
 
         private const string API_KEY = "AIzaSyCMRnOADLA-VpgjY0e9dfAPLAkd-LApf_8"; // constant

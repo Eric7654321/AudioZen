@@ -15,6 +15,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
+using Microsoft.Toolkit.Uwp.Notifications;
 
 // ★★★ 關鍵修正：只給 WinForms 一個別名，不要整個引用，避免 Button/MessageBox 衝突 ★★★
 using WinForms = System.Windows.Forms;
@@ -124,8 +125,27 @@ namespace AudioUI
                     var dir = Path.GetDirectoryName(configPath);
                     if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
+                    bool isAccepted = await _GeminiService.SendNotificationAndWaitAsync();
+                    MessageBox.Show(isAccepted.ToString());
+
                     _TtsService.Stop();
-                    // 呼叫 AI 服務
+
+                    //var targetProcess = Process.GetProcessesByName("chrome");
+                    //await Task.Run(() =>
+                    //{
+                    //    try
+                    //    {
+                    //        PerProcessAudioRecorder.RecordProcessToWave(
+                    //            targetProcess[0],
+                    //            Path.Combine(".", "config", "record"),
+                    //            TimeSpan.FromSeconds(3));
+                    //    }
+                    //    catch (Exception ex)
+                    //    {
+                    //        // 這裡捕捉錯誤並 Invoke 回 UI 顯示
+                    //        Dispatcher.Invoke(() => MessageBox.Show($"錄音失敗: {ex.Message}"));
+                    //    }
+                    //});
                     await _GeminiService.RecordAndProcessAsync(0, 5000, audioPath, configPath);
 
                     // 錄音完成後刷新 Config 列表
