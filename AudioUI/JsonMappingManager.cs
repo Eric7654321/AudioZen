@@ -19,8 +19,14 @@ namespace AudioUI
     {
         public string Id { get; set; }
         public string ChatName { get; set; }
+        public string RecordPath { get; set; }
         // 支援多個檔名
         public ObservableCollection<FileCreateData> FileDatas { get; set; } = new ObservableCollection<FileCreateData>();
+    }
+    public class ChatSessionInfo
+    {
+        public string Id { get; set; }
+        public string DisplayName { get; set; } 
     }
 
     public class ChatManager
@@ -31,6 +37,56 @@ namespace AudioUI
         public ChatManager()
         {
             MapList = new List<FileMapItem>();
+        }
+
+        // 取得聊天紀錄的側邊欄
+        public List<ChatSessionInfo> GetChatList()
+        {
+            var historyList = new List<ChatSessionInfo>();
+
+            // 遍歷所有聊天室
+            foreach (var item in MapList)
+            {
+                // 1. 處理顯示名稱：如果是空的，就顯示 "New Chat" 或 "未命名對話"
+                string nameToShow = string.IsNullOrWhiteSpace(item.ChatName)
+                                    ? "New Chat"
+                                    : item.ChatName;
+
+                // 2. (選用) 取得最後一則訊息當作預覽
+                // 因為你的 PushFront 邏輯，FileDatas[0] 是最新的訊息
+                if (item.FileDatas != null && item.FileDatas.Count > 0)
+                {
+                    var latestData = item.FileDatas[0];
+                    // 優先顯示 User 的輸入，若無則顯示 AI 回應
+                    string rawMsg = !string.IsNullOrEmpty(latestData.UserInput)
+                                    ? latestData.UserInput
+                                    : latestData.AiResponse;
+                }
+
+                if (item.Id != "-1")
+                {
+                    // 3. 加入列表
+                    historyList.Add(new ChatSessionInfo
+                    {
+                        Id = item.Id,
+                        DisplayName = nameToShow
+                    });
+                }
+            }
+            return historyList;
+        }
+
+        // 取得歷史紀錄
+        public List<FileCreateData> GetHistory(string id, int limit = 10)
+        {
+            var item = MapList.FirstOrDefault(x => x.Id == id);
+            if (item == null) return new List<FileCreateData>();
+
+            // item.FileDatas 目前是 [最新, 次新, ..., 最舊]
+            // 我們先取前 limit 個 (即最近的 N 個)，然後反轉順序變成 [最舊 ... 最新]
+            var history = item.FileDatas.Take(limit).Reverse().ToList();
+
+            return history;
         }
 
         public string GetNextId()
@@ -61,39 +117,30 @@ namespace AudioUI
             return candidate.ToString();
         }
 
-        // 建立新的Chat
-        public void CreateChat(string id, string ChatName)
-        {
-            var item = MapList.FirstOrDefault(x => x.Id == id);
-
-            if (item == null)
-            {
-                item = new FileMapItem { Id = id };
-                MapList.Add(item);
-            }
-            MapList.Last().ChatName = ChatName;
-        }
-
 
         // 功能：PushFront (加入到最上面)
         // 邏輯：如果 ID 不存在則建立，存在則將檔名插入到 Index 0
-        public void PushFront(string id, FileCreateData fileData)
+        public void PushFront(string id, FileCreateData fileData, string chatName = "", string recordPath = "")
         {
             var item = MapList.FirstOrDefault(x => x.Id == id);
 
+            // 未建立 -> 新增一個
             if (item == null)
             {
-                item = new FileMapItem { Id = id };
+                string title = chatName.Length > 10
+                ? chatName.Substring(0, 10) + "..."
+                : chatName;
+
+                item = new FileMapItem { Id = id, ChatName = title, RecordPath = recordPath };
                 MapList.Add(item);
             }
 
             // 核心邏輯：插入到最前面 (最新排到最舊)
-            // 這裡可以選擇是否允許重複檔名，目前設定為允許
             item.FileDatas.Insert(0, fileData);
         }
 
         // 功能：PopFront (取出並移除最上面的)
-        // 邏輯：移除 Index 0 的項目並回傳，如果清空了則移除 ID 並回傳空字串
+        // 邏輯：移除 Index 0 的項目並回傳
         public FileCreateData PopFront(string id)
         {
             var item = MapList.FirstOrDefault(x => x.Id == id);
@@ -109,13 +156,40 @@ namespace AudioUI
             return null;
         }
 
-        // 查詢：取得目前所有堆疊內容
+        // 查詢：取得目前第一個內容
         public FileCreateData GetFront(string id)
         {
             var item = MapList.FirstOrDefault(x => x.Id == id);
             if (item == null) return null;
             if (item.FileDatas == null || item.FileDatas.Count == 0) return null;
             return item.FileDatas[0];
+        }
+
+        // 將指定的 Chat 移動到 List 的第一個位置 (UI 列表通常綁定這個 List)
+        public void MoveChatToTop(string id)
+        {
+            var item = MapList.FirstOrDefault(x => x.Id == id);
+            if (item != null)
+            {
+                // 如果已經是第一個就不用動
+                if (MapList.IndexOf(item) == 0) return;
+
+                MapList.Remove(item);
+                MapList.Insert(0, item);
+
+                // 觸發存檔確保順序被保存
+                SaveToJson();
+            }
+        }
+
+        public void RenameChat(string id, string newName)
+        {
+            var item = MapList.FirstOrDefault(x => x.Id == id);
+            if (item != null)
+            {
+                item.ChatName = newName;
+                SaveToJson();
+            }
         }
 
         // 存檔
@@ -157,6 +231,36 @@ namespace AudioUI
                 System.Windows.MessageBox.Show($"讀檔失敗: {ex.Message}");
             }
         }
-    }
 
+        // 整串刪除
+        public bool DeleteChat(string id)
+        {
+            var item = MapList.FirstOrDefault(x => x.Id == id);
+            if (item == null) return false;
+
+            // 1. 從列表中移除
+            MapList.Remove(item);
+
+            // 2. 觸發存檔
+            SaveToJson();
+            return true;
+        }
+
+        // 單則訊息刪除
+        public void DeleteMessage(string id, FileCreateData messageData)
+        {
+            var item = MapList.FirstOrDefault(x => x.Id == id);
+            if (item == null || messageData == null) return;
+
+            if (item.FileDatas.Contains(messageData))
+            {
+
+                // 1. 移除資料
+                item.FileDatas.Remove(messageData);
+
+                // 2. 存檔
+                SaveToJson();
+            }
+        }
+    }
 }

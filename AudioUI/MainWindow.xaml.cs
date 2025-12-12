@@ -128,7 +128,7 @@ namespace AudioUI
 
                     _TtsService.Stop();
                     await PerProcessAudioRecorder.RecordAllActiveAppsAsync(
-                        Path.Combine(".", "config", "record"),
+                        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "record"),
                         TimeSpan.FromSeconds(3));
 
                     //await _GeminiService.RecordAndProcessAsync(0, 5000, audioPath, configPath);

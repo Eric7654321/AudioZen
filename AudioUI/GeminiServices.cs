@@ -519,8 +519,8 @@ namespace AudioUI
 
 
 
-        private const string API_KEY = "AIzaSyC58BU_c7KfydnxiAGXWNn7Ry220kmFsZo"; // constant AIzaSyCMRnOADLA-VpgjY0e9dfAPLAkd-LApf_8
-        private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + API_KEY; // todo
+        private const string API_KEY = "AIzaSyBnaa04JNMcjsraKZYs3oitjsJIrt5zaQQ"; // constant AIzaSyCMRnOADLA-VpgjY0e9dfAPLAkd-LApf_8
+        private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-lite:generateContent?key=" + API_KEY; // todo
         TtsService _TtsService = new TtsService();
         ChatManager _ChatManager = new ChatManager();
 
@@ -529,6 +529,10 @@ namespace AudioUI
         /// </summary>
         public async Task RecordAndProcessAsync(int situationId, int recordMs,string audioFilePath, string eqConfigPath)
         {
+            Task<string> recordPathTask = PerProcessAudioRecorder.RecordAllActiveAppsAsync(
+                        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "record"),
+                        TimeSpan.FromSeconds(6));
+
             // 0. 第一次回應
             await _TtsService.SpeakAsync("請問您想如何調整音訊設定"); // constant
 
@@ -580,6 +584,8 @@ namespace AudioUI
                     AiResponse = ttsMessage
                 };
 
+                string recordPath = await recordPathTask;
+
                 // 6. 詢問是否套用設定
                 _ChatManager.PushFront("-1", newCreateData);
                 if (await SendNotificationAndWaitAsync("回退確認","是否要取消此設定"))
@@ -594,10 +600,13 @@ namespace AudioUI
 
                     if (await SendNotificationAndWaitAsync("preset設定", "是否要存為preset"))
                     {
-                        _ChatManager.PushFront(_ChatManager.GetNextId().ToString(), newCreateData);
+                        _ChatManager.PushFront(_ChatManager.GetNextId().ToString(), newCreateData, transcribedText, recordPath);
                     }
                 }
-                    
+
+                // Inserted wait for one second as requested (非阻塞)
+                await Task.Delay(1000);
+
                 SendNotification("設定結束", "調整已結束，請享受更好的聲音");
                 // 儲存 Chat
                 _ChatManager.SaveToJson();
