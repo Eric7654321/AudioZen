@@ -14,7 +14,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using Microsoft.Toolkit.Uwp.Notifications;
 
 namespace AudioUI
 {
@@ -465,7 +464,6 @@ namespace AudioUI
 
                 await _TtsService.SpeakAsync("是否需要調整回原本的內容"); // constant
 
-                bool needRollback = false; // simulate user input
                 FileCreateData newCreateData = new FileCreateData
                 {
                     FileName = eqConfigPath,
@@ -473,7 +471,7 @@ namespace AudioUI
                     AiResponse = ttsMessage
                 };
                 // 如果對輸入不滿意
-                if (needRollback)
+                if (await SendNotificationAndWaitAsync())
                 {
                     // rollback
                     await ConfigRollback("-1", configPath);
@@ -484,8 +482,7 @@ namespace AudioUI
                 }
                 // 詢問是否需要儲存成preset
                 await _TtsService.SpeakAsync("是否需要將此設定儲存成preset"); // constant
-                bool needSavePreset = true; // simulate user input
-                if (needSavePreset)
+                if (await SendNotificationAndWaitAsync())
                 {
                     _MappingManager.PushFront(situationIdString, newCreateData);
                 }

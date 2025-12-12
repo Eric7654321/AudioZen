@@ -1,6 +1,14 @@
-﻿using System.Collections.ObjectModel;
+﻿using AudioTools;
+using Microsoft.Toolkit.Uwp.Notifications;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -8,19 +16,10 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
+using Drawing = System.Drawing;
 using Path = System.IO.Path;
-using System.IO;
-using System;
-using System.Linq;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text.Json;
-using Microsoft.Toolkit.Uwp.Notifications;
-
 // ★★★ 關鍵修正：只給 WinForms 一個別名，不要整個引用，避免 Button/MessageBox 衝突 ★★★
 using WinForms = System.Windows.Forms;
-
-using Drawing = System.Drawing;
 
 namespace AudioUI
 {
@@ -74,6 +73,7 @@ namespace AudioUI
         private TtsService _TtsService = new TtsService();
         private MappingManager _MappingManager = new MappingManager();
         private KeyMappingService _KeyMapService = new KeyMappingService();
+        private WakeWordTrigger _WakeWordTrigger = new WakeWordTrigger();
 
         // 背景執行與快捷鍵服務
         private HotkeyService _HotkeyService = new HotkeyService();
@@ -105,6 +105,7 @@ namespace AudioUI
         public MainWindow()
         {
             InitializeComponent();
+            _WakeWordTrigger.InitializeSpeechRecognition();
             this.DataContext = this;
 
             MinimizeCommand = new RelayCommand(_ => WindowState = WindowState.Minimized);
@@ -125,27 +126,14 @@ namespace AudioUI
                     var dir = Path.GetDirectoryName(configPath);
                     if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
-                    bool isAccepted = await _GeminiService.SendNotificationAndWaitAsync();
-                    System.Windows.MessageBox.Show(isAccepted.ToString());
+                    //bool isAccepted = await _GeminiService.SendNotificationAndWaitAsync();
+                    //System.Windows.MessageBox.Show(isAccepted.ToString());
 
                     _TtsService.Stop();
+                    //await PerProcessAudioRecorder.RecordAllActiveAppsAsync(
+                    //    Path.Combine(".", "config", "record"), 
+                    //    TimeSpan.FromSeconds(3));
 
-                    //var targetProcess = Process.GetProcessesByName("chrome");
-                    //await Task.Run(() =>
-                    //{
-                    //    try
-                    //    {
-                    //        PerProcessAudioRecorder.RecordProcessToWave(
-                    //            targetProcess[0],
-                    //            Path.Combine(".", "config", "record"),
-                    //            TimeSpan.FromSeconds(3));
-                    //    }
-                    //    catch (Exception ex)
-                    //    {
-                    //        // 這裡捕捉錯誤並 Invoke 回 UI 顯示
-                    //        Dispatcher.Invoke(() => MessageBox.Show($"錄音失敗: {ex.Message}"));
-                    //    }
-                    //});
                     await _GeminiService.RecordAndProcessAsync(0, 5000, audioPath, configPath);
 
                     // 錄音完成後刷新 Config 列表

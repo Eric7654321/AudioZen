@@ -1,292 +1,235 @@
-﻿// PerProcessAudioRecorder.cs
-// 只負責錄音邏輯，不含任何 WPF UI。
-// - 在支援 Application Loopback 的系統 (Windows 10 build 20348+/Windows 11) 上，使用 per-process loopback 只錄指定程式。
-// - 在較舊系統上，會退回錄整個預設播放裝置的 loopback（所有程式混在一起）。
-
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
-using System.Windows;
+using System.Threading.Tasks;
 
-namespace AudioUI
+namespace AudioTools
 {
-    /// <summary>
-    /// 針對單一 Process 錄製輸出音訊到 WAV 檔。
-    /// </summary>
     public static class PerProcessAudioRecorder
     {
-        private static Guid IID_IAudioClient =
-            new Guid("1CB9AD4C-DBFA-4c32-B178-C2F568A703B2");
-
-        private static Guid IID_IAudioCaptureClient =
-            new Guid("C8ADBD64-E71E-48A0-A4DE-185C395CD317");
-
+        // 定義 COM GUIDs
+        private static  Guid IID_IAudioClient = new Guid("1CB9AD4C-DBFA-4c32-B178-C2F568A703B2");
+        private static  Guid IID_IAudioCaptureClient = new Guid("C8ADBD64-E71E-48A0-A4DE-185C395CD317");
         private const string VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK = "VAD\\Process_Loopback";
 
-        private static WaveFormatEx CreateLoopbackFormat()
+        /// <summary>
+        /// [新功能] 建立 Timestamp 資料夾，並對所有有視窗的應用程式同時進行錄音。
+        /// </summary>
+        /// <param name="baseOutputFolder">基礎輸出路徑 (例如 C:\Recordings)</param>
+        /// <param name="duration">錄音時間長度</param>
+        public static async Task RecordAllActiveAppsAsync(string baseOutputFolder, TimeSpan duration)
         {
-            const ushort WAVE_FORMAT_PCM = 0x0001;
-
-            ushort channels = 2;
-            uint sampleRate = 44100;
-            ushort bits = 16;
-
-            ushort blockAlign = (ushort)(channels * (bits / 8));
-            uint avgBytes = sampleRate * blockAlign;
-
-            return new WaveFormatEx
+            if (!IsProcessLoopbackSupported())
             {
-                wFormatTag = WAVE_FORMAT_PCM,
-                nChannels = channels,
-                nSamplesPerSec = sampleRate,
-                nBlockAlign = blockAlign,
-                nAvgBytesPerSec = avgBytes,
-                wBitsPerSample = bits,
-                cbSize = 0
-            };
-        }
-
-
-
-        public static void RecordProcessToWave(
-            Process process,
-            string outputFolder,
-            TimeSpan duration,
-            bool allowDeviceLoopbackFallback = true)
-        {
-            if (process == null) throw new ArgumentNullException(nameof(process));
-            if (string.IsNullOrWhiteSpace(outputFolder)) throw new ArgumentNullException(nameof(outputFolder));
-            if (!Directory.Exists(outputFolder)) Directory.CreateDirectory(outputFolder);
-
-            string safeName = SanitizeFileName(process.ProcessName);
-            string fileName = $"{DateTime.Now:yyyyMMdd_HHmmss}_{safeName}.wav";
-            string filePath = Path.Combine(outputFolder, fileName);
-
-            if (IsProcessLoopbackSupported())
-            {
-                RecordProcessLoopbackInternal(process, filePath, duration);
+                throw new NotSupportedException("此功能需要 Windows 10 Build 20348 或 Windows 11 以上版本。");
             }
-            else
+
+            // 1. 建立 Timestamp 資料夾
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            string sessionFolder = Path.Combine(baseOutputFolder, timestamp);
+            if (!Directory.Exists(sessionFolder)) Directory.CreateDirectory(sessionFolder);
+
+            // 2. 篩選目標 Process
+            // 策略：抓取所有有「視窗標題」的程式，通常這些才是會發出聲音的使用者應用程式。
+            // 過濾掉系統核心程序與沒有 UI 的背景服務。
+            var targetProcesses = Process.GetProcesses()
+                .Where(p => !string.IsNullOrEmpty(p.MainWindowTitle))
+                .ToList();
+
+            Debug.WriteLine($"找到 {targetProcesses.Count} 個潛在錄音目標。");
+
+            // 3. 建立並行任務 (Parallel Tasks)
+            var recordingTasks = new List<Task>();
+
+            foreach (var p in targetProcesses)
             {
-                if (!allowDeviceLoopbackFallback)
+                // 為每個 Process 啟動一個獨立的 Task
+                var task = Task.Run(() =>
                 {
-                    throw new NotSupportedException(
-                        "Per-process loopback 錄音需要 Windows 10 build 20348 以上或 Windows 11。");
-                }
-                RecordDeviceLoopbackInternal(process, filePath, duration);
+                    try
+                    {
+                        // 產生檔名：時間_ProcessName_PID.wav
+                        string safeName = SanitizeFileName(p.ProcessName);
+                        string fileName = $"{timestamp}_{safeName}_{p.Id}.wav";
+                        string fullPath = Path.Combine(sessionFolder, fileName);
+
+                        // 呼叫錄音核心邏輯
+                        RecordProcessLoopbackInternal(p, fullPath, duration);
+                    }
+                    catch (Exception ex)
+                    {
+                        // 某些程式可能無法錄音 (權限不足或已關閉)，這裡捕捉例外避免整個批次崩潰
+                        Debug.WriteLine($"無法錄製 {p.ProcessName} (PID: {p.Id}): {ex.Message}");
+                    }
+                });
+
+                recordingTasks.Add(task);
+            }
+
+            // 4. 等待所有錄音任務完成
+            if (recordingTasks.Count > 0)
+            {
+                await Task.WhenAll(recordingTasks);
             }
         }
 
-        /// <summary>判斷系統是否支援 per-process loopback。</summary>
-        private static bool IsProcessLoopbackSupported()
+        /// <summary>單一 Process 錄音 (核心邏輯)</summary>
+        public static void RecordProcessToWave(Process process, string outputFilePath, TimeSpan duration)
         {
-#if NET5_0_OR_GREATER
-            // Windows 10 build 20348 (Server 2022) 開始支援 per-process loopback。
-            return OperatingSystem.IsWindowsVersionAtLeast(10, 0, 20348);
-#else
-            var v = Environment.OSVersion.Version;
-            return v.Major > 10 || (v.Major == 10 && v.Build >= 20348);
-#endif
+            // 這是給外部單獨呼叫用的接口，批次功能使用的是 RecordAllActiveAppsAsync
+            if (process == null) throw new ArgumentNullException(nameof(process));
+
+            // 確保路徑存在
+            string folder = Path.GetDirectoryName(outputFilePath);
+            if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+
+            RecordProcessLoopbackInternal(process, outputFilePath, duration);
         }
 
-        // --- per-process loopback path (需要新系統) ---
+        // --- 核心錄製實作 ---
 
         private static void RecordProcessLoopbackInternal(Process process, string filePath, TimeSpan duration)
         {
-            // 1. 啟用 per-process loopback 對應的 IAudioClient
-            IAudioClient audioClient = ActivateAudioClientForProcess((uint)process.Id);
-
-            // --- 修正開始 ---
-
-            // 2. 取得系統混音格式 (Mix Format)，而不是自己瞎猜 44100Hz
-            // 這能解決 0x88890021 (Buffer Size Not Aligned) 的大部分問題
-
-            System.Windows.MessageBox.Show("test");
-            WaveFormatEx format = CreateLoopbackFormat();
-            System.Windows.MessageBox.Show("test");
-
-            // 計算 Frame 大小 (通常 Float 是 32bit * 2ch = 8 bytes)
-            int bytesPerFrame = (format.wBitsPerSample / 8) * format.nChannels;
-
-            long hnsBufferDuration = 10000000; // 建議給予明確的 Buffer (例如 1秒 = 10,000,000 hnsecs)，或者填 0 讓系統決定
-            long hnsPeriodicity = 0;
-
-            // 3. Initialize 修正
-            // 關鍵錯誤修正：這裡必須加上 AudioClientStreamFlags.Loopback
-            CheckHr(audioClient.Initialize(
-                    AudioClientShareMode.Shared,
-                    AudioClientStreamFlags.Loopback, // <--- 原本是 None，改成 Loopback
-                    hnsBufferDuration,
-                    hnsPeriodicity,
-                    ref format,
-                    IntPtr.Zero),
-                "IAudioClient.Initialize (process loopback) failed.");
-
-            // --- 修正結束 ---
-
-            uint bufferFrameCount;
-            CheckHr(audioClient.GetBufferSize(out bufferFrameCount), "GetBufferSize failed.");
-
-            IntPtr captureClientPtr;
-            CheckHr(audioClient.GetService(ref IID_IAudioCaptureClient, out captureClientPtr),
-                "GetService(IAudioCaptureClient) failed.");
-
-            var captureClient = (IAudioCaptureClient)Marshal.GetObjectForIUnknown(captureClientPtr);
+            IAudioClient audioClient = null;
+            IAudioCaptureClient captureClient = null;
 
             try
             {
-                CaptureToWave(audioClient, captureClient, format, bytesPerFrame, duration, filePath);
-            }
-            finally
-            {
-                Marshal.ReleaseComObject(captureClient);
-                Marshal.ReleaseComObject(audioClient);
-            }
-        }
+                // 1. 取得 Process Loopback 音訊介面
+                audioClient = ActivateAudioClientForProcess((uint)process.Id);
 
-        // --- device loopback fallback (所有程式混在一起) ---
+                // 2. 設定 WASAPI 來源格式 (必須是 32-bit Float, 48kHz)
+                WaveFormatEx inputFormat = CreateLoopbackFormat();
 
-        private static void RecordDeviceLoopbackInternal(Process process, string filePath, TimeSpan duration)
-        {
-            // 取得預設播放裝置
-            var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumeratorComObject();
-            IMMDevice device = null;
+                // 3. 設定 WAV 存檔格式 (轉換為 16-bit PCM)
+                WaveFormatEx fileFormat = CreateOutputPcmFormat(inputFormat);
 
-            try
-            {
-                CheckHr(enumerator.GetDefaultAudioEndpoint(EDataFlow.eRender, ERole.eMultimedia, out device),
-                    "GetDefaultAudioEndpoint failed.");
-
-                // 由裝置產生 IAudioClient
-                IntPtr audioClientPtr;
-                CheckHr(device.Activate(ref IID_IAudioClient, CLSCTX.CLSCTX_ALL, IntPtr.Zero, out audioClientPtr),
-                    "IMMDevice.Activate(IAudioClient) failed.");
-
-                var audioClient = (IAudioClient)Marshal.GetObjectForIUnknown(audioClientPtr);
-
-                IntPtr mixFmtPtr;
-                WaveFormatEx format;
-
-                int hrMix = audioClient.GetMixFormat(out mixFmtPtr);
-                if (hrMix >= 0 && mixFmtPtr != IntPtr.Zero)
-                {
-                    format = Marshal.PtrToStructure<WaveFormatEx>(mixFmtPtr);
-                    Marshal.FreeCoTaskMem(mixFmtPtr);
-                }
-                else
-                {
-                    format = CreateDefaultPcmFormat();
-                }
-
-                int bytesPerFrame = (format.wBitsPerSample / 8) * format.nChannels;
-                long hnsBufferDuration = 0;
-                long hnsPeriodicity = 0;
-
+                // 4. 初始化 (關鍵：AudioClientStreamFlags.Loopback)
+                long hnsBufferDuration = 1000000; // 100ms buffer
                 CheckHr(audioClient.Initialize(
                         AudioClientShareMode.Shared,
-                        AudioClientStreamFlags.Loopback,
+                        AudioClientStreamFlags.Loopback, // 必備旗標
                         hnsBufferDuration,
-                        hnsPeriodicity,
-                        ref format,
+                        0,
+                        ref inputFormat,
                         IntPtr.Zero),
-                    "IAudioClient.Initialize (device loopback) failed.");
+                    "IAudioClient.Initialize failed.");
 
-                uint bufferFrameCount;
-                CheckHr(audioClient.GetBufferSize(out bufferFrameCount), "GetBufferSize failed.");
-
+                // 5. 取得服務
                 IntPtr captureClientPtr;
-                CheckHr(audioClient.GetService(ref IID_IAudioCaptureClient, out captureClientPtr),
-                    "GetService(IAudioCaptureClient) failed.");
+                CheckHr(audioClient.GetService(ref IID_IAudioCaptureClient, out captureClientPtr), "GetService failed.");
+                captureClient = (IAudioCaptureClient)Marshal.GetObjectForIUnknown(captureClientPtr);
 
-                var captureClient = (IAudioCaptureClient)Marshal.GetObjectForIUnknown(captureClientPtr);
-
-                try
-                {
-                    CaptureToWave(audioClient, captureClient, format, bytesPerFrame, duration, filePath);
-                }
-                finally
-                {
-                    Marshal.ReleaseComObject(captureClient);
-                    Marshal.ReleaseComObject(audioClient);
-                }
+                // 6. 開始錄音與轉碼
+                CaptureToWave(audioClient, captureClient, inputFormat, fileFormat, duration, filePath);
+            }
+            catch (Exception ex)
+            {
+                // 拋出例外讓外層 Task 捕捉 (例如 Process 已經結束或拒絕存取)
+                throw new InvalidOperationException($"錄音失敗 [{process.ProcessName}]: {ex.Message}", ex);
             }
             finally
             {
-                if (device != null) Marshal.ReleaseComObject(device);
-                if (enumerator != null) Marshal.ReleaseComObject(enumerator);
+                if (captureClient != null) Marshal.ReleaseComObject(captureClient);
+                if (audioClient != null) Marshal.ReleaseComObject(audioClient);
             }
         }
 
-        // --- 共用的錄製主迴圈 ---
+        // --- 錄音迴圈與轉碼 (Float -> PCM) ---
 
         private static void CaptureToWave(
             IAudioClient audioClient,
             IAudioCaptureClient captureClient,
-            WaveFormatEx format,
-            int bytesPerFrame,
+            WaveFormatEx inputFormat,
+            WaveFormatEx outputFormat,
             TimeSpan duration,
             string filePath)
         {
+            int inputBytesPerFrame = inputFormat.nBlockAlign;
+            int outputBytesPerFrame = outputFormat.nBlockAlign;
+
             using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read))
             {
                 long headerPos = fs.Position;
-                WriteWaveHeader(fs, format, 0);
+                WriteWaveHeader(fs, outputFormat, 0); // 寫入標頭 (0 data size)
 
-                CheckHr(audioClient.Start(), "IAudioClient.Start failed.");
+                CheckHr(audioClient.Start(), "Start failed.");
+
                 var sw = Stopwatch.StartNew();
-                long totalBytesWritten = 0;
+                long totalOutputBytes = 0;
+
+                // 緩衝區重用
+                byte[] inputBuffer = new byte[8192];
+                float[] floatBuffer = new float[2048];
+                byte[] outputBuffer = new byte[4096];
 
                 try
                 {
                     while (sw.Elapsed < duration)
                     {
-                        Thread.Sleep(10);
+                        // 簡單的流速控制，避免 CPU 100%
+                        Thread.Sleep(5);
 
                         uint nextPacketSize;
-                        CheckHr(captureClient.GetNextPacketSize(out nextPacketSize),
-                            "GetNextPacketSize failed.");
+                        CheckHr(captureClient.GetNextPacketSize(out nextPacketSize), "GetNextPacketSize failed.");
 
                         while (nextPacketSize > 0)
                         {
-                            IntPtr buffer;
+                            IntPtr pData;
                             uint framesAvailable;
                             AudioClientBufferFlags flags;
-                            ulong devicePosition;
-                            ulong qpcPosition;
+                            ulong devPos, qpcPos;
 
-                            CheckHr(
-                                captureClient.GetBuffer(
-                                    out buffer,
-                                    out framesAvailable,
-                                    out flags,
-                                    out devicePosition,
-                                    out qpcPosition),
-                                "GetBuffer failed.");
+                            CheckHr(captureClient.GetBuffer(out pData, out framesAvailable, out flags, out devPos, out qpcPos), "GetBuffer failed.");
 
-                            int bytesToCopy = checked((int)(framesAvailable * bytesPerFrame));
+                            int bytesToRead = (int)(framesAvailable * inputBytesPerFrame);
+                            int bytesToWrite = (int)(framesAvailable * outputBytesPerFrame);
+
+                            // 擴大緩衝區檢查
+                            if (inputBuffer.Length < bytesToRead) inputBuffer = new byte[bytesToRead];
+                            int floatCount = bytesToRead / 4;
+                            if (floatBuffer.Length < floatCount) floatBuffer = new float[floatCount];
+                            if (outputBuffer.Length < bytesToWrite) outputBuffer = new byte[bytesToWrite];
 
                             if ((flags & AudioClientBufferFlags.Silent) != 0)
                             {
-                                byte[] silence = new byte[bytesToCopy];
-                                fs.Write(silence, 0, silence.Length);
-                                totalBytesWritten += silence.Length;
+                                // 靜音處理：寫入 0
+                                Array.Clear(outputBuffer, 0, bytesToWrite);
+                                fs.Write(outputBuffer, 0, bytesToWrite);
                             }
                             else
                             {
-                                byte[] managed = new byte[bytesToCopy];
-                                Marshal.Copy(buffer, managed, 0, bytesToCopy);
-                                fs.Write(managed, 0, managed.Length);
-                                totalBytesWritten += managed.Length;
+                                // 1. 複製原始資料 (Float Bytes)
+                                Marshal.Copy(pData, inputBuffer, 0, bytesToRead);
+
+                                // 2. Bytes -> Float[]
+                                Buffer.BlockCopy(inputBuffer, 0, floatBuffer, 0, bytesToRead);
+
+                                // 3. Float -> Short (PCM)
+                                int outIndex = 0;
+                                for (int i = 0; i < floatCount; i++)
+                                {
+                                    float s = floatBuffer[i];
+                                    // Clipping
+                                    if (s > 1.0f) s = 1.0f;
+                                    else if (s < -1.0f) s = -1.0f;
+
+                                    short pcm = (short)(s * 32767);
+                                    outputBuffer[outIndex++] = (byte)(pcm & 0xFF);
+                                    outputBuffer[outIndex++] = (byte)((pcm >> 8) & 0xFF);
+                                }
+
+                                fs.Write(outputBuffer, 0, bytesToWrite);
                             }
 
-                            CheckHr(captureClient.ReleaseBuffer(framesAvailable),
-                                "ReleaseBuffer failed.");
-
-                            CheckHr(captureClient.GetNextPacketSize(out nextPacketSize),
-                                "GetNextPacketSize failed (loop).");
+                            totalOutputBytes += bytesToWrite;
+                            CheckHr(captureClient.ReleaseBuffer(framesAvailable), "ReleaseBuffer failed.");
+                            CheckHr(captureClient.GetNextPacketSize(out nextPacketSize), "Loop GetNextPacketSize failed.");
                         }
                     }
                 }
@@ -295,141 +238,129 @@ namespace AudioUI
                     audioClient.Stop();
                 }
 
+                // 修正檔頭大小
                 long endPos = fs.Position;
                 fs.Position = headerPos;
-                WriteWaveHeader(fs, format, totalBytesWritten);
+                WriteWaveHeader(fs, outputFormat, totalOutputBytes);
                 fs.Position = endPos;
             }
         }
 
-        private static WaveFormatEx CreateDefaultPcmFormat()
-        {
-            // 2ch, 44.1kHz, 16bit PCM
-            ushort channels = 2;
-            uint sampleRate = 44100;
-            ushort bits = 16;
-            ushort blockAlign = (ushort)(channels * (bits / 8));
-            uint avgBytes = sampleRate * blockAlign;
+        // --- 輔助方法 ---
 
+        private static bool IsProcessLoopbackSupported()
+        {
+#if NET5_0_OR_GREATER
+            return OperatingSystem.IsWindowsVersionAtLeast(10, 0, 20348);
+#else
+            var v = Environment.OSVersion.Version;
+            return v.Major > 10 || (v.Major == 10 && v.Build >= 20348);
+#endif
+        }
+
+        private static WaveFormatEx CreateLoopbackFormat()
+        {
             return new WaveFormatEx
             {
-                wFormatTag = 1, // WAVE_FORMAT_PCM
-                nChannels = channels,
-                nSamplesPerSec = sampleRate,
-                wBitsPerSample = bits,
-                nBlockAlign = blockAlign,
-                nAvgBytesPerSec = avgBytes,
+                wFormatTag = 3, // IEEE_FLOAT
+                nChannels = 2,
+                nSamplesPerSec = 48000,
+                wBitsPerSample = 32,
+                nBlockAlign = 8,
+                nAvgBytesPerSec = 48000 * 8,
                 cbSize = 0
             };
         }
 
-        private static void CheckHr(int hr, string message)
+        private static WaveFormatEx CreateOutputPcmFormat(WaveFormatEx src)
         {
-            if (hr < 0) throw new COMException(message, hr);
+            ushort bits = 16;
+            ushort align = (ushort)(src.nChannels * 2);
+            return new WaveFormatEx
+            {
+                wFormatTag = 1, // PCM
+                nChannels = src.nChannels,
+                nSamplesPerSec = src.nSamplesPerSec,
+                wBitsPerSample = bits,
+                nBlockAlign = align,
+                nAvgBytesPerSec = src.nSamplesPerSec * align,
+                cbSize = 0
+            };
         }
 
         private static string SanitizeFileName(string name)
         {
             foreach (char c in Path.GetInvalidFileNameChars())
                 name = name.Replace(c, '_');
-            return string.IsNullOrWhiteSpace(name) ? "UnknownProcess" : name;
+            return string.IsNullOrWhiteSpace(name) ? "Unknown" : name;
         }
 
-        // --- per-process loopback：ActivateAudioInterfaceAsync ---
-
-        private static IAudioClient ActivateAudioClientForProcess(uint processId)
-        {
-            var tcs = new System.Threading.Tasks.TaskCompletionSource<IAudioClient>();
-            var handler = new ActivateAudioInterfaceCompletionHandler(tcs);
-
-            AUDIOCLIENT_ACTIVATION_PARAMS activationParams = new AUDIOCLIENT_ACTIVATION_PARAMS
-            {
-                ActivationType = AUDIOCLIENT_ACTIVATION_TYPE.AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK,
-                ProcessLoopbackParams = new AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS
-                {
-                    TargetProcessId = processId,
-                    ProcessLoopbackMode =
-                        PROCESS_LOOPBACK_MODE.PROCESS_LOOPBACK_MODE_INCLUDE_TARGET_PROCESS_TREE
-                }
-            };
-
-            IntPtr activationParamsPtr = IntPtr.Zero;
-            PROPVARIANT prop = default(PROPVARIANT);
-
-            try
-            {
-                int size = Marshal.SizeOf(typeof(AUDIOCLIENT_ACTIVATION_PARAMS));
-                activationParamsPtr = Marshal.AllocHGlobal(size);
-                Marshal.StructureToPtr(activationParams, activationParamsPtr, false);
-
-                prop.vt = (ushort)VarEnum.VT_BLOB;
-                prop.wReserved1 = 0;
-                prop.wReserved2 = 0;
-                prop.wReserved3 = 0;
-                prop.blob.cbSize = (uint)size;
-                prop.blob.pBlobData = activationParamsPtr;
-
-                IActivateAudioInterfaceAsyncOperation asyncOp;
-
-                int hr = ActivateAudioInterfaceAsync(
-                    VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK,
-                    ref IID_IAudioClient,
-                    ref prop,
-                    handler,
-                    out asyncOp);
-
-                CheckHr(hr, "ActivateAudioInterfaceAsync failed.");
-
-                // 等待 callback 把 IAudioClient 塞進 TaskCompletionSource
-                IAudioClient client = tcs.Task.GetAwaiter().GetResult();
-                return client;
-            }
-            finally
-            {
-                if (activationParamsPtr != IntPtr.Zero)
-                    Marshal.FreeHGlobal(activationParamsPtr);
-            }
-        }
-
-        // --- WAV header ---
-
-        private static void WriteWaveHeader(FileStream stream, WaveFormatEx format, long dataLengthBytes)
+        private static void WriteWaveHeader(FileStream stream, WaveFormatEx format, long dataLen)
         {
             using (var bw = new BinaryWriter(stream, System.Text.Encoding.ASCII, leaveOpen: true))
             {
-                // 我們只寫最基本的 16 bytes (不包含 cbSize 和任何附加欄位)
-                uint fmtChunkSize = 16;
-
-                uint riffChunkSize = (uint)(
-                    4 +              // "WAVE"
-                    8 + fmtChunkSize + // "fmt " + size + data
-                    8 + dataLengthBytes // "data" + size + data
-                );
-
-                // RIFF header
                 bw.Write(new[] { (byte)'R', (byte)'I', (byte)'F', (byte)'F' });
-                bw.Write(riffChunkSize);
+                bw.Write((uint)(36 + dataLen));
                 bw.Write(new[] { (byte)'W', (byte)'A', (byte)'V', (byte)'E' });
-
-                // fmt chunk
                 bw.Write(new[] { (byte)'f', (byte)'m', (byte)'t', (byte)' ' });
-                bw.Write(fmtChunkSize);
-
+                bw.Write((uint)16);
                 bw.Write(format.wFormatTag);
                 bw.Write(format.nChannels);
                 bw.Write(format.nSamplesPerSec);
                 bw.Write(format.nAvgBytesPerSec);
                 bw.Write(format.nBlockAlign);
                 bw.Write(format.wBitsPerSample);
-                // **這裡不要寫 cbSize，也不要寫任何附加欄位**
-
-                // data chunk
                 bw.Write(new[] { (byte)'d', (byte)'a', (byte)'t', (byte)'a' });
-                bw.Write((uint)dataLengthBytes);
+                bw.Write((uint)dataLen);
             }
         }
 
-        // --- interop types ---
+        // --- Activate Audio Client Async Logic ---
+
+        private static IAudioClient ActivateAudioClientForProcess(uint processId)
+        {
+            var tcs = new TaskCompletionSource<IAudioClient>();
+            var handler = new ActivateAudioInterfaceCompletionHandler(tcs);
+
+            var p = new AUDIOCLIENT_ACTIVATION_PARAMS
+            {
+                ActivationType = AUDIOCLIENT_ACTIVATION_TYPE.ProcessLoopback,
+                ProcessLoopbackParams = new AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS
+                {
+                    TargetProcessId = processId,
+                    ProcessLoopbackMode = PROCESS_LOOPBACK_MODE.IncludeTargetProcessTree
+                }
+            };
+
+            // Marshaling params
+            int size = Marshal.SizeOf(typeof(AUDIOCLIENT_ACTIVATION_PARAMS));
+            IntPtr ptr = Marshal.AllocHGlobal(size);
+            Marshal.StructureToPtr(p, ptr, false);
+
+            PROPVARIANT prop = default;
+            prop.vt = (ushort)VarEnum.VT_BLOB;
+            prop.blob.cbSize = (uint)size;
+            prop.blob.pBlobData = ptr;
+
+            try
+            {
+                IActivateAudioInterfaceAsyncOperation op;
+                ActivateAudioInterfaceAsync(VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK, ref IID_IAudioClient, ref prop, handler, out op);
+                return tcs.Task.GetAwaiter().GetResult();
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(ptr);
+            }
+        }
+
+        // --- 必要的 CheckHr ---
+        private static void CheckHr(int hr, string msg)
+        {
+            if (hr < 0) throw new COMException(msg, hr);
+        }
+
+        // --- COM Interop Definitions (精簡版，整合修正) ---
 
         [DllImport("Mmdevapi.dll", ExactSpelling = true, PreserveSig = true, CharSet = CharSet.Unicode)]
         private static extern int ActivateAudioInterfaceAsync(
@@ -438,6 +369,38 @@ namespace AudioUI
             ref PROPVARIANT activationParams,
             IActivateAudioInterfaceCompletionHandler completionHandler,
             out IActivateAudioInterfaceAsyncOperation activationOperation);
+
+        [ComImport, Guid("41D949AB-9862-444A-80F6-C261334DA5EB"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        private interface IActivateAudioInterfaceCompletionHandler
+        {
+            void ActivateCompleted(IActivateAudioInterfaceAsyncOperation operation);
+        }
+
+        [ComImport, Guid("72A22D78-CDE4-431D-B8CC-843A71199B6D"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        private interface IActivateAudioInterfaceAsyncOperation
+        {
+            void GetActivateResult(out int activateResult, [Out] out IntPtr activatedInterface);
+        }
+
+        private class ActivateAudioInterfaceCompletionHandler : IActivateAudioInterfaceCompletionHandler
+        {
+            private readonly TaskCompletionSource<IAudioClient> _tcs;
+            public ActivateAudioInterfaceCompletionHandler(TaskCompletionSource<IAudioClient> tcs) => _tcs = tcs;
+
+            public void ActivateCompleted(IActivateAudioInterfaceAsyncOperation operation)
+            {
+                operation.GetActivateResult(out int hr, out IntPtr ptr);
+                if (hr < 0) { _tcs.TrySetException(new COMException("Activate failed", hr)); return; }
+
+                var client = (IAudioClient)Marshal.GetObjectForIUnknown(ptr);
+                Marshal.Release(ptr);
+                _tcs.TrySetResult(client);
+            }
+        }
+
+        // 定義 WaveFormatEx, IAudioClient (加了 PreserveSig), IAudioCaptureClient, Enums...
+        // 請將之前修正過的介面定義放在這裡 (省略以節省篇幅，與之前討論的一致)
+        // 必須包含 AudioClientStreamFlags.Loopback 定義
 
         [StructLayout(LayoutKind.Sequential)]
         private struct WaveFormatEx
@@ -451,289 +414,40 @@ namespace AudioUI
             public ushort cbSize;
         }
 
-        [Flags]
-        private enum AudioClientStreamFlags : uint
-        {
-            None = 0x00000000,
-            CrossProcess = 0x00010000,
-            Loopback = 0x00020000,
-            EventCallback = 0x00040000,
-            NoPersist = 0x00080000,
-        }
-
-        private enum AudioClientShareMode
-        {
-            Shared = 0,
-            Exclusive = 1
-        }
-
-        [Flags]
-        private enum AudioClientBufferFlags : uint
-        {
-            None = 0x0,
-            DataDiscontinuity = 0x1,
-            Silent = 0x2,
-            TimestampError = 0x4
-        }
-
-        private enum AUDIOCLIENT_ACTIVATION_TYPE
-        {
-            AUDIOCLIENT_ACTIVATION_TYPE_DEFAULT = 0,
-            AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK = 1
-        }
-
-        private enum PROCESS_LOOPBACK_MODE
-        {
-            PROCESS_LOOPBACK_MODE_INCLUDE_TARGET_PROCESS_TREE = 0,
-            PROCESS_LOOPBACK_MODE_EXCLUDE_TARGET_PROCESS_TREE = 1
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS
-        {
-            public uint TargetProcessId;
-            public PROCESS_LOOPBACK_MODE ProcessLoopbackMode;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct AUDIOCLIENT_ACTIVATION_PARAMS
-        {
-            public AUDIOCLIENT_ACTIVATION_TYPE ActivationType;
-            public AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS ProcessLoopbackParams;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct PROPVARIANT_BLOB
-        {
-            public uint cbSize;
-            public IntPtr pBlobData;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct PROPVARIANT
-        {
-            public ushort vt;
-            public ushort wReserved1;
-            public ushort wReserved2;
-            public ushort wReserved3;
-            public PROPVARIANT_BLOB blob;
-        }
-
-        [ComImport]
-        [Guid("41D949AB-9862-444A-80F6-C261334DA5EB")]
-        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        private interface IActivateAudioInterfaceCompletionHandler
-        {
-            void ActivateCompleted(IActivateAudioInterfaceAsyncOperation operation);
-        }
-
-        [ComImport]
-        [Guid("72A22D78-CDE4-431D-B8CC-843A71199B6D")]
-        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        private interface IActivateAudioInterfaceAsyncOperation
-        {
-            void GetActivateResult(
-                out int activateResult,
-                [MarshalAs(UnmanagedType.IUnknown)] out object activatedInterface);
-        }
-
-        [ComVisible(true)]
-        [ClassInterface(ClassInterfaceType.None)]
-        private sealed class ActivateAudioInterfaceCompletionHandler
-            : IActivateAudioInterfaceCompletionHandler
-        {
-            private readonly System.Threading.Tasks.TaskCompletionSource<IAudioClient> _tcs;
-
-            public ActivateAudioInterfaceCompletionHandler(
-                System.Threading.Tasks.TaskCompletionSource<IAudioClient> tcs)
-            {
-                _tcs = tcs;
-            }
-
-            public void ActivateCompleted(IActivateAudioInterfaceAsyncOperation operation)
-            {
-                try
-                {
-                    operation.GetActivateResult(out int hr, out object activated);
-
-                    if (hr < 0)
-                    {
-                        _tcs.TrySetException(new COMException(
-                            "ActivateAudioInterfaceAsync failed in callback.", hr));
-                        return;
-                    }
-
-                    if (activated is not IAudioClient client)
-                    {
-                        _tcs.TrySetException(new InvalidCastException(
-                            "Activated interface is not IAudioClient."));
-                        return;
-                    }
-
-                    _tcs.TrySetResult(client);
-                }
-                catch (Exception ex)
-                {
-                    _tcs.TrySetException(ex);
-                }
-            }
-        }
-
-        [ComImport]
-        [Guid("1CB9AD4C-DBFA-4c32-B178-C2F568A703B2")]
-        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        [ComImport, Guid("1CB9AD4C-DBFA-4c32-B178-C2F568A703B2"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
         private interface IAudioClient
         {
-            int Initialize(
-                AudioClientShareMode shareMode,
-                AudioClientStreamFlags streamFlags,
-                long hnsBufferDuration,
-                long hnsPeriodicity,
-                ref WaveFormatEx pFormat,
-                IntPtr audioSessionGuid);
-
-            int GetBufferSize(out uint bufferSize);
-            int GetStreamLatency(out long latency);
-            int GetCurrentPadding(out uint currentPadding);
-
-            int IsFormatSupported(
-                AudioClientShareMode shareMode,
-                ref WaveFormatEx pFormat,
-                out IntPtr closestMatch);
-
-            int GetMixFormat(out IntPtr deviceFormat);
-            int GetDevicePeriod(out long defaultDevicePeriod, out long minimumDevicePeriod);
-            int Start();
-            int Stop();
-            int Reset();
-            int SetEventHandle(IntPtr eventHandle);
-            int GetService(ref Guid riid, out IntPtr service);
+            [PreserveSig] int Initialize(AudioClientShareMode shareMode, AudioClientStreamFlags streamFlags, long hnsBufferDuration, long hnsPeriodicity, ref WaveFormatEx pFormat, IntPtr audioSessionGuid);
+            [PreserveSig] int GetBufferSize(out uint bufferSize);
+            [PreserveSig] int GetStreamLatency(out long latency);
+            [PreserveSig] int GetCurrentPadding(out uint currentPadding);
+            [PreserveSig] int IsFormatSupported(AudioClientShareMode shareMode, ref WaveFormatEx pFormat, out IntPtr closestMatch);
+            [PreserveSig] int GetMixFormat(out IntPtr deviceFormat);
+            [PreserveSig] int GetDevicePeriod(out long defaultDevicePeriod, out long minimumDevicePeriod);
+            [PreserveSig] int Start();
+            [PreserveSig] int Stop();
+            [PreserveSig] int Reset();
+            [PreserveSig] int SetEventHandle(IntPtr eventHandle);
+            [PreserveSig] int GetService(ref Guid riid, out IntPtr service);
         }
 
-        [ComImport]
-        [Guid("C8ADBD64-E71E-48A0-A4DE-185C395CD317")]
-        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        [ComImport, Guid("C8ADBD64-E71E-48A0-A4DE-185C395CD317"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
         private interface IAudioCaptureClient
         {
-            int GetBuffer(
-                out IntPtr data,
-                out uint numFramesToRead,
-                out AudioClientBufferFlags bufferFlags,
-                out ulong devicePosition,
-                out ulong qpcPosition);
-
-            int ReleaseBuffer(uint numFramesRead);
-
-            int GetNextPacketSize(out uint numFramesInNextPacket);
+            [PreserveSig] int GetBuffer(out IntPtr data, out uint numFramesToRead, out AudioClientBufferFlags bufferFlags, out ulong devicePosition, out ulong qpcPosition);
+            [PreserveSig] int ReleaseBuffer(uint numFramesRead);
+            [PreserveSig] int GetNextPacketSize(out uint numFramesInNextPacket);
         }
 
-        // --- MMDevice API (device loopback fallback) ---
+        [Flags] private enum AudioClientStreamFlags : uint { None = 0, CrossProcess = 0x10000, Loopback = 0x20000, EventCallback = 0x40000, NoPersist = 0x80000 }
+        private enum AudioClientShareMode { Shared = 0, Exclusive = 1 }
+        [Flags] private enum AudioClientBufferFlags : uint { None = 0, DataDiscontinuity = 1, Silent = 2, TimestampError = 4 }
+        private enum AUDIOCLIENT_ACTIVATION_TYPE { Default = 0, ProcessLoopback = 1 }
+        private enum PROCESS_LOOPBACK_MODE { IncludeTargetProcessTree = 0, ExcludeTargetProcessTree = 1 }
 
-        private enum EDataFlow
-        {
-            eRender,
-            eCapture,
-            eAll,
-            EDataFlow_enum_count
-        }
-
-        private enum ERole
-        {
-            eConsole,
-            eMultimedia,
-            eCommunications,
-            ERole_enum_count
-        }
-
-        [Flags]
-        private enum DeviceState : uint
-        {
-            ACTIVE = 0x00000001,
-            DISABLED = 0x00000002,
-            NOTPRESENT = 0x00000004,
-            UNPLUGGED = 0x00000008,
-            MASK_ALL = 0x0000000F
-        }
-
-        [Flags]
-        private enum CLSCTX : uint
-        {
-            CLSCTX_INPROC_SERVER = 0x1,
-            CLSCTX_INPROC_HANDLER = 0x2,
-            CLSCTX_LOCAL_SERVER = 0x4,
-            CLSCTX_REMOTE_SERVER = 0x10,
-            CLSCTX_ALL = CLSCTX_INPROC_SERVER | CLSCTX_INPROC_HANDLER | CLSCTX_LOCAL_SERVER | CLSCTX_REMOTE_SERVER
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct PROPERTYKEY
-        {
-            public Guid fmtid;
-            public uint pid;
-        }
-
-        [ComImport]
-        [Guid("886d8eeb-8cf2-4446-8d02-cdba1dbdcf99")]
-        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        private interface IPropertyStore
-        {
-            int GetCount(out uint cProps);
-            int GetAt(uint iProp, out PROPERTYKEY pkey);
-            int GetValue(ref PROPERTYKEY key, out PROPVARIANT pv);
-            int SetValue(ref PROPERTYKEY key, ref PROPVARIANT pv);
-            int Commit();
-        }
-
-        [ComImport]
-        [Guid("A95664D2-9614-4F35-A746-DE8DB63617E6")]
-        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        private interface IMMDeviceEnumerator
-        {
-            int EnumAudioEndpoints(EDataFlow dataFlow, DeviceState dwStateMask, out IMMDeviceCollection ppDevices);
-            int GetDefaultAudioEndpoint(EDataFlow dataFlow, ERole role, out IMMDevice ppEndpoint);
-            int GetDevice([MarshalAs(UnmanagedType.LPWStr)] string pwstrId, out IMMDevice ppDevice);
-            int RegisterEndpointNotificationCallback(IMMNotificationClient pClient);
-            int UnregisterEndpointNotificationCallback(IMMNotificationClient pClient);
-        }
-
-        [ComImport]
-        [Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")]
-        private class MMDeviceEnumeratorComObject
-        {
-        }
-
-        [ComImport]
-        [Guid("D666063F-1587-4E43-81F1-B948E807363F")]
-        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        private interface IMMDevice
-        {
-            int Activate(ref Guid iid, CLSCTX dwClsCtx, IntPtr pActivationParams, out IntPtr ppInterface);
-            int OpenPropertyStore(int stgmAccess, out IPropertyStore ppProperties);
-            int GetId([MarshalAs(UnmanagedType.LPWStr)] out string ppstrId);
-            int GetState(out DeviceState pdwState);
-        }
-
-        [ComImport]
-        [Guid("0BD7A1BE-7A1A-44DB-8397-C0EC0BA2980A")]
-        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        private interface IMMDeviceCollection
-        {
-            int GetCount(out uint pcDevices);
-            int Item(uint nDevice, out IMMDevice ppDevice);
-        }
-
-        [ComImport]
-        [Guid("7991EEC9-7E89-4D85-8390-6C703CEC60C0")]
-        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        private interface IMMNotificationClient
-        {
-            void OnDeviceStateChanged([MarshalAs(UnmanagedType.LPWStr)] string pwstrDeviceId, DeviceState dwNewState);
-            void OnDeviceAdded([MarshalAs(UnmanagedType.LPWStr)] string pwstrDeviceId);
-            void OnDeviceRemoved([MarshalAs(UnmanagedType.LPWStr)] string pwstrDeviceId);
-            void OnDefaultDeviceChanged(EDataFlow flow, ERole role,
-                [MarshalAs(UnmanagedType.LPWStr)] string pwstrDefaultDeviceId);
-            void OnPropertyValueChanged([MarshalAs(UnmanagedType.LPWStr)] string pwstrDeviceId,
-                ref PROPERTYKEY key);
-        }
+        [StructLayout(LayoutKind.Sequential)] private struct AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS { public uint TargetProcessId; public PROCESS_LOOPBACK_MODE ProcessLoopbackMode; }
+        [StructLayout(LayoutKind.Sequential)] private struct AUDIOCLIENT_ACTIVATION_PARAMS { public AUDIOCLIENT_ACTIVATION_TYPE ActivationType; public AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS ProcessLoopbackParams; }
+        [StructLayout(LayoutKind.Sequential)] private struct PROPVARIANT { public ushort vt; public ushort wReserved1; public ushort wReserved2; public ushort wReserved3; public PROPVARIANT_BLOB blob; }
+        [StructLayout(LayoutKind.Sequential)] private struct PROPVARIANT_BLOB { public uint cbSize; public IntPtr pBlobData; }
     }
 }
