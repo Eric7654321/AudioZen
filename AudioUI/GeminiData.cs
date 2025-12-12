@@ -41,7 +41,6 @@ namespace AudioUI
 
     public class EqConfigItem
     {
-        // 目標代號：all, first, second, third
         [JsonPropertyName("target")]
         public string Target { get; set; }
 

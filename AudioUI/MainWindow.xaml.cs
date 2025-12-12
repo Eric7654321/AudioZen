@@ -70,7 +70,7 @@ namespace AudioUI
         private AudioSessionService _AudioService = new AudioSessionService();
         private GeminiServices _GeminiService = new GeminiServices();
         private TtsService _TtsService = new TtsService();
-        private MappingManager _MappingManager = new MappingManager();
+        private ChatManager _ChatManager = new ChatManager();
         private KeyMappingService _KeyMapService = new KeyMappingService();
         private WakeWordTrigger _WakeWordTrigger = new WakeWordTrigger();
         private PerProcessAudioRecorder _PerProcessAudioRecorder = new PerProcessAudioRecorder();
@@ -151,7 +151,7 @@ namespace AudioUI
             RefreshAudioApps();
             InitDevices();
 
-            _MappingManager.LoadFromJson();
+            _ChatManager.LoadFromJson();
             _KeyMapService.Load();
 
             // 初始化系統列與快捷鍵
@@ -262,7 +262,7 @@ namespace AudioUI
                 return;
             }
 
-            var mapItem = _MappingManager.MapList.FirstOrDefault(x => x.Id == configId);
+            var mapItem = _ChatManager.MapList.FirstOrDefault(x => x.Id == configId);
             if (mapItem != null && mapItem.FileDatas.Count > 0)
             {
                 string filePath = mapItem.FileDatas[0].FileName;
@@ -334,13 +334,13 @@ namespace AudioUI
         private void RefreshConfigOptions()
         {
             ConfigOptions.Clear();
-            _MappingManager.LoadFromJson();
+            _ChatManager.LoadFromJson();
 
             ConfigOptions.Add(new ConfigOptionItem { SituationId = "cmd_unbind", DisplayName = "解除綁定 (Unbind)", Description = "清除按鍵設定" });
             ConfigOptions.Add(new ConfigOptionItem { SituationId = "cmd_rollback", DisplayName = "Rollback", Description = "回復上一個操作" });
             ConfigOptions.Add(new ConfigOptionItem { SituationId = "cmd_mute", DisplayName = "Mute", Description = "全域靜音" });
 
-            foreach (var map in _MappingManager.MapList.Where(x => x.Id != "-1"))
+            foreach (var map in _ChatManager.MapList.Where(x => x.Id != "-1"))
             {
                 var latestFile = map.FileDatas.FirstOrDefault();
                 if (latestFile != null)

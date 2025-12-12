@@ -31,7 +31,7 @@ namespace AudioUI
         /// </summary>
         /// <param name="baseOutputFolder">基礎輸出路徑 (例如 C:\Recordings)</param>
         /// <param name="duration">錄音時間長度</param>
-        public static async Task RecordAllActiveAppsAsync(string baseOutputFolder, TimeSpan duration)
+        public static async Task<string> RecordAllActiveAppsAsync(string baseOutputFolder, TimeSpan duration)
         {
             if (!IsProcessLoopbackSupported())
             {
@@ -44,9 +44,7 @@ namespace AudioUI
             string sessionFolder = Path.Combine(baseOutputFolder, timestamp);
             if (!Directory.Exists(sessionFolder)) Directory.CreateDirectory(sessionFolder);
 
-            // 2. 篩選目標 Process
-            // 策略：抓取所有有「視窗標題」的程式，通常這些才是會發出聲音的使用者應用程式。
-            // 過濾掉系統核心程序與沒有 UI 的背景服務。
+            // 2. 透過AudioSessionService的函式來篩選目標 Process
             AudioSessionService _AudioSessionService = new AudioSessionService();
             var activeApps = _AudioSessionService.GetAppsWithConfig();
             var pidsToRecord = activeApps.Select(app => app.ProcessId).ToList();
@@ -92,7 +90,8 @@ namespace AudioUI
             {
                 await Task.WhenAll(recordingTasks);
             }
-            System.Windows.MessageBox.Show($"錄音完成，檔案已儲存在：{sessionFolder}");
+
+            return sessionFolder;
         }
 
         /// <summary>
@@ -532,13 +531,6 @@ namespace AudioUI
         [StructLayout(LayoutKind.Sequential)] private struct AUDIOCLIENT_ACTIVATION_PARAMS { public AUDIOCLIENT_ACTIVATION_TYPE ActivationType; public AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS ProcessLoopbackParams; }
         [StructLayout(LayoutKind.Sequential)] private struct PROPVARIANT { public ushort vt; public ushort wReserved1; public ushort wReserved2; public ushort wReserved3; public PROPVARIANT_BLOB blob; }
         [StructLayout(LayoutKind.Sequential)] private struct PROPVARIANT_BLOB { public uint cbSize; public IntPtr pBlobData; }
-
-
-        
-
-
-
-        
 
         /// <summary>
         /// 停止播放並釋放資源

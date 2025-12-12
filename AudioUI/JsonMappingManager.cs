@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -17,20 +18,62 @@ namespace AudioUI
     public class FileMapItem
     {
         public string Id { get; set; }
-        public string Name { get; set; }
+        public string ChatName { get; set; }
         // 支援多個檔名
-        public List<FileCreateData> FileDatas { get; set; } = new List<FileCreateData>();
+        public ObservableCollection<FileCreateData> FileDatas { get; set; } = new ObservableCollection<FileCreateData>();
     }
 
-    public class MappingManager
+    public class ChatManager
     {
-        private string _filePath = Path.Combine(".", "config", "file_mapping.json"); // constant
+        private string _filePath = Path.Combine(".", "config", "file_Mapping.json"); // constant
         public List<FileMapItem> MapList { get; private set; }
 
-        public MappingManager()
+        public ChatManager()
         {
             MapList = new List<FileMapItem>();
         }
+
+        public string GetNextId()
+        {
+            // 1. 建立一個 HashSet 來儲存目前已存在且能轉為整數的 ID
+            // 使用 HashSet 是為了讓後面的查詢 (Contains) 速度最快 (O(1))
+            var existingIds = new HashSet<int>();
+
+            foreach (var item in MapList)
+            {
+                // 嘗試將 string Id 轉為 int
+                // 使用 int.TryParse 是為了避免如果有 Id 是 "uuid-xxx" 這種非數字格式時程式崩潰
+                // 如果轉換成功，idValue 會是該數字，並加入集合中
+                if (int.TryParse(item.Id, out int idValue))
+                {
+                    existingIds.Add(idValue);
+                }
+            }
+
+            // 2. 從 0 開始往上數，找到第一個「不在」集合中的非負整數
+            int candidate = 0;
+            while (existingIds.Contains(candidate))
+            {
+                candidate++;
+            }
+
+            // 3. 回傳結果 (轉回 string 以符合 FileMapItem.Id 的型別)
+            return candidate.ToString();
+        }
+
+        // 建立新的Chat
+        public void CreateChat(string id, string ChatName)
+        {
+            var item = MapList.FirstOrDefault(x => x.Id == id);
+
+            if (item == null)
+            {
+                item = new FileMapItem { Id = id };
+                MapList.Add(item);
+            }
+            MapList.Last().ChatName = ChatName;
+        }
+
 
         // 功能：PushFront (加入到最上面)
         // 邏輯：如果 ID 不存在則建立，存在則將檔名插入到 Index 0
@@ -58,11 +101,6 @@ namespace AudioUI
             {
                 FileCreateData poppedFileName = item.FileDatas[0];
                 item.FileDatas.RemoveAt(0);
-                // 若移除後已無檔名，移除整個項目（避免留下空的 Id）
-                if (item.FileDatas.Count == 0)
-                {
-                    MapList.Remove(item);
-                }
 
                 return poppedFileName;
             }

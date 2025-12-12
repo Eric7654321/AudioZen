@@ -80,15 +80,23 @@ namespace AudioUI
             return tcs.Task;
         }
 
+        Dictionary<string,string>  myDeviceMap = new Dictionary<string, string>
+        {
+            { "Voicemeeter Input VB-Audio Voicemeeter VAIO {7bac9b47-61e4-4f81-b81b-2ad6c8186abc}", "chrome" },  // constant
+            { "Voicemeeter AUX Input VB-Audio Voicemeeter VAIO {ba00bb3e-8c53-44ca-ab44-10c3715d3dbd}", "discord" },
+            { "CABLE Input VB-Audio Virtual Cable {0a4eba8e-e0ec-457a-90de-e84ce08d5844}", "games" }
+        };
+
+
         // --- 功能 2: 呼叫 Gemini API ---
         string optimizeText = // constant
         "You are an audio engineer. Analyze to the user's text command. " +
         "Based on the request, generate an Equalizer APO configuration. " +
         "You manage 4 specific targets: " +
         "1. 'all': Applies to everything (Global). " +
-        "2. 'first': Primary device (e.g., Speakers). " +
-        "3. 'second': Secondary device (e.g., Headphones). " +
-        "4. 'third': Tertiary device (e.g., Communication/Game). " +
+        "2. 'Voicemeeter Input VB-Audio Voicemeeter VAIO {7bac9b47-61e4-4f81-b81b-2ad6c8186abc}': chrome" + 
+        "3. 'Voicemeeter AUX Input VB-Audio Voicemeeter VAIO {ba00bb3e-8c53-44ca-ab44-10c3715d3dbd}': discord" +
+        "4. 'CABLE Input VB-Audio Virtual Cable {0a4eba8e-e0ec-457a-90de-e84ce08d5844}': games " +
         "Frequencies: 25, 40, 63, 100, 160, 250, 400, 630, 1000, 1600, 2500, 4000, 6300, 10000, 16000. " +
         "Rules: " +
         "1. Decide which target(s) to modify based on the user's intent. If vague, use 'all'. You can return multiple configs if needed. " +
@@ -184,7 +192,7 @@ namespace AudioUI
         "  \"message_for_user\": \"string (Explain in 15 words in Traditional Chinese)\", " +
         "  \"configs\": [ " +
         "    { " +
-        "      \"target\": \"all\"|\"first\"|\"second\"|\"third\", " +
+        "      \"target\": \"all\"|\"Voicemeeter Input VB-Audio Voicemeeter VAIO {7bac9b47-61e4-4f81-b81b-2ad6c8186abc}\"|\"Voicemeeter AUX Input VB-Audio Voicemeeter VAIO {ba00bb3e-8c53-44ca-ab44-10c3715d3dbd}\"|\"CABLE Input VB-Audio Virtual Cable {0a4eba8e-e0ec-457a-90de-e84ce08d5844}\", " +
         "      \"preamp_db\": float, " +
         "      \"graphic_eq_string\": \"string\" " +
         "      \"comp_json\": [ ... ], " +
@@ -367,18 +375,16 @@ namespace AudioUI
                     foreach (var config in eqResponse.Configs)
                     {
                         // 1. 處理 Device 行
-                        string targetKey = config.Target?.ToLower();
-
+                        string targetKey = config.Target;
                         if (targetKey == "all")
                         {
                             // 如果是 all，通常不需要指定 Device，或者您可以根據需求決定是否要重置 Device 選擇
-                            // 這裡示範：寫入一行註解，或者什麼都不寫代表全域
-                            sw.WriteLine("# Global Setting");
+                            sw.WriteLine($"Device: all");
                         }
                         else if (!string.IsNullOrEmpty(targetKey) && deviceMap.ContainsKey(targetKey))
                         {
                             // 根據 map 寫入實際裝置名稱
-                            sw.WriteLine($"Device: {deviceMap[targetKey]}");
+                            sw.WriteLine($"Device: {targetKey}");
                         }
                         else
                         {
@@ -422,12 +428,13 @@ namespace AudioUI
         // --- 功能 4: 還原設定檔 ---
         public async Task ConfigRollback(string IdString, string configPath)
         {
-            if (_MappingManager.GetFront(IdString) == null)
+            _ChatManager.PopFront(IdString);
+            if (_ChatManager.GetFront(IdString) == null)
             {
                 await _TtsService.SpeakAsync("已經沒有更早的設定可以還原"); // constant
                 return;
             }
-            string originconfigPath = _MappingManager.GetFront(IdString).FileName;
+            string originconfigPath = _ChatManager.GetFront(IdString).FileName;
             File.Copy(originconfigPath, configPath, overwrite: true);
         }
         /// <summary>
@@ -495,7 +502,7 @@ namespace AudioUI
                 }
                 else
                 {
-                    // 超時了 (使用者沒點)
+                    // 超時
                     // 這裡可以選擇清除通知，避免過期點擊
                     ToastNotificationManagerCompat.History.Clear();
                     return false; // 預設回傳 false
@@ -513,21 +520,15 @@ namespace AudioUI
 
 
         private const string API_KEY = "AIzaSyC58BU_c7KfydnxiAGXWNn7Ry220kmFsZo"; // constant AIzaSyCMRnOADLA-VpgjY0e9dfAPLAkd-LApf_8
-        private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + API_KEY;
+        private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + API_KEY; // todo
         TtsService _TtsService = new TtsService();
-        MappingManager _MappingManager = new MappingManager();
+        ChatManager _ChatManager = new ChatManager();
 
         /// <summary>
         /// 完整的進行一次錄音、分析與寫入的過程 (goal 1)
         /// </summary>
         public async Task RecordAndProcessAsync(int situationId, int recordMs,string audioFilePath, string eqConfigPath)
         {
-            var myDeviceMap = new Dictionary<string, string>
-{
-                { "first", "Speakers (Realtek(R) Audio)" },    // 第一個裝置的真實名稱  // constant
-                { "second", "Headphones (HyperX Cloud II)" },  // 第二個裝置的真實名稱
-                { "third", "VG279Q (NVIDIA High Definition Audio)" } // 第三個裝置
-            };  
             // 0. 第一次回應
             await _TtsService.SpeakAsync("請問您想如何調整音訊設定"); // constant
 
@@ -535,11 +536,11 @@ namespace AudioUI
             string audioBase64 = await RecordAudioAsync(audioFilePath, recordMs);
 
             // 2. 提示正在解析
+            SendNotification("解析中", "心頻氣和正在分析內容");
             await _TtsService.SpeakAsync("正在解析中"); // constant
 
             // 3. 呼叫 Gemini API
             string transcribedText = await TranscribeWithGeminiAsync(audioBase64, GEMINI_URL); // STT
-            System.Windows.MessageBox.Show(transcribedText);
             string geminiResponse = await CallGeminiApiAsync(transcribedText, GEMINI_URL);
 
             if (!string.IsNullOrEmpty(geminiResponse))
@@ -563,7 +564,8 @@ namespace AudioUI
                 // 套用到config.txt
                 string configTxtPath = Path.Combine(".", "config", "config.txt"); // constant
                 string situationIdString = situationId.ToString();
-                
+                SendNotification("已套用設定", "心頻氣和已完成解析並套用設定");
+
                 File.Copy(eqConfigPath, configTxtPath, overwrite: true);
 
                 // 5. 使用 TTS 播放回應訊息
@@ -577,7 +579,9 @@ namespace AudioUI
                     UserInput = transcribedText,
                     AiResponse = ttsMessage
                 };
+
                 // 6. 詢問是否套用設定
+                _ChatManager.PushFront("-1", newCreateData);
                 if (await SendNotificationAndWaitAsync("回退確認","是否要取消此設定"))
                 {
                     // rollback
@@ -585,17 +589,18 @@ namespace AudioUI
                 }
                 else
                 {
-                    _MappingManager.PushFront("-1", newCreateData);
-                }
-                // 7. 詢問是否需要儲存成preset
-                await _TtsService.SpeakAsync("是否需要存為preset"); // constant
-                if (await SendNotificationAndWaitAsync("preset設定","是否要存為preset"))
-                {
-                    _MappingManager.PushFront(situationIdString, newCreateData);
-                }
+                    // 7. 詢問是否需要儲存成preset
+                    await _TtsService.SpeakAsync("是否需要存為preset"); // constant
 
-                // 儲存 mapping
-                _MappingManager.SaveToJson();
+                    if (await SendNotificationAndWaitAsync("preset設定", "是否要存為preset"))
+                    {
+                        _ChatManager.PushFront(_ChatManager.GetNextId().ToString(), newCreateData);
+                    }
+                }
+                    
+                SendNotification("設定結束", "調整已結束，請享受更好的聲音");
+                // 儲存 Chat
+                _ChatManager.SaveToJson();
             }
             return;
         }
