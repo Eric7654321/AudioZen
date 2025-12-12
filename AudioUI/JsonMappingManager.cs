@@ -111,7 +111,6 @@ namespace AudioUI
                 if (loadedData != null)
                 {
                     MapList = loadedData;
-                    System.Windows.MessageBox.Show("讀檔成功！");
                 }
             }
             catch (Exception ex)
