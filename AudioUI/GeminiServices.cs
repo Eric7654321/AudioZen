@@ -333,12 +333,25 @@ namespace AudioUI
             string originconfigPath = _MappingManager.GetFront(IdString).FileName;
             File.Copy(originconfigPath, configPath, overwrite: true);
         }
+        /// <summary>
+        /// 發送通知
+        /// </summary>
+        private void SendConfirmationToast()
+        {
+            new ToastContentBuilder()
+                .AddText("確認通知") // 標題
+                .AddText("請問您是否接受調整？") // 內文
+                                       // 加入按鈕，並設定點擊後回傳的參數 (action=yes 或 action=no)
+                .AddButton(new ToastButton("是", "action=yes"))
+                .AddButton(new ToastButton("否", "action=no"))
+                .Show(); // 發送通知
+        }
 
         /// <summary>
         /// 發送通知並「非同步等待」使用者回應
         /// </summary>
         /// <returns>Task<bool>: True=接受, False=拒絕或超時</returns>
-        public async Task<bool> SendNotificationAndWaitAsync()
+        public async Task<bool> SendNotificationAndWaitAsync(string title, string context)
         {
             // 1. 建立一個任務完成來源，用來當作暫停點
             var tcs = new TaskCompletionSource<bool>();
@@ -371,8 +384,8 @@ namespace AudioUI
             {
                 // 4. 建構並發送通知
                 new ToastContentBuilder()
-                    .AddText("確認通知")
-                    .AddText("請問您是否接受調整？")
+                    .AddText(title)
+                    .AddText(context)
                     .AddButton(new ToastButton("是", "action=yes"))
                     .AddButton(new ToastButton("否", "action=no"))
                     .Show();
@@ -421,13 +434,14 @@ namespace AudioUI
                 { "second", "Headphones (HyperX Cloud II)" },  // 第二個裝置的真實名稱
                 { "third", "VG279Q (NVIDIA High Definition Audio)" } // 第三個裝置
             };  
-            // 第一次回應
+            // 0. 第一次回應
             await _TtsService.SpeakAsync("請問您想如何調整音訊設定"); // constant
+            SendConfirmationToast();
 
-            // 錄音recordMs 毫秒
+            // 1. 錄音recordMs 毫秒
             string audioBase64 = await RecordAudioAsync(audioFilePath, recordMs);
 
-            // 提示正在解析
+            // 2. 提示正在解析
             await _TtsService.SpeakAsync("正在解析中"); // constant
 
             // 3. 呼叫 Gemini API
@@ -454,10 +468,10 @@ namespace AudioUI
                 }
 
                 // 套用到config.txt
-                string configPath = Path.Combine(".", "config", "config.txt"); // constant
+                string configTxtPath = Path.Combine(".", "config", "config.txt"); // constant
                 string situationIdString = situationId.ToString();
                 
-                File.Copy(eqConfigPath, configPath, overwrite: true);
+                File.Copy(eqConfigPath, configTxtPath, overwrite: true);
 
                 // 5. 使用 TTS 播放回應訊息
                 await _TtsService.SpeakAsync(ttsMessage);
@@ -470,19 +484,19 @@ namespace AudioUI
                     UserInput = transcribedText,
                     AiResponse = ttsMessage
                 };
-                // 如果對輸入不滿意
-                if (await SendNotificationAndWaitAsync())
+                // 6. 詢問是否套用設定
+                if (await SendNotificationAndWaitAsync("回退確認","是否要取消此設定"))
                 {
                     // rollback
-                    await ConfigRollback("-1", configPath);
+                    await ConfigRollback("-1", configTxtPath);
                 }
                 else
                 {
                     _MappingManager.PushFront("-1", newCreateData);
                 }
-                // 詢問是否需要儲存成preset
-                await _TtsService.SpeakAsync("是否需要將此設定儲存成preset"); // constant
-                if (await SendNotificationAndWaitAsync())
+                // 7. 詢問是否需要儲存成preset
+                await _TtsService.SpeakAsync("是否需要存為preset"); // constant
+                if (await SendNotificationAndWaitAsync("preset設定","是否要存為preset"))
                 {
                     _MappingManager.PushFront(situationIdString, newCreateData);
                 }

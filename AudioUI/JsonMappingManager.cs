@@ -17,6 +17,7 @@ namespace AudioUI
     public class FileMapItem
     {
         public string Id { get; set; }
+        public string Name { get; set; }
         // 支援多個檔名
         public List<FileCreateData> FileDatas { get; set; } = new List<FileCreateData>();
     }

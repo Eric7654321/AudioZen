@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AudioUI;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -8,10 +9,11 @@ using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace AudioTools
+namespace AudioAI
 {
-    public static class PerProcessAudioRecorder
+    public class PerProcessAudioRecorder
     {
+        private AudioSessionService _AudioSessionService = new AudioSessionService();
         // 定義 COM GUIDs
         private static  Guid IID_IAudioClient = new Guid("1CB9AD4C-DBFA-4c32-B178-C2F568A703B2");
         private static  Guid IID_IAudioCaptureClient = new Guid("C8ADBD64-E71E-48A0-A4DE-185C395CD317");
@@ -28,6 +30,8 @@ namespace AudioTools
             {
                 throw new NotSupportedException("此功能需要 Windows 10 Build 20348 或 Windows 11 以上版本。");
             }
+
+            //var activeApps = _AudioSessionService.GetAppsWithConfig();
 
             // 1. 建立 Timestamp 資料夾
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
