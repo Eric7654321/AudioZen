@@ -216,8 +216,14 @@ namespace AudioUI
 
             foreach (var kvp in keyMap)
             {
-                // Modifier = 0 (不需要 Ctrl/Alt)
-                _HotkeyService.Register(kvp.Value, 0, (uint)kvp.Value);
+                // ★★★ 修正：把 0 改成 1 (代表 Alt) ★★★
+                // 0 = None (會吃掉按鍵，導致無法打字)
+                // 1 = Alt
+                // 2 = Ctrl
+                // 4 = Shift
+                // 8 = Win
+                // 這裡我們設定為 Alt + 按鍵，這樣就不會影響正常輸入了
+                _HotkeyService.Register(kvp.Value, 1, (uint)kvp.Value);
             }
 
             _HotkeyService.OnHotkeyPressed += HandleGlobalHotkey;
