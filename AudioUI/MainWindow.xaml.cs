@@ -126,7 +126,7 @@ namespace AudioUI
                     if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
                     bool isAccepted = await _GeminiService.SendNotificationAndWaitAsync();
-                    MessageBox.Show(isAccepted.ToString());
+                    System.Windows.MessageBox.Show(isAccepted.ToString());
 
                     _TtsService.Stop();
 
