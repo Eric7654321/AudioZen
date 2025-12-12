@@ -7,11 +7,18 @@ using System.Windows;
 
 namespace AudioUI
 {
+    public class FileCreateData
+    {
+        public string FileName { get; set; }
+        public string UserInput { get; set; }
+        public string AiResponse { get; set; }
+    }
+
     public class FileMapItem
     {
         public string Id { get; set; }
         // 支援多個檔名
-        public List<string> FileNames { get; set; } = new List<string>();
+        public List<FileCreateData> FileNames { get; set; } = new List<FileCreateData>();
     }
 
     public class MappingManager
@@ -26,7 +33,7 @@ namespace AudioUI
 
         // 功能：PushFront (加入到最上面)
         // 邏輯：如果 ID 不存在則建立，存在則將檔名插入到 Index 0
-        public void PushFront(string id, string fileName)
+        public void PushFront(string id, FileCreateData fileName)
         {
             var item = MapList.FirstOrDefault(x => x.Id == id);
 
@@ -43,12 +50,12 @@ namespace AudioUI
 
         // 功能：PopFront (取出並移除最上面的)
         // 邏輯：移除 Index 0 的項目並回傳，如果清空了則移除 ID 並回傳空字串
-        public string PopFront(string id)
+        public FileCreateData PopFront(string id)
         {
             var item = MapList.FirstOrDefault(x => x.Id == id);
             if (item != null && item.FileNames.Count > 0)
             {
-                string poppedFileName = item.FileNames[0];
+                FileCreateData poppedFileName = item.FileNames[0];
                 item.FileNames.RemoveAt(0);
                 // 若移除後已無檔名，移除整個項目（避免留下空的 Id）
                 if (item.FileNames.Count == 0)
@@ -60,15 +67,15 @@ namespace AudioUI
             }
 
             // 找不到 ID 或列表為空，回傳空字串以便呼叫端安全判斷
-            return "";
+            return null;
         }
 
         // 查詢：取得目前所有堆疊內容
-        public string GetFront(string id)
+        public FileCreateData GetFront(string id)
         {
             var item = MapList.FirstOrDefault(x => x.Id == id);
-            if (item == null) return "";
-            if (item.FileNames == null || item.FileNames.Count == 0) return "";
+            if (item == null) return null;
+            if (item.FileNames == null || item.FileNames.Count == 0) return null;
             return item.FileNames[0];
         }
 

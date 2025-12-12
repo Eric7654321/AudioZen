@@ -69,6 +69,22 @@
           "Microsoft.WindowsDesktop.App.WPF"
         ]
       },
+      "Microsoft.Extensions.AI.Abstractions/10.0.0": {
+        "type": "package",
+        "dependencies": {
+          "System.Text.Json": "10.0.0"
+        },
+        "compile": {
+          "lib/net8.0/Microsoft.Extensions.AI.Abstractions.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/Microsoft.Extensions.AI.Abstractions.dll": {
+            "related": ".xml"
+          }
+        }
+      },
       "Microsoft.NETCore.Platforms/3.1.0": {
         "type": "package",
         "compile": {
@@ -277,6 +293,22 @@
           "buildTransitive/net8.0/_._": {}
         }
       },
+      "System.IO.Pipelines/10.0.1": {
+        "type": "package",
+        "compile": {
+          "lib/net8.0/System.IO.Pipelines.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/System.IO.Pipelines.dll": {
+            "related": ".xml"
+          }
+        },
+        "build": {
+          "buildTransitive/net8.0/_._": {}
+        }
+      },
       "System.Security.AccessControl/4.7.0": {
         "type": "package",
         "dependencies": {
@@ -345,8 +377,34 @@
           }
         }
       },
-      "System.Text.Json/8.0.5": {
+      "System.Text.Encodings.Web/10.0.1": {
         "type": "package",
+        "compile": {
+          "lib/net8.0/System.Text.Encodings.Web.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/System.Text.Encodings.Web.dll": {
+            "related": ".xml"
+          }
+        },
+        "build": {
+          "buildTransitive/net8.0/_._": {}
+        },
+        "runtimeTargets": {
+          "runtimes/browser/lib/net8.0/System.Text.Encodings.Web.dll": {
+            "assetType": "runtime",
+            "rid": "browser"
+          }
+        }
+      },
+      "System.Text.Json/10.0.1": {
+        "type": "package",
+        "dependencies": {
+          "System.IO.Pipelines": "10.0.1",
+          "System.Text.Encodings.Web": "10.0.1"
+        },
         "compile": {
           "lib/net8.0/System.Text.Json.dll": {
             "related": ".xml"
@@ -358,7 +416,247 @@
           }
         },
         "build": {
-          "buildTransitive/net6.0/System.Text.Json.targets": {}
+          "buildTransitive/net8.0/System.Text.Json.targets": {}
+        }
+      },
+      "Vanara.Core/4.2.1": {
+        "type": "package",
+        "compile": {
+          "lib/net8.0-windows7.0/Vanara.Core.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0-windows7.0/Vanara.Core.dll": {
+            "related": ".xml"
+          }
+        },
+        "resource": {
+          "lib/net8.0-windows7.0/fr/Vanara.Core.resources.dll": {
+            "locale": "fr"
+          }
+        }
+      },
+      "Vanara.PInvoke.ComDlg32/4.2.1": {
+        "type": "package",
+        "dependencies": {
+          "Vanara.Core": "4.2.1",
+          "Vanara.PInvoke.User32": "4.2.1"
+        },
+        "compile": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.ComDlg32.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.ComDlg32.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "Vanara.PInvoke.CoreAudio/4.2.1": {
+        "type": "package",
+        "dependencies": {
+          "Vanara.Core": "4.2.1",
+          "Vanara.PInvoke.Multimedia": "4.2.1",
+          "Vanara.PInvoke.Ole": "4.2.1"
+        },
+        "compile": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.CoreAudio.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.CoreAudio.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "Vanara.PInvoke.Cryptography/4.2.1": {
+        "type": "package",
+        "dependencies": {
+          "Vanara.Core": "4.2.1",
+          "Vanara.PInvoke.Shared": "4.2.1"
+        },
+        "compile": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.Cryptography.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.Cryptography.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "Vanara.PInvoke.Gdi32/4.2.1": {
+        "type": "package",
+        "dependencies": {
+          "Vanara.Core": "4.2.1",
+          "Vanara.PInvoke.Shared": "4.2.1"
+        },
+        "compile": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.Gdi32.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.Gdi32.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "Vanara.PInvoke.Kernel32/4.2.1": {
+        "type": "package",
+        "dependencies": {
+          "Vanara.Core": "4.2.1",
+          "Vanara.PInvoke.Shared": "4.2.1"
+        },
+        "compile": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.Kernel32.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.Kernel32.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "Vanara.PInvoke.Multimedia/4.2.1": {
+        "type": "package",
+        "dependencies": {
+          "Vanara.Core": "4.2.1",
+          "Vanara.PInvoke.ComDlg32": "4.2.1"
+        },
+        "compile": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.Multimedia.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.Multimedia.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "Vanara.PInvoke.Ole/4.2.1": {
+        "type": "package",
+        "dependencies": {
+          "Vanara.Core": "4.2.1",
+          "Vanara.PInvoke.Rpc": "4.2.1"
+        },
+        "compile": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.Ole.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.Ole.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "Vanara.PInvoke.Rpc/4.2.1": {
+        "type": "package",
+        "dependencies": {
+          "Vanara.Core": "4.2.1",
+          "Vanara.PInvoke.Security": "4.2.1"
+        },
+        "compile": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.Rpc.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.Rpc.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "Vanara.PInvoke.Security/4.2.1": {
+        "type": "package",
+        "dependencies": {
+          "Vanara.Core": "4.2.1",
+          "Vanara.PInvoke.Cryptography": "4.2.1",
+          "Vanara.PInvoke.Kernel32": "4.2.1"
+        },
+        "compile": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.Security.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.Security.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "Vanara.PInvoke.Shared/4.2.1": {
+        "type": "package",
+        "dependencies": {
+          "Vanara.Core": "4.2.1"
+        },
+        "compile": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.Shared.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.Shared.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "Vanara.PInvoke.User32/4.2.1": {
+        "type": "package",
+        "dependencies": {
+          "Vanara.Core": "4.2.1",
+          "Vanara.PInvoke.Gdi32": "4.2.1",
+          "Vanara.PInvoke.Kernel32": "4.2.1"
+        },
+        "compile": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.User32.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0-windows7.0/Vanara.PInvoke.User32.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "Whisper.net/1.9.0": {
+        "type": "package",
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "10.0.0"
+        },
+        "compile": {
+          "lib/net8.0/Whisper.net.dll": {}
+        },
+        "runtime": {
+          "lib/net8.0/Whisper.net.dll": {}
+        }
+      },
+      "Whisper.net.Runtime/1.9.0": {
+        "type": "package",
+        "dependencies": {
+          "Whisper.net.Runtime.Metal": "1.9.0"
+        },
+        "build": {
+          "build/Whisper.net.Runtime.targets": {}
+        }
+      },
+      "Whisper.net.Runtime.Clblast/1.5.0": {
+        "type": "package",
+        "build": {
+          "build/Whisper.net.Runtime.Clblast.targets": {}
+        }
+      },
+      "Whisper.net.Runtime.Metal/1.9.0": {
+        "type": "package",
+        "build": {
+          "build/Whisper.net.Runtime.Metal.targets": {}
         }
       }
     }
@@ -501,6 +799,29 @@
         "logo_small.png",
         "mahapps.metro.iconpacks.material.6.2.1.nupkg.sha512",
         "mahapps.metro.iconpacks.material.nuspec"
+      ]
+    },
+    "Microsoft.Extensions.AI.Abstractions/10.0.0": {
+      "sha512": "PHeuDm2tC6wJPEQvleUr2kNQaIMNqSf3aEbzkIPlZyQ0+0SYI9SwXVLdGD1NPBI+xB+Vb2lxZKhrFlIf9kP9WA==",
+      "type": "package",
+      "path": "microsoft.extensions.ai.abstractions/10.0.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "README.md",
+        "lib/net10.0/Microsoft.Extensions.AI.Abstractions.dll",
+        "lib/net10.0/Microsoft.Extensions.AI.Abstractions.xml",
+        "lib/net462/Microsoft.Extensions.AI.Abstractions.dll",
+        "lib/net462/Microsoft.Extensions.AI.Abstractions.xml",
+        "lib/net8.0/Microsoft.Extensions.AI.Abstractions.dll",
+        "lib/net8.0/Microsoft.Extensions.AI.Abstractions.xml",
+        "lib/net9.0/Microsoft.Extensions.AI.Abstractions.dll",
+        "lib/net9.0/Microsoft.Extensions.AI.Abstractions.xml",
+        "lib/netstandard2.0/Microsoft.Extensions.AI.Abstractions.dll",
+        "lib/netstandard2.0/Microsoft.Extensions.AI.Abstractions.xml",
+        "microsoft.extensions.ai.abstractions.10.0.0.nupkg.sha512",
+        "microsoft.extensions.ai.abstractions.nuspec"
       ]
     },
     "Microsoft.NETCore.Platforms/3.1.0": {
@@ -765,6 +1086,35 @@
         "useSharedDesignerContext.txt"
       ]
     },
+    "System.IO.Pipelines/10.0.1": {
+      "sha512": "26LbFXHKd7PmRnWlkjnYgmjd5B6HYVG+1MpTO25BdxTJnx6D0O16JPAC/S4YBqjtt4YpfGj1QO/Ss6SPMGEGQw==",
+      "type": "package",
+      "path": "system.io.pipelines/10.0.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "PACKAGE.md",
+        "THIRD-PARTY-NOTICES.TXT",
+        "buildTransitive/net461/System.IO.Pipelines.targets",
+        "buildTransitive/net462/_._",
+        "buildTransitive/net8.0/_._",
+        "buildTransitive/netcoreapp2.0/System.IO.Pipelines.targets",
+        "lib/net10.0/System.IO.Pipelines.dll",
+        "lib/net10.0/System.IO.Pipelines.xml",
+        "lib/net462/System.IO.Pipelines.dll",
+        "lib/net462/System.IO.Pipelines.xml",
+        "lib/net8.0/System.IO.Pipelines.dll",
+        "lib/net8.0/System.IO.Pipelines.xml",
+        "lib/net9.0/System.IO.Pipelines.dll",
+        "lib/net9.0/System.IO.Pipelines.xml",
+        "lib/netstandard2.0/System.IO.Pipelines.dll",
+        "lib/netstandard2.0/System.IO.Pipelines.xml",
+        "system.io.pipelines.10.0.1.nupkg.sha512",
+        "system.io.pipelines.nuspec",
+        "useSharedDesignerContext.txt"
+      ]
+    },
     "System.Security.AccessControl/4.7.0": {
       "sha512": "JECvTt5aFF3WT3gHpfofL2MNNP6v84sxtXxpqhLBCcDRzqsPBmHhQ6shv4DwwN2tRlzsUxtb3G9M3763rbXKDg==",
       "type": "package",
@@ -897,15 +1247,51 @@
         "useSharedDesignerContext.txt"
       ]
     },
-    "System.Text.Json/8.0.5": {
-      "sha512": "0f1B50Ss7rqxXiaBJyzUu9bWFOO2/zSlifZ/UNMdiIpDYe4cY4LQQicP4nirK1OS31I43rn062UIJ1Q9bpmHpg==",
+    "System.Text.Encodings.Web/10.0.1": {
+      "sha512": "cVAka0o1rJJ5/De0pjNs7jcaZk5hUGf1HGzUyVmE2MEB1Vf0h/8qsWxImk1zjitCbeD2Avaq2P2+usdvqgbeVQ==",
       "type": "package",
-      "path": "system.text.json/8.0.5",
+      "path": "system.text.encodings.web/10.0.1",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "Icon.png",
-        "LICENSE.TXT",
+        "PACKAGE.md",
+        "THIRD-PARTY-NOTICES.TXT",
+        "buildTransitive/net461/System.Text.Encodings.Web.targets",
+        "buildTransitive/net462/_._",
+        "buildTransitive/net8.0/_._",
+        "buildTransitive/netcoreapp2.0/System.Text.Encodings.Web.targets",
+        "lib/net10.0/System.Text.Encodings.Web.dll",
+        "lib/net10.0/System.Text.Encodings.Web.xml",
+        "lib/net462/System.Text.Encodings.Web.dll",
+        "lib/net462/System.Text.Encodings.Web.xml",
+        "lib/net8.0/System.Text.Encodings.Web.dll",
+        "lib/net8.0/System.Text.Encodings.Web.xml",
+        "lib/net9.0/System.Text.Encodings.Web.dll",
+        "lib/net9.0/System.Text.Encodings.Web.xml",
+        "lib/netstandard2.0/System.Text.Encodings.Web.dll",
+        "lib/netstandard2.0/System.Text.Encodings.Web.xml",
+        "runtimes/browser/lib/net10.0/System.Text.Encodings.Web.dll",
+        "runtimes/browser/lib/net10.0/System.Text.Encodings.Web.xml",
+        "runtimes/browser/lib/net8.0/System.Text.Encodings.Web.dll",
+        "runtimes/browser/lib/net8.0/System.Text.Encodings.Web.xml",
+        "runtimes/wasi/lib/net10.0/System.Text.Encodings.Web.dll",
+        "runtimes/wasi/lib/net10.0/System.Text.Encodings.Web.xml",
+        "runtimes/win/lib/net9.0/System.Text.Encodings.Web.dll",
+        "runtimes/win/lib/net9.0/System.Text.Encodings.Web.xml",
+        "system.text.encodings.web.10.0.1.nupkg.sha512",
+        "system.text.encodings.web.nuspec",
+        "useSharedDesignerContext.txt"
+      ]
+    },
+    "System.Text.Json/10.0.1": {
+      "sha512": "EsgwDgU1PFqhrFA9l5n+RBu76wFhNGCEwu8ITrBNhjPP3MxLyklroU5GIF8o6JYpYg6T4KD/VICfMdgPAvNp5g==",
+      "type": "package",
+      "path": "system.text.json/10.0.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
         "PACKAGE.md",
         "THIRD-PARTY-NOTICES.TXT",
         "analyzers/dotnet/roslyn3.11/cs/System.Text.Json.SourceGeneration.dll",
@@ -952,22 +1338,549 @@
         "analyzers/dotnet/roslyn4.4/cs/zh-Hant/System.Text.Json.SourceGeneration.resources.dll",
         "buildTransitive/net461/System.Text.Json.targets",
         "buildTransitive/net462/System.Text.Json.targets",
-        "buildTransitive/net6.0/System.Text.Json.targets",
+        "buildTransitive/net8.0/System.Text.Json.targets",
         "buildTransitive/netcoreapp2.0/System.Text.Json.targets",
         "buildTransitive/netstandard2.0/System.Text.Json.targets",
+        "lib/net10.0/System.Text.Json.dll",
+        "lib/net10.0/System.Text.Json.xml",
         "lib/net462/System.Text.Json.dll",
         "lib/net462/System.Text.Json.xml",
-        "lib/net6.0/System.Text.Json.dll",
-        "lib/net6.0/System.Text.Json.xml",
-        "lib/net7.0/System.Text.Json.dll",
-        "lib/net7.0/System.Text.Json.xml",
         "lib/net8.0/System.Text.Json.dll",
         "lib/net8.0/System.Text.Json.xml",
+        "lib/net9.0/System.Text.Json.dll",
+        "lib/net9.0/System.Text.Json.xml",
         "lib/netstandard2.0/System.Text.Json.dll",
         "lib/netstandard2.0/System.Text.Json.xml",
-        "system.text.json.8.0.5.nupkg.sha512",
+        "system.text.json.10.0.1.nupkg.sha512",
         "system.text.json.nuspec",
         "useSharedDesignerContext.txt"
+      ]
+    },
+    "Vanara.Core/4.2.1": {
+      "sha512": "S6Hk/up/27HfKK2PaXx0oWE8szV0dktT0u2n5xL7iNFbS/zC7K7ZA7i1h6I8LpHwQNbvPddWewb/mSEmZl00/Q==",
+      "type": "package",
+      "path": "vanara.core/4.2.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Vanara64x64.png",
+        "lib/net48/Vanara.Core.dll",
+        "lib/net48/Vanara.Core.xml",
+        "lib/net48/fr/Vanara.Core.resources.dll",
+        "lib/net5.0/Vanara.Core.dll",
+        "lib/net5.0/Vanara.Core.xml",
+        "lib/net5.0/fr/Vanara.Core.resources.dll",
+        "lib/net6.0/Vanara.Core.dll",
+        "lib/net6.0/Vanara.Core.xml",
+        "lib/net6.0/fr/Vanara.Core.resources.dll",
+        "lib/net7.0/Vanara.Core.dll",
+        "lib/net7.0/Vanara.Core.xml",
+        "lib/net7.0/fr/Vanara.Core.resources.dll",
+        "lib/net8.0-windows7.0/Vanara.Core.dll",
+        "lib/net8.0-windows7.0/Vanara.Core.xml",
+        "lib/net8.0-windows7.0/fr/Vanara.Core.resources.dll",
+        "lib/net9.0-windows7.0/Vanara.Core.dll",
+        "lib/net9.0-windows7.0/Vanara.Core.xml",
+        "lib/net9.0-windows7.0/fr/Vanara.Core.resources.dll",
+        "lib/netcoreapp3.1/Vanara.Core.dll",
+        "lib/netcoreapp3.1/Vanara.Core.xml",
+        "lib/netcoreapp3.1/fr/Vanara.Core.resources.dll",
+        "lib/netstandard2.0/Vanara.Core.dll",
+        "lib/netstandard2.0/Vanara.Core.xml",
+        "lib/netstandard2.0/fr/Vanara.Core.resources.dll",
+        "lib/netstandard2.1/Vanara.Core.dll",
+        "lib/netstandard2.1/Vanara.Core.xml",
+        "lib/netstandard2.1/fr/Vanara.Core.resources.dll",
+        "pkgreadme.md",
+        "vanara.core.4.2.1.nupkg.sha512",
+        "vanara.core.nuspec"
+      ]
+    },
+    "Vanara.PInvoke.ComDlg32/4.2.1": {
+      "sha512": "zadr7wkW6oLuKc7bqzTD2PFpqzr6116vg8Rl8gR3yK27EezWXZwpfMn+PaFVLKp+OWN32/TE1NqzOxIWJHkkrA==",
+      "type": "package",
+      "path": "vanara.pinvoke.comdlg32/4.2.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Vanara64x64.png",
+        "lib/net48/Vanara.PInvoke.ComDlg32.dll",
+        "lib/net48/Vanara.PInvoke.ComDlg32.xml",
+        "lib/net5.0/Vanara.PInvoke.ComDlg32.dll",
+        "lib/net5.0/Vanara.PInvoke.ComDlg32.xml",
+        "lib/net6.0/Vanara.PInvoke.ComDlg32.dll",
+        "lib/net6.0/Vanara.PInvoke.ComDlg32.xml",
+        "lib/net7.0/Vanara.PInvoke.ComDlg32.dll",
+        "lib/net7.0/Vanara.PInvoke.ComDlg32.xml",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.ComDlg32.dll",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.ComDlg32.xml",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.ComDlg32.dll",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.ComDlg32.xml",
+        "lib/netcoreapp3.1/Vanara.PInvoke.ComDlg32.dll",
+        "lib/netcoreapp3.1/Vanara.PInvoke.ComDlg32.xml",
+        "lib/netstandard2.0/Vanara.PInvoke.ComDlg32.dll",
+        "lib/netstandard2.0/Vanara.PInvoke.ComDlg32.xml",
+        "lib/netstandard2.1/Vanara.PInvoke.ComDlg32.dll",
+        "lib/netstandard2.1/Vanara.PInvoke.ComDlg32.xml",
+        "pkgreadme.md",
+        "vanara.pinvoke.comdlg32.4.2.1.nupkg.sha512",
+        "vanara.pinvoke.comdlg32.nuspec"
+      ]
+    },
+    "Vanara.PInvoke.CoreAudio/4.2.1": {
+      "sha512": "FuT6NuoZJFkFJ4ulkXv8OYMS26VWPmefWg/NLPxuNPAEWoCz8U/ifKUOrvhCfnr33oLE0hPls4SWLQVhJ/yO1w==",
+      "type": "package",
+      "path": "vanara.pinvoke.coreaudio/4.2.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Vanara64x64.png",
+        "lib/net48/Vanara.PInvoke.CoreAudio.dll",
+        "lib/net48/Vanara.PInvoke.CoreAudio.xml",
+        "lib/net5.0/Vanara.PInvoke.CoreAudio.dll",
+        "lib/net5.0/Vanara.PInvoke.CoreAudio.xml",
+        "lib/net6.0/Vanara.PInvoke.CoreAudio.dll",
+        "lib/net6.0/Vanara.PInvoke.CoreAudio.xml",
+        "lib/net7.0/Vanara.PInvoke.CoreAudio.dll",
+        "lib/net7.0/Vanara.PInvoke.CoreAudio.xml",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.CoreAudio.dll",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.CoreAudio.xml",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.CoreAudio.dll",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.CoreAudio.xml",
+        "lib/netcoreapp3.1/Vanara.PInvoke.CoreAudio.dll",
+        "lib/netcoreapp3.1/Vanara.PInvoke.CoreAudio.xml",
+        "lib/netstandard2.0/Vanara.PInvoke.CoreAudio.dll",
+        "lib/netstandard2.0/Vanara.PInvoke.CoreAudio.xml",
+        "lib/netstandard2.1/Vanara.PInvoke.CoreAudio.dll",
+        "lib/netstandard2.1/Vanara.PInvoke.CoreAudio.xml",
+        "pkgreadme.md",
+        "vanara.pinvoke.coreaudio.4.2.1.nupkg.sha512",
+        "vanara.pinvoke.coreaudio.nuspec"
+      ]
+    },
+    "Vanara.PInvoke.Cryptography/4.2.1": {
+      "sha512": "0uEPE3fAdu9WRmEuBG75/K8eO4WwuI9wSE9zYAxPEwLd4Lz1scjgEajQBeQVhPvD9mvMFxjyG0g/TtwDPbDz0w==",
+      "type": "package",
+      "path": "vanara.pinvoke.cryptography/4.2.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Vanara64x64.png",
+        "lib/net48/Vanara.PInvoke.Cryptography.dll",
+        "lib/net48/Vanara.PInvoke.Cryptography.xml",
+        "lib/net5.0/Vanara.PInvoke.Cryptography.dll",
+        "lib/net5.0/Vanara.PInvoke.Cryptography.xml",
+        "lib/net6.0/Vanara.PInvoke.Cryptography.dll",
+        "lib/net6.0/Vanara.PInvoke.Cryptography.xml",
+        "lib/net7.0/Vanara.PInvoke.Cryptography.dll",
+        "lib/net7.0/Vanara.PInvoke.Cryptography.xml",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.Cryptography.dll",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.Cryptography.xml",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.Cryptography.dll",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.Cryptography.xml",
+        "lib/netcoreapp3.1/Vanara.PInvoke.Cryptography.dll",
+        "lib/netcoreapp3.1/Vanara.PInvoke.Cryptography.xml",
+        "lib/netstandard2.0/Vanara.PInvoke.Cryptography.dll",
+        "lib/netstandard2.0/Vanara.PInvoke.Cryptography.xml",
+        "lib/netstandard2.1/Vanara.PInvoke.Cryptography.dll",
+        "lib/netstandard2.1/Vanara.PInvoke.Cryptography.xml",
+        "pkgreadme.md",
+        "vanara.pinvoke.cryptography.4.2.1.nupkg.sha512",
+        "vanara.pinvoke.cryptography.nuspec"
+      ]
+    },
+    "Vanara.PInvoke.Gdi32/4.2.1": {
+      "sha512": "7uLMDEgi7TnUFGZOrMeDJoarTrmK/tEPzIgLS2HC6hRX/9b9yMwPMX4atQw7OfOo560V98jJM466+Gxw6P+Uog==",
+      "type": "package",
+      "path": "vanara.pinvoke.gdi32/4.2.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Vanara64x64.png",
+        "lib/net48/Vanara.PInvoke.Gdi32.dll",
+        "lib/net48/Vanara.PInvoke.Gdi32.xml",
+        "lib/net5.0/Vanara.PInvoke.Gdi32.dll",
+        "lib/net5.0/Vanara.PInvoke.Gdi32.xml",
+        "lib/net6.0/Vanara.PInvoke.Gdi32.dll",
+        "lib/net6.0/Vanara.PInvoke.Gdi32.xml",
+        "lib/net7.0/Vanara.PInvoke.Gdi32.dll",
+        "lib/net7.0/Vanara.PInvoke.Gdi32.xml",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.Gdi32.dll",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.Gdi32.xml",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.Gdi32.dll",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.Gdi32.xml",
+        "lib/netcoreapp3.1/Vanara.PInvoke.Gdi32.dll",
+        "lib/netcoreapp3.1/Vanara.PInvoke.Gdi32.xml",
+        "lib/netstandard2.0/Vanara.PInvoke.Gdi32.dll",
+        "lib/netstandard2.0/Vanara.PInvoke.Gdi32.xml",
+        "lib/netstandard2.1/Vanara.PInvoke.Gdi32.dll",
+        "lib/netstandard2.1/Vanara.PInvoke.Gdi32.xml",
+        "pkgreadme.md",
+        "vanara.pinvoke.gdi32.4.2.1.nupkg.sha512",
+        "vanara.pinvoke.gdi32.nuspec"
+      ]
+    },
+    "Vanara.PInvoke.Kernel32/4.2.1": {
+      "sha512": "RDHekPrUI+u8+3Iy6/X7wV+TDTSf+OwWLhmWhQBUgk2QfK6a0jjWzJvxowC6NQXCHk18s7z3cFaoQXlnbMymqg==",
+      "type": "package",
+      "path": "vanara.pinvoke.kernel32/4.2.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Vanara64x64.png",
+        "lib/net48/Vanara.PInvoke.Kernel32.dll",
+        "lib/net48/Vanara.PInvoke.Kernel32.xml",
+        "lib/net5.0/Vanara.PInvoke.Kernel32.dll",
+        "lib/net5.0/Vanara.PInvoke.Kernel32.xml",
+        "lib/net6.0/Vanara.PInvoke.Kernel32.dll",
+        "lib/net6.0/Vanara.PInvoke.Kernel32.xml",
+        "lib/net7.0/Vanara.PInvoke.Kernel32.dll",
+        "lib/net7.0/Vanara.PInvoke.Kernel32.xml",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.Kernel32.dll",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.Kernel32.xml",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.Kernel32.dll",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.Kernel32.xml",
+        "lib/netcoreapp3.1/Vanara.PInvoke.Kernel32.dll",
+        "lib/netcoreapp3.1/Vanara.PInvoke.Kernel32.xml",
+        "lib/netstandard2.0/Vanara.PInvoke.Kernel32.dll",
+        "lib/netstandard2.0/Vanara.PInvoke.Kernel32.xml",
+        "lib/netstandard2.1/Vanara.PInvoke.Kernel32.dll",
+        "lib/netstandard2.1/Vanara.PInvoke.Kernel32.xml",
+        "pkgreadme.md",
+        "vanara.pinvoke.kernel32.4.2.1.nupkg.sha512",
+        "vanara.pinvoke.kernel32.nuspec"
+      ]
+    },
+    "Vanara.PInvoke.Multimedia/4.2.1": {
+      "sha512": "noDCZ8VVyMQqgVj3Ai3LDulC6IfKygXODYBislJvSSbt8ih+4Gp8HL6RIzKw3CdUI6yDXpFUYSOUwwKDduL5ig==",
+      "type": "package",
+      "path": "vanara.pinvoke.multimedia/4.2.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Vanara64x64.png",
+        "lib/net48/Vanara.PInvoke.Multimedia.dll",
+        "lib/net48/Vanara.PInvoke.Multimedia.xml",
+        "lib/net5.0/Vanara.PInvoke.Multimedia.dll",
+        "lib/net5.0/Vanara.PInvoke.Multimedia.xml",
+        "lib/net6.0/Vanara.PInvoke.Multimedia.dll",
+        "lib/net6.0/Vanara.PInvoke.Multimedia.xml",
+        "lib/net7.0/Vanara.PInvoke.Multimedia.dll",
+        "lib/net7.0/Vanara.PInvoke.Multimedia.xml",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.Multimedia.dll",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.Multimedia.xml",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.Multimedia.dll",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.Multimedia.xml",
+        "lib/netcoreapp3.1/Vanara.PInvoke.Multimedia.dll",
+        "lib/netcoreapp3.1/Vanara.PInvoke.Multimedia.xml",
+        "lib/netstandard2.0/Vanara.PInvoke.Multimedia.dll",
+        "lib/netstandard2.0/Vanara.PInvoke.Multimedia.xml",
+        "lib/netstandard2.1/Vanara.PInvoke.Multimedia.dll",
+        "lib/netstandard2.1/Vanara.PInvoke.Multimedia.xml",
+        "pkgreadme.md",
+        "vanara.pinvoke.multimedia.4.2.1.nupkg.sha512",
+        "vanara.pinvoke.multimedia.nuspec"
+      ]
+    },
+    "Vanara.PInvoke.Ole/4.2.1": {
+      "sha512": "swvpPPq14Vj9JyjlbItk8IEcFfMH2Dq1+mJkbAun/NoYsSdczQlJnEBVRYwk0t7RpER14hicJlyYdGcSimE4gA==",
+      "type": "package",
+      "path": "vanara.pinvoke.ole/4.2.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Vanara64x64.png",
+        "lib/net48/Vanara.PInvoke.Ole.dll",
+        "lib/net48/Vanara.PInvoke.Ole.xml",
+        "lib/net5.0/Vanara.PInvoke.Ole.dll",
+        "lib/net5.0/Vanara.PInvoke.Ole.xml",
+        "lib/net6.0/Vanara.PInvoke.Ole.dll",
+        "lib/net6.0/Vanara.PInvoke.Ole.xml",
+        "lib/net7.0/Vanara.PInvoke.Ole.dll",
+        "lib/net7.0/Vanara.PInvoke.Ole.xml",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.Ole.dll",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.Ole.xml",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.Ole.dll",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.Ole.xml",
+        "lib/netcoreapp3.1/Vanara.PInvoke.Ole.dll",
+        "lib/netcoreapp3.1/Vanara.PInvoke.Ole.xml",
+        "lib/netstandard2.0/Vanara.PInvoke.Ole.dll",
+        "lib/netstandard2.0/Vanara.PInvoke.Ole.xml",
+        "lib/netstandard2.1/Vanara.PInvoke.Ole.dll",
+        "lib/netstandard2.1/Vanara.PInvoke.Ole.xml",
+        "pkgreadme.md",
+        "vanara.pinvoke.ole.4.2.1.nupkg.sha512",
+        "vanara.pinvoke.ole.nuspec"
+      ]
+    },
+    "Vanara.PInvoke.Rpc/4.2.1": {
+      "sha512": "hPB/fQSatMTU4GJk9IdSw9b+XJh7+fjuafrmBnY7oDQ+y1jt9yS2tpeVy5AvaTTymk+JokV4mkNpE32ViGu72A==",
+      "type": "package",
+      "path": "vanara.pinvoke.rpc/4.2.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Vanara64x64.png",
+        "lib/net48/Vanara.PInvoke.Rpc.dll",
+        "lib/net48/Vanara.PInvoke.Rpc.xml",
+        "lib/net5.0/Vanara.PInvoke.Rpc.dll",
+        "lib/net5.0/Vanara.PInvoke.Rpc.xml",
+        "lib/net6.0/Vanara.PInvoke.Rpc.dll",
+        "lib/net6.0/Vanara.PInvoke.Rpc.xml",
+        "lib/net7.0/Vanara.PInvoke.Rpc.dll",
+        "lib/net7.0/Vanara.PInvoke.Rpc.xml",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.Rpc.dll",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.Rpc.xml",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.Rpc.dll",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.Rpc.xml",
+        "lib/netcoreapp3.1/Vanara.PInvoke.Rpc.dll",
+        "lib/netcoreapp3.1/Vanara.PInvoke.Rpc.xml",
+        "lib/netstandard2.0/Vanara.PInvoke.Rpc.dll",
+        "lib/netstandard2.0/Vanara.PInvoke.Rpc.xml",
+        "lib/netstandard2.1/Vanara.PInvoke.Rpc.dll",
+        "lib/netstandard2.1/Vanara.PInvoke.Rpc.xml",
+        "pkgreadme.md",
+        "vanara.pinvoke.rpc.4.2.1.nupkg.sha512",
+        "vanara.pinvoke.rpc.nuspec"
+      ]
+    },
+    "Vanara.PInvoke.Security/4.2.1": {
+      "sha512": "YiRexNVkRoGREQocdGMV03Zq/llOFWeXZYhW/95mxnExenx0DErlguzYIkWSbedtPcvVd6/w+mkHELIPYzDo3w==",
+      "type": "package",
+      "path": "vanara.pinvoke.security/4.2.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Vanara64x64.png",
+        "lib/net48/Vanara.PInvoke.Security.dll",
+        "lib/net48/Vanara.PInvoke.Security.xml",
+        "lib/net5.0/Vanara.PInvoke.Security.dll",
+        "lib/net5.0/Vanara.PInvoke.Security.xml",
+        "lib/net6.0/Vanara.PInvoke.Security.dll",
+        "lib/net6.0/Vanara.PInvoke.Security.xml",
+        "lib/net7.0/Vanara.PInvoke.Security.dll",
+        "lib/net7.0/Vanara.PInvoke.Security.xml",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.Security.dll",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.Security.xml",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.Security.dll",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.Security.xml",
+        "lib/netcoreapp3.1/Vanara.PInvoke.Security.dll",
+        "lib/netcoreapp3.1/Vanara.PInvoke.Security.xml",
+        "lib/netstandard2.0/Vanara.PInvoke.Security.dll",
+        "lib/netstandard2.0/Vanara.PInvoke.Security.xml",
+        "lib/netstandard2.1/Vanara.PInvoke.Security.dll",
+        "lib/netstandard2.1/Vanara.PInvoke.Security.xml",
+        "pkgreadme.md",
+        "vanara.pinvoke.security.4.2.1.nupkg.sha512",
+        "vanara.pinvoke.security.nuspec"
+      ]
+    },
+    "Vanara.PInvoke.Shared/4.2.1": {
+      "sha512": "EVLvS02V6mL3xWo4cMv0OCo5H3uVR0eWxb0TtfcoI/SVaCKYWi1F000nax+uuEBJGmS90cfpYDvsgPn408b2ag==",
+      "type": "package",
+      "path": "vanara.pinvoke.shared/4.2.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Vanara64x64.png",
+        "lib/net48/Vanara.PInvoke.Shared.dll",
+        "lib/net48/Vanara.PInvoke.Shared.xml",
+        "lib/net5.0/Vanara.PInvoke.Shared.dll",
+        "lib/net5.0/Vanara.PInvoke.Shared.xml",
+        "lib/net6.0/Vanara.PInvoke.Shared.dll",
+        "lib/net6.0/Vanara.PInvoke.Shared.xml",
+        "lib/net7.0/Vanara.PInvoke.Shared.dll",
+        "lib/net7.0/Vanara.PInvoke.Shared.xml",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.Shared.dll",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.Shared.xml",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.Shared.dll",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.Shared.xml",
+        "lib/netcoreapp3.1/Vanara.PInvoke.Shared.dll",
+        "lib/netcoreapp3.1/Vanara.PInvoke.Shared.xml",
+        "lib/netstandard2.0/Vanara.PInvoke.Shared.dll",
+        "lib/netstandard2.0/Vanara.PInvoke.Shared.xml",
+        "lib/netstandard2.1/Vanara.PInvoke.Shared.dll",
+        "lib/netstandard2.1/Vanara.PInvoke.Shared.xml",
+        "pkgreadme.md",
+        "vanara.pinvoke.shared.4.2.1.nupkg.sha512",
+        "vanara.pinvoke.shared.nuspec"
+      ]
+    },
+    "Vanara.PInvoke.User32/4.2.1": {
+      "sha512": "K73vrUqc4yEqtTa7szjHQdpbe9ZO4r+soN5m6bR9w3RQEgpt+mev2VDl1FT1l5K7F05jYNtCOnIffPWMNJs8qw==",
+      "type": "package",
+      "path": "vanara.pinvoke.user32/4.2.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Vanara64x64.png",
+        "lib/net48/Vanara.PInvoke.User32.dll",
+        "lib/net48/Vanara.PInvoke.User32.xml",
+        "lib/net5.0/Vanara.PInvoke.User32.dll",
+        "lib/net5.0/Vanara.PInvoke.User32.xml",
+        "lib/net6.0/Vanara.PInvoke.User32.dll",
+        "lib/net6.0/Vanara.PInvoke.User32.xml",
+        "lib/net7.0/Vanara.PInvoke.User32.dll",
+        "lib/net7.0/Vanara.PInvoke.User32.xml",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.User32.dll",
+        "lib/net8.0-windows7.0/Vanara.PInvoke.User32.xml",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.User32.dll",
+        "lib/net9.0-windows7.0/Vanara.PInvoke.User32.xml",
+        "lib/netcoreapp3.1/Vanara.PInvoke.User32.dll",
+        "lib/netcoreapp3.1/Vanara.PInvoke.User32.xml",
+        "lib/netstandard2.0/Vanara.PInvoke.User32.dll",
+        "lib/netstandard2.0/Vanara.PInvoke.User32.xml",
+        "lib/netstandard2.1/Vanara.PInvoke.User32.dll",
+        "lib/netstandard2.1/Vanara.PInvoke.User32.xml",
+        "pkgreadme.md",
+        "vanara.pinvoke.user32.4.2.1.nupkg.sha512",
+        "vanara.pinvoke.user32.nuspec"
+      ]
+    },
+    "Whisper.net/1.9.0": {
+      "sha512": "oIDi3oa+EYQgPdAsGxEZJmheUuyHI8imN4GUE0rA2xme38uiImE8pqJNYvKsseug3+2Dp9dOud38fl159kROIA==",
+      "type": "package",
+      "path": "whisper.net/1.9.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "LICENSE",
+        "lib/net10.0-android36.0/Whisper.net.dll",
+        "lib/net10.0-android36.0/Whisper.net.xml",
+        "lib/net10.0-ios26.0/Whisper.net.dll",
+        "lib/net10.0-maccatalyst26.0/Whisper.net.dll",
+        "lib/net10.0-tvos26.0/Whisper.net.dll",
+        "lib/net10.0/Whisper.net.dll",
+        "lib/net8.0/Whisper.net.dll",
+        "lib/net9.0-android35.0/Whisper.net.dll",
+        "lib/net9.0-android35.0/Whisper.net.xml",
+        "lib/net9.0-ios18.0/Whisper.net.dll",
+        "lib/net9.0-maccatalyst18.0/Whisper.net.dll",
+        "lib/net9.0-tvos18.0/Whisper.net.dll",
+        "lib/net9.0/Whisper.net.dll",
+        "lib/netstandard2.0/Whisper.net.dll",
+        "readme.md",
+        "whisper.net.1.9.0.nupkg.sha512",
+        "whisper.net.nuspec"
+      ]
+    },
+    "Whisper.net.Runtime/1.9.0": {
+      "sha512": "Fl+kWm+7/EA+Q0KsYrWZlS42MHOxYVK96VpBZy0yLWMwMFwSSMiXzCxosxSm8vSVhYuqGeBK4IOOLTL9FSTsZg==",
+      "type": "package",
+      "path": "whisper.net.runtime/1.9.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "build/Whisper.net.Runtime.targets",
+        "build/android-arm64-v8a/libggml-base-whisper.so",
+        "build/android-arm64-v8a/libggml-cpu-whisper.so",
+        "build/android-arm64-v8a/libggml-whisper.so",
+        "build/android-arm64-v8a/libwhisper.so",
+        "build/android-x86/libggml-base-whisper.so",
+        "build/android-x86/libggml-cpu-whisper.so",
+        "build/android-x86/libggml-whisper.so",
+        "build/android-x86/libwhisper.so",
+        "build/android-x86_64/libggml-base-whisper.so",
+        "build/android-x86_64/libggml-cpu-whisper.so",
+        "build/android-x86_64/libggml-whisper.so",
+        "build/android-x86_64/libwhisper.so",
+        "build/browser-wasm/libggml-base-whisper.a",
+        "build/browser-wasm/libggml-cpu-whisper.a",
+        "build/browser-wasm/libggml-whisper.a",
+        "build/browser-wasm/libwhisper.a",
+        "build/ios-device/libggml-base-whisper.a",
+        "build/ios-device/libggml-blas-whisper.a",
+        "build/ios-device/libggml-cpu-whisper.a",
+        "build/ios-device/libggml-metal-whisper.a",
+        "build/ios-device/libggml-whisper.a",
+        "build/ios-device/libwhisper.a",
+        "build/ios-simulator/libggml-base-whisper.a",
+        "build/ios-simulator/libggml-blas-whisper.a",
+        "build/ios-simulator/libggml-cpu-whisper.a",
+        "build/ios-simulator/libggml-whisper.a",
+        "build/ios-simulator/libwhisper.a",
+        "build/linux-arm/libggml-base-whisper.so",
+        "build/linux-arm/libggml-cpu-whisper.so",
+        "build/linux-arm/libggml-whisper.so",
+        "build/linux-arm/libwhisper.so",
+        "build/linux-arm64/libggml-base-whisper.so",
+        "build/linux-arm64/libggml-cpu-whisper.so",
+        "build/linux-arm64/libggml-whisper.so",
+        "build/linux-arm64/libwhisper.so",
+        "build/linux-x64/libggml-base-whisper.so",
+        "build/linux-x64/libggml-cpu-whisper.so",
+        "build/linux-x64/libggml-whisper.so",
+        "build/linux-x64/libwhisper.so",
+        "build/maccatalyst/libggml-base-whisper.a",
+        "build/maccatalyst/libggml-blas-whisper.a",
+        "build/maccatalyst/libggml-cpu-whisper.a",
+        "build/maccatalyst/libggml-whisper.a",
+        "build/maccatalyst/libwhisper.a",
+        "build/macos-arm64/libggml-base-whisper.dylib",
+        "build/macos-arm64/libggml-blas-whisper.dylib",
+        "build/macos-arm64/libggml-cpu-whisper.dylib",
+        "build/macos-arm64/libggml-metal-whisper.dylib",
+        "build/macos-arm64/libggml-whisper.dylib",
+        "build/macos-arm64/libwhisper.dylib",
+        "build/macos-x64/libggml-base-whisper.dylib",
+        "build/macos-x64/libggml-blas-whisper.dylib",
+        "build/macos-x64/libggml-cpu-whisper.dylib",
+        "build/macos-x64/libggml-whisper.dylib",
+        "build/macos-x64/libwhisper.dylib",
+        "build/tvos-device/libggml-base-whisper.a",
+        "build/tvos-device/libggml-blas-whisper.a",
+        "build/tvos-device/libggml-cpu-whisper.a",
+        "build/tvos-device/libggml-metal-whisper.a",
+        "build/tvos-device/libggml-whisper.a",
+        "build/tvos-device/libwhisper.a",
+        "build/tvos-simulator/libggml-base-whisper.a",
+        "build/tvos-simulator/libggml-blas-whisper.a",
+        "build/tvos-simulator/libggml-cpu-whisper.a",
+        "build/tvos-simulator/libggml-whisper.a",
+        "build/tvos-simulator/libwhisper.a",
+        "build/win-arm64/ggml-base-whisper.dll",
+        "build/win-arm64/ggml-cpu-whisper.dll",
+        "build/win-arm64/ggml-whisper.dll",
+        "build/win-arm64/whisper.dll",
+        "build/win-x64/ggml-base-whisper.dll",
+        "build/win-x64/ggml-cpu-whisper.dll",
+        "build/win-x64/ggml-whisper.dll",
+        "build/win-x64/whisper.dll",
+        "build/win-x86/ggml-base-whisper.dll",
+        "build/win-x86/ggml-cpu-whisper.dll",
+        "build/win-x86/ggml-whisper.dll",
+        "build/win-x86/whisper.dll",
+        "content/readme.md",
+        "whisper.net.runtime.1.9.0.nupkg.sha512",
+        "whisper.net.runtime.nuspec"
+      ]
+    },
+    "Whisper.net.Runtime.Clblast/1.5.0": {
+      "sha512": "Z19uocE6/KONJN/gDP525uyEf9azbgSS/X91TvjTHs8WR8FtydqOBq7KiGuJzl01bzVZXvu/7Th6hUNLitWraA==",
+      "type": "package",
+      "path": "whisper.net.runtime.clblast/1.5.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "build/Whisper.net.Runtime.Clblast.targets",
+        "build/win-x64/clblast.dll",
+        "build/win-x64/whisper.dll",
+        "whisper.net.runtime.clblast.1.5.0.nupkg.sha512",
+        "whisper.net.runtime.clblast.nuspec"
+      ]
+    },
+    "Whisper.net.Runtime.Metal/1.9.0": {
+      "sha512": "HO66gX4D+vaElvmxnLaRGkyufuc8pGR6OlTwKinZAmUoN9KWG4AHA4AJHkj9ZQge95jNDZKKmQt6RE8RwAGJmA==",
+      "type": "package",
+      "path": "whisper.net.runtime.metal/1.9.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "build/Whisper.net.Runtime.Metal.targets",
+        "build/ggml-metal.metal",
+        "content/readme.md",
+        "whisper.net.runtime.metal.1.9.0.nupkg.sha512",
+        "whisper.net.runtime.metal.nuspec"
       ]
     }
   },
@@ -980,7 +1893,11 @@
       "NAudio.Wasapi >= 2.2.1",
       "System.Drawing.Common >= 10.0.0",
       "System.Speech >= 10.0.0",
-      "System.Text.Json >= 8.0.5"
+      "System.Text.Json >= 10.0.1",
+      "Vanara.PInvoke.CoreAudio >= 4.2.1",
+      "Whisper.net >= 1.9.0",
+      "Whisper.net.Runtime >= 1.9.0",
+      "Whisper.net.Runtime.Clblast >= 1.5.0"
     ]
   },
   "packageFolders": {
@@ -1063,7 +1980,23 @@
           },
           "System.Text.Json": {
             "target": "Package",
-            "version": "[8.0.5, )"
+            "version": "[10.0.1, )"
+          },
+          "Vanara.PInvoke.CoreAudio": {
+            "target": "Package",
+            "version": "[4.2.1, )"
+          },
+          "Whisper.net": {
+            "target": "Package",
+            "version": "[1.9.0, )"
+          },
+          "Whisper.net.Runtime": {
+            "target": "Package",
+            "version": "[1.9.0, )"
+          },
+          "Whisper.net.Runtime.Clblast": {
+            "target": "Package",
+            "version": "[1.5.0, )"
           }
         },
         "imports": [

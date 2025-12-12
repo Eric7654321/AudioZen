@@ -8,8 +8,10 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Policy;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
 namespace AudioUI
@@ -52,6 +54,8 @@ namespace AudioUI
                     // 此時檔案已經存檔完畢且解除鎖定，可以安全讀取
                     byte[] bytes = File.ReadAllBytes(filePath);
                     string returnString = Convert.ToBase64String(bytes);
+                    //string configPath = Path.Combine(".", "fixedCommand.wav");
+                    //byte[] bytes = File.ReadAllBytes(configPath);
 
                     // 設定 Task 完成並回傳字串
                     tcs.SetResult(returnString);
@@ -75,11 +79,9 @@ namespace AudioUI
             return tcs.Task;
         }
 
-
-
-        // --- 功能 3: 呼叫 Gemini API ---
+        // --- 功能 2: 呼叫 Gemini API ---
         string optimizeText = // constant
-        "You are an audio engineer. Listen to the user's voice command. " +
+        "You are an audio engineer. Analyze to the user's text command. " +
         "Based on the request, generate an Equalizer APO configuration. " +
         "You manage 4 specific targets: " +
         "1. 'all': Applies to everything (Global). " +
@@ -111,7 +113,7 @@ namespace AudioUI
         "25, 40, 63, 100, 160, 250, 400, 630, 1000, 1600, 2500, 4000, 6300, 10000, 16000. " +
         "Rules for generation: " +
         "1. Determine the gain (dB) for each band based on the user's intent and return in floating number. " +
-        "Besides, the gain should be larger than 7.0dB, or just remain no gain."+
+        "Besides, the gain should be larger than 7.0dB, or just remain no gain." +
         "2. Calculate 'preamp_db'. logic: Identify the maximum positive gain among all bands. " +
         "The preamp_db must be negative and its absolute value must be greater than or equal to that maximum gain (e.g., if max gain is +15.2dB, preamp must be -15.2dB or lower, like -15.8dB). " +
         "3. Construct 'graphic_eq_string' in the format: '25 [gain]; 40 [gain]; ...' " +
@@ -121,13 +123,21 @@ namespace AudioUI
         "  \"preamp_db\": float, " +
         "  \"graphic_eq_string\": \"string (The formatted frequency-gain pairs separated by semicolons)\" " +
         "}";
-        public async Task<string> CallGeminiApiAsync(string base64Audio, string url)
+        public async Task<string> CallGeminiApiAsync(string userSpeech, string url)
         {
-            using var client = new HttpClient() { Timeout = TimeSpan.FromSeconds(30) };
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("AudioUI/1.0");
+            // 將語音轉換成文字
 
-            // 建構 JSON Payload (使用匿名物件讓 System.Text.Json 自動序列化)
+            if (string.IsNullOrWhiteSpace(userSpeech))
+            {
+                return "{\"message_for_user\": \"我聽不清楚，請再說一次。\", \"configs\": []}";
+            }
+
+            MessageBox.Show("識別到的文字：" + userSpeech); // TODO: 傳外面
+
+            // 組合最終的 Prompt
+            string fullPrompt = optimizeText + $"\n\nUser Command: \"{userSpeech}\"";
+
+            // 建構 JSON Payload
             var payload = new
             {
                 generationConfig = new { responseMimeType = "application/json" },
@@ -137,8 +147,7 @@ namespace AudioUI
                     {
                         parts = new object[]
                         {
-                            new { text = optimizeText },
-                            new { inlineData = new { mimeType = "audio/wav", data = base64Audio } }
+                            new { text = fullPrompt }
                         }
                     }
                 }
@@ -147,7 +156,53 @@ namespace AudioUI
             string jsonContent = JsonSerializer.Serialize(payload);
             var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-            // 重試機制
+            // 呼叫 Gemini API request並回傳結果
+            return await SendGeminiRequestAsync(url, payload);
+        }
+
+        // 輔助功能：將語音轉換成文字
+        private async Task<string> TranscribeWithGeminiAsync(string base64Audio, string url)
+        {
+            // 簡單的 Prompt，告訴 Gemini 只要轉錄就好
+            var payload = new
+            {
+                contents = new[]
+                {
+                new
+                {
+                    parts = new object[]
+                    {
+                        new { text = "Please transcribe this audio into Traditional Chinese text exactly as spoken. Do not add any introduction or explanation. Output only the text." },
+                        new { inlineData = new { mimeType = "audio/wav", data = base64Audio } }
+                    }
+                }
+            }
+            };
+
+            string responseJson = await SendGeminiRequestAsync(url, payload);
+            try
+            {
+                // 使用 JsonNode 解析複雜的巢狀結構
+                var node = JsonNode.Parse(responseJson);
+
+                // 路徑通常是: candidates[0].content.parts[0].text
+                var text = node?["candidates"]?[0]?["content"]?["parts"]?[0]?["text"]?.ToString();
+
+                return text?.Trim() ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        // 輔助功能：發送 Gemini API 請求並處理重試邏輯
+        private async Task<string> SendGeminiRequestAsync(string url, object payload)
+        {
+            using var client = new HttpClient() { Timeout = TimeSpan.FromSeconds(30) };
+            var jsonPayload = JsonSerializer.Serialize(payload);
+            var httpContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
             const int maxRetries = 3;
             for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
@@ -164,7 +219,7 @@ namespace AudioUI
                     }
 
                     // 若為 5xx 或 429 (rate limit) 或 503，嘗試重試
-                    if ((int)response.StatusCode >= 500 || response.StatusCode == HttpStatusCode.TooManyRequests || response.StatusCode == HttpStatusCode.ServiceUnavailable)
+                    if ((int)response.StatusCode >= 500 || response.StatusCode == HttpStatusCode.ServiceUnavailable)
                     {
                         // 若已是最後一次重試，拋出包含 body 的例外，便於診斷
                         if (attempt == maxRetries)
@@ -195,11 +250,12 @@ namespace AudioUI
                     await Task.Delay((int)Math.Pow(2, attempt) * 1000);
                 }
             }
-
-            throw new InvalidOperationException("不可達的程式路徑：CallGeminiApiAsync 重試機制異常結束。");
+            throw new InvalidOperationException("不可達的程式路徑：重試機制異常結束。");
         }
 
-        // --- 功能 4: 解析回傳並寫入 Config ---
+        
+
+        // --- 功能 3: 解析回傳並寫入 Config ---
         public string ParseAndWriteConfig(string rawResponse, string outputPath, Dictionary<string, string> deviceMap)
         {
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
@@ -261,19 +317,20 @@ namespace AudioUI
             return eqResponse.MessageForUser;
         }
 
+        // --- 功能 4: 還原設定檔 ---
         public async Task ConfigRollback(string IdString, string configPath)
         {
-            if (_MappingManager.GetFront(IdString) == "")
+            if (_MappingManager.GetFront(IdString) == null)
             {
                 await _TtsService.SpeakAsync("已經沒有更早的設定可以還原"); // constant
                 return;
             }
-            string originconfigPath = _MappingManager.GetFront(IdString);
+            string originconfigPath = _MappingManager.GetFront(IdString).FileName;
             File.Copy(originconfigPath, configPath, overwrite: true);
         }
 
 
-        private const string API_KEY = "AIzaSyBJe-x4R2675FWctAAY3UrfW8hM1z9taoE"; // constant
+        private const string API_KEY = "AIzaSyAEmNTpITVz5i6gMvKVtfHlBNV3c-vVIRM"; // constant
         private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + API_KEY;
         TtsService _TtsService = new TtsService();
         MappingManager _MappingManager = new MappingManager();
@@ -299,14 +356,15 @@ namespace AudioUI
             await _TtsService.SpeakAsync("正在解析中"); // constant
 
             // 3. 呼叫 Gemini API
-            string geminiResponse = await CallGeminiApiAsync(audioBase64, GEMINI_URL);
+            string transcribedText = await TranscribeWithGeminiAsync(audioBase64, GEMINI_URL); // STT
+            string geminiResponse = await CallGeminiApiAsync(transcribedText, GEMINI_URL);
 
             if (!string.IsNullOrEmpty(geminiResponse))
             {
                 // 4. 解析回傳並寫入 Config
                 string ttsMessage = ParseAndWriteConfig(geminiResponse, eqConfigPath, myDeviceMap);
 
-                // 套用到目前config
+                // 套用到config.txt
                 string configPath = Path.Combine(".", "config", "config.txt"); // constant
                 string situationIdString = situationId.ToString();
                 
@@ -318,6 +376,12 @@ namespace AudioUI
                 await _TtsService.SpeakAsync("是否需要調整回原本的內容"); // constant
 
                 bool needRollback = false; // simulate user input
+                FileCreateData newCreateData = new FileCreateData
+                {
+                    FileName = eqConfigPath,
+                    UserInput = transcribedText,
+                    AiResponse = ttsMessage
+                };
                 // 如果對輸入不滿意
                 if (needRollback)
                 {
@@ -326,14 +390,14 @@ namespace AudioUI
                 }
                 else
                 {
-                    _MappingManager.PushFront("-1", eqConfigPath);
+                    _MappingManager.PushFront("-1", newCreateData);
                 }
                 // 詢問是否需要儲存成preset
                 await _TtsService.SpeakAsync("是否需要將此設定儲存成preset"); // constant
                 bool needSavePreset = true; // simulate user input
                 if (needSavePreset)
                 {
-                    _MappingManager.PushFront(situationIdString, eqConfigPath);
+                    _MappingManager.PushFront(situationIdString, newCreateData);
                 }
 
                 // 儲存 mapping

@@ -96,6 +96,7 @@ namespace AudioUI
                     if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
                     _TtsService.Stop();
+
                     await _GeminiService.RecordAndProcessAsync(0, 5000, audioPath, configPath);
                 }
                 catch (Exception ex)
