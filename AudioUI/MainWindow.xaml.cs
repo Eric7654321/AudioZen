@@ -73,6 +73,7 @@ namespace AudioUI
         private TtsService _TtsService = new TtsService();
         private MappingManager _MappingManager = new MappingManager();
         private KeyMappingService _KeyMapService = new KeyMappingService();
+        private WakeWordTrigger _WakeWordTrigger = new WakeWordTrigger();
 
         // 背景執行與快捷鍵服務
         private HotkeyService _HotkeyService = new HotkeyService();
@@ -104,6 +105,7 @@ namespace AudioUI
         public MainWindow()
         {
             InitializeComponent();
+            _WakeWordTrigger.InitializeSpeechRecognition();
             this.DataContext = this;
 
             MinimizeCommand = new RelayCommand(_ => WindowState = WindowState.Minimized);
