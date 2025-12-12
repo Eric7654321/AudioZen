@@ -93,6 +93,12 @@ namespace AudioUI
         "1. Decide which target(s) to modify based on the user's intent. If vague, use 'all'. You can return multiple configs if needed. " +
         "2. For each config, calculate 'preamp_db' (must be negative, |preamp| >= max_gain). " +
         "3. Construct 'graphic_eq_string'. " +
+        "   [CRITICAL FORMATTING RULE ABOUT RULE 3]: " +
+"   - The output MUST differ from standard filter syntax. " +
+"   - CORRECT FORMAT: '25 0.5; 40 1.2; 63 -2.0; ...' (Frequency[space]Gain[semicolon]). " +
+"   - WRONG FORMAT: 'Filter: ON PK Fc 25 Hz...' (DO NOT USE THIS). " +
+"   - FORBIDDEN WORDS: 'Filter', 'ON', 'PK', 'Fc', 'Hz', 'Gain', 'Q', ':'. " +
+"   - ONLY use numbers, spaces, and semicolons. " +
         "WARNING: Output ONLY a JSON object with this exact structure: " +
         "{ " +
         "  \"message_for_user\": \"string (Explain in 15 words in Traditional Chinese)\", " +
@@ -126,13 +132,11 @@ namespace AudioUI
         public async Task<string> CallGeminiApiAsync(string userSpeech, string url)
         {
             // 將語音轉換成文字
-
             if (string.IsNullOrWhiteSpace(userSpeech))
             {
                 return "{\"message_for_user\": \"我聽不清楚，請再說一次。\", \"configs\": []}";
             }
 
-            MessageBox.Show("識別到的文字：" + userSpeech); // TODO: 傳外面
 
             // 組合最終的 Prompt
             string fullPrompt = optimizeText + $"\n\nUser Command: \"{userSpeech}\"";
@@ -178,13 +182,11 @@ namespace AudioUI
                 }
             }
             };
-
             string responseJson = await SendGeminiRequestAsync(url, payload);
             try
             {
                 // 使用 JsonNode 解析複雜的巢狀結構
                 var node = JsonNode.Parse(responseJson);
-
                 // 路徑通常是: candidates[0].content.parts[0].text
                 var text = node?["candidates"]?[0]?["content"]?["parts"]?[0]?["text"]?.ToString();
 
@@ -262,7 +264,9 @@ namespace AudioUI
             var geminiResponse = JsonSerializer.Deserialize<GeminiResponse>(rawResponse, options);
 
             if (geminiResponse?.Candidates == null || geminiResponse.Candidates.Count == 0)
-                throw new Exception("No candidates found.");
+            {
+                return "-1";
+            }
 
             string innerJsonText = geminiResponse.Candidates[0].Content.Parts[0].Text;
 
@@ -330,7 +334,7 @@ namespace AudioUI
         }
 
 
-        private const string API_KEY = "AIzaSyAEmNTpITVz5i6gMvKVtfHlBNV3c-vVIRM"; // constant
+        private const string API_KEY = "AIzaSyCMRnOADLA-VpgjY0e9dfAPLAkd-LApf_8"; // constant
         private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + API_KEY;
         TtsService _TtsService = new TtsService();
         MappingManager _MappingManager = new MappingManager();
@@ -357,12 +361,24 @@ namespace AudioUI
 
             // 3. 呼叫 Gemini API
             string transcribedText = await TranscribeWithGeminiAsync(audioBase64, GEMINI_URL); // STT
+            MessageBox.Show(transcribedText);
             string geminiResponse = await CallGeminiApiAsync(transcribedText, GEMINI_URL);
 
             if (!string.IsNullOrEmpty(geminiResponse))
             {
                 // 4. 解析回傳並寫入 Config
                 string ttsMessage = ParseAndWriteConfig(geminiResponse, eqConfigPath, myDeviceMap);
+                int retryCount = 0;
+                while (ttsMessage=="-1" && retryCount < 3)
+                {
+                    geminiResponse = await CallGeminiApiAsync(transcribedText, GEMINI_URL);
+                    ttsMessage = ParseAndWriteConfig(geminiResponse, eqConfigPath, myDeviceMap);
+                    retryCount++;
+                }
+                if (retryCount == 3)
+                {
+                    await _TtsService.SpeakAsync("很抱歉，無法產生有效指令，請稍後再試");
+                }
 
                 // 套用到config.txt
                 string configPath = Path.Combine(".", "config", "config.txt"); // constant

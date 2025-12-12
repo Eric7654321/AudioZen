@@ -69,22 +69,6 @@
           "Microsoft.WindowsDesktop.App.WPF"
         ]
       },
-      "Microsoft.Extensions.AI.Abstractions/10.0.0": {
-        "type": "package",
-        "dependencies": {
-          "System.Text.Json": "10.0.0"
-        },
-        "compile": {
-          "lib/net8.0/Microsoft.Extensions.AI.Abstractions.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/net8.0/Microsoft.Extensions.AI.Abstractions.dll": {
-            "related": ".xml"
-          }
-        }
-      },
       "Microsoft.NETCore.Platforms/3.1.0": {
         "type": "package",
         "compile": {
@@ -625,39 +609,6 @@
             "related": ".xml"
           }
         }
-      },
-      "Whisper.net/1.9.0": {
-        "type": "package",
-        "dependencies": {
-          "Microsoft.Extensions.AI.Abstractions": "10.0.0"
-        },
-        "compile": {
-          "lib/net8.0/Whisper.net.dll": {}
-        },
-        "runtime": {
-          "lib/net8.0/Whisper.net.dll": {}
-        }
-      },
-      "Whisper.net.Runtime/1.9.0": {
-        "type": "package",
-        "dependencies": {
-          "Whisper.net.Runtime.Metal": "1.9.0"
-        },
-        "build": {
-          "build/Whisper.net.Runtime.targets": {}
-        }
-      },
-      "Whisper.net.Runtime.Clblast/1.5.0": {
-        "type": "package",
-        "build": {
-          "build/Whisper.net.Runtime.Clblast.targets": {}
-        }
-      },
-      "Whisper.net.Runtime.Metal/1.9.0": {
-        "type": "package",
-        "build": {
-          "build/Whisper.net.Runtime.Metal.targets": {}
-        }
       }
     }
   },
@@ -799,29 +750,6 @@
         "logo_small.png",
         "mahapps.metro.iconpacks.material.6.2.1.nupkg.sha512",
         "mahapps.metro.iconpacks.material.nuspec"
-      ]
-    },
-    "Microsoft.Extensions.AI.Abstractions/10.0.0": {
-      "sha512": "PHeuDm2tC6wJPEQvleUr2kNQaIMNqSf3aEbzkIPlZyQ0+0SYI9SwXVLdGD1NPBI+xB+Vb2lxZKhrFlIf9kP9WA==",
-      "type": "package",
-      "path": "microsoft.extensions.ai.abstractions/10.0.0",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "Icon.png",
-        "README.md",
-        "lib/net10.0/Microsoft.Extensions.AI.Abstractions.dll",
-        "lib/net10.0/Microsoft.Extensions.AI.Abstractions.xml",
-        "lib/net462/Microsoft.Extensions.AI.Abstractions.dll",
-        "lib/net462/Microsoft.Extensions.AI.Abstractions.xml",
-        "lib/net8.0/Microsoft.Extensions.AI.Abstractions.dll",
-        "lib/net8.0/Microsoft.Extensions.AI.Abstractions.xml",
-        "lib/net9.0/Microsoft.Extensions.AI.Abstractions.dll",
-        "lib/net9.0/Microsoft.Extensions.AI.Abstractions.xml",
-        "lib/netstandard2.0/Microsoft.Extensions.AI.Abstractions.dll",
-        "lib/netstandard2.0/Microsoft.Extensions.AI.Abstractions.xml",
-        "microsoft.extensions.ai.abstractions.10.0.0.nupkg.sha512",
-        "microsoft.extensions.ai.abstractions.nuspec"
       ]
     },
     "Microsoft.NETCore.Platforms/3.1.0": {
@@ -1736,152 +1664,6 @@
         "vanara.pinvoke.user32.4.2.1.nupkg.sha512",
         "vanara.pinvoke.user32.nuspec"
       ]
-    },
-    "Whisper.net/1.9.0": {
-      "sha512": "oIDi3oa+EYQgPdAsGxEZJmheUuyHI8imN4GUE0rA2xme38uiImE8pqJNYvKsseug3+2Dp9dOud38fl159kROIA==",
-      "type": "package",
-      "path": "whisper.net/1.9.0",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "LICENSE",
-        "lib/net10.0-android36.0/Whisper.net.dll",
-        "lib/net10.0-android36.0/Whisper.net.xml",
-        "lib/net10.0-ios26.0/Whisper.net.dll",
-        "lib/net10.0-maccatalyst26.0/Whisper.net.dll",
-        "lib/net10.0-tvos26.0/Whisper.net.dll",
-        "lib/net10.0/Whisper.net.dll",
-        "lib/net8.0/Whisper.net.dll",
-        "lib/net9.0-android35.0/Whisper.net.dll",
-        "lib/net9.0-android35.0/Whisper.net.xml",
-        "lib/net9.0-ios18.0/Whisper.net.dll",
-        "lib/net9.0-maccatalyst18.0/Whisper.net.dll",
-        "lib/net9.0-tvos18.0/Whisper.net.dll",
-        "lib/net9.0/Whisper.net.dll",
-        "lib/netstandard2.0/Whisper.net.dll",
-        "readme.md",
-        "whisper.net.1.9.0.nupkg.sha512",
-        "whisper.net.nuspec"
-      ]
-    },
-    "Whisper.net.Runtime/1.9.0": {
-      "sha512": "Fl+kWm+7/EA+Q0KsYrWZlS42MHOxYVK96VpBZy0yLWMwMFwSSMiXzCxosxSm8vSVhYuqGeBK4IOOLTL9FSTsZg==",
-      "type": "package",
-      "path": "whisper.net.runtime/1.9.0",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "build/Whisper.net.Runtime.targets",
-        "build/android-arm64-v8a/libggml-base-whisper.so",
-        "build/android-arm64-v8a/libggml-cpu-whisper.so",
-        "build/android-arm64-v8a/libggml-whisper.so",
-        "build/android-arm64-v8a/libwhisper.so",
-        "build/android-x86/libggml-base-whisper.so",
-        "build/android-x86/libggml-cpu-whisper.so",
-        "build/android-x86/libggml-whisper.so",
-        "build/android-x86/libwhisper.so",
-        "build/android-x86_64/libggml-base-whisper.so",
-        "build/android-x86_64/libggml-cpu-whisper.so",
-        "build/android-x86_64/libggml-whisper.so",
-        "build/android-x86_64/libwhisper.so",
-        "build/browser-wasm/libggml-base-whisper.a",
-        "build/browser-wasm/libggml-cpu-whisper.a",
-        "build/browser-wasm/libggml-whisper.a",
-        "build/browser-wasm/libwhisper.a",
-        "build/ios-device/libggml-base-whisper.a",
-        "build/ios-device/libggml-blas-whisper.a",
-        "build/ios-device/libggml-cpu-whisper.a",
-        "build/ios-device/libggml-metal-whisper.a",
-        "build/ios-device/libggml-whisper.a",
-        "build/ios-device/libwhisper.a",
-        "build/ios-simulator/libggml-base-whisper.a",
-        "build/ios-simulator/libggml-blas-whisper.a",
-        "build/ios-simulator/libggml-cpu-whisper.a",
-        "build/ios-simulator/libggml-whisper.a",
-        "build/ios-simulator/libwhisper.a",
-        "build/linux-arm/libggml-base-whisper.so",
-        "build/linux-arm/libggml-cpu-whisper.so",
-        "build/linux-arm/libggml-whisper.so",
-        "build/linux-arm/libwhisper.so",
-        "build/linux-arm64/libggml-base-whisper.so",
-        "build/linux-arm64/libggml-cpu-whisper.so",
-        "build/linux-arm64/libggml-whisper.so",
-        "build/linux-arm64/libwhisper.so",
-        "build/linux-x64/libggml-base-whisper.so",
-        "build/linux-x64/libggml-cpu-whisper.so",
-        "build/linux-x64/libggml-whisper.so",
-        "build/linux-x64/libwhisper.so",
-        "build/maccatalyst/libggml-base-whisper.a",
-        "build/maccatalyst/libggml-blas-whisper.a",
-        "build/maccatalyst/libggml-cpu-whisper.a",
-        "build/maccatalyst/libggml-whisper.a",
-        "build/maccatalyst/libwhisper.a",
-        "build/macos-arm64/libggml-base-whisper.dylib",
-        "build/macos-arm64/libggml-blas-whisper.dylib",
-        "build/macos-arm64/libggml-cpu-whisper.dylib",
-        "build/macos-arm64/libggml-metal-whisper.dylib",
-        "build/macos-arm64/libggml-whisper.dylib",
-        "build/macos-arm64/libwhisper.dylib",
-        "build/macos-x64/libggml-base-whisper.dylib",
-        "build/macos-x64/libggml-blas-whisper.dylib",
-        "build/macos-x64/libggml-cpu-whisper.dylib",
-        "build/macos-x64/libggml-whisper.dylib",
-        "build/macos-x64/libwhisper.dylib",
-        "build/tvos-device/libggml-base-whisper.a",
-        "build/tvos-device/libggml-blas-whisper.a",
-        "build/tvos-device/libggml-cpu-whisper.a",
-        "build/tvos-device/libggml-metal-whisper.a",
-        "build/tvos-device/libggml-whisper.a",
-        "build/tvos-device/libwhisper.a",
-        "build/tvos-simulator/libggml-base-whisper.a",
-        "build/tvos-simulator/libggml-blas-whisper.a",
-        "build/tvos-simulator/libggml-cpu-whisper.a",
-        "build/tvos-simulator/libggml-whisper.a",
-        "build/tvos-simulator/libwhisper.a",
-        "build/win-arm64/ggml-base-whisper.dll",
-        "build/win-arm64/ggml-cpu-whisper.dll",
-        "build/win-arm64/ggml-whisper.dll",
-        "build/win-arm64/whisper.dll",
-        "build/win-x64/ggml-base-whisper.dll",
-        "build/win-x64/ggml-cpu-whisper.dll",
-        "build/win-x64/ggml-whisper.dll",
-        "build/win-x64/whisper.dll",
-        "build/win-x86/ggml-base-whisper.dll",
-        "build/win-x86/ggml-cpu-whisper.dll",
-        "build/win-x86/ggml-whisper.dll",
-        "build/win-x86/whisper.dll",
-        "content/readme.md",
-        "whisper.net.runtime.1.9.0.nupkg.sha512",
-        "whisper.net.runtime.nuspec"
-      ]
-    },
-    "Whisper.net.Runtime.Clblast/1.5.0": {
-      "sha512": "Z19uocE6/KONJN/gDP525uyEf9azbgSS/X91TvjTHs8WR8FtydqOBq7KiGuJzl01bzVZXvu/7Th6hUNLitWraA==",
-      "type": "package",
-      "path": "whisper.net.runtime.clblast/1.5.0",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "build/Whisper.net.Runtime.Clblast.targets",
-        "build/win-x64/clblast.dll",
-        "build/win-x64/whisper.dll",
-        "whisper.net.runtime.clblast.1.5.0.nupkg.sha512",
-        "whisper.net.runtime.clblast.nuspec"
-      ]
-    },
-    "Whisper.net.Runtime.Metal/1.9.0": {
-      "sha512": "HO66gX4D+vaElvmxnLaRGkyufuc8pGR6OlTwKinZAmUoN9KWG4AHA4AJHkj9ZQge95jNDZKKmQt6RE8RwAGJmA==",
-      "type": "package",
-      "path": "whisper.net.runtime.metal/1.9.0",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "build/Whisper.net.Runtime.Metal.targets",
-        "build/ggml-metal.metal",
-        "content/readme.md",
-        "whisper.net.runtime.metal.1.9.0.nupkg.sha512",
-        "whisper.net.runtime.metal.nuspec"
-      ]
     }
   },
   "projectFileDependencyGroups": {
@@ -1894,10 +1676,7 @@
       "System.Drawing.Common >= 10.0.0",
       "System.Speech >= 10.0.0",
       "System.Text.Json >= 10.0.1",
-      "Vanara.PInvoke.CoreAudio >= 4.2.1",
-      "Whisper.net >= 1.9.0",
-      "Whisper.net.Runtime >= 1.9.0",
-      "Whisper.net.Runtime.Clblast >= 1.5.0"
+      "Vanara.PInvoke.CoreAudio >= 4.2.1"
     ]
   },
   "packageFolders": {
@@ -1985,18 +1764,6 @@
           "Vanara.PInvoke.CoreAudio": {
             "target": "Package",
             "version": "[4.2.1, )"
-          },
-          "Whisper.net": {
-            "target": "Package",
-            "version": "[1.9.0, )"
-          },
-          "Whisper.net.Runtime": {
-            "target": "Package",
-            "version": "[1.9.0, )"
-          },
-          "Whisper.net.Runtime.Clblast": {
-            "target": "Package",
-            "version": "[1.5.0, )"
           }
         },
         "imports": [
