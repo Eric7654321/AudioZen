@@ -50,6 +50,19 @@ namespace AudioUI
 
         [JsonPropertyName("graphic_eq_string")]
         public string GraphicEqString { get; set; }
+
+        [JsonPropertyName("comp_json")] 
+        public List<MeldaEntry> CompJson { get; set; } 
+
+        [JsonPropertyName("reverb_json")]
+        public List<MeldaEntry> ReverbJson { get; set; }
     }
 
+    public class MeldaEntry{
+        [JsonPropertyName("raw_key")] 
+        public string RawKey { get; set; }
+
+        [JsonConverter(typeof(ObjectToNativeConverter))]
+        public object Value { get; set; }
+    }
 }
