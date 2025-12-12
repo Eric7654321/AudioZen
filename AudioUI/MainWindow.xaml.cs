@@ -73,6 +73,7 @@ namespace AudioUI
         private MappingManager _MappingManager = new MappingManager();
         private KeyMappingService _KeyMapService = new KeyMappingService();
         private WakeWordTrigger _WakeWordTrigger = new WakeWordTrigger();
+        private PerProcessAudioRecorder _PerProcessAudioRecorder = new PerProcessAudioRecorder();
 
         // 背景執行與快捷鍵服務
         private HotkeyService _HotkeyService = new HotkeyService();
@@ -125,15 +126,12 @@ namespace AudioUI
                     var dir = Path.GetDirectoryName(configPath);
                     if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
-                    //bool isAccepted = await _GeminiService.SendNotificationAndWaitAsync();
-                    //System.Windows.MessageBox.Show(isAccepted.ToString());
-
                     _TtsService.Stop();
-                    //await PerProcessAudioRecorder.RecordAllActiveAppsAsync(
-                    //    Path.Combine(".", "config", "record"), 
-                    //    TimeSpan.FromSeconds(3));
+                    await PerProcessAudioRecorder.RecordAllActiveAppsAsync(
+                        Path.Combine(".", "config", "record"),
+                        TimeSpan.FromSeconds(3));
 
-                    await _GeminiService.RecordAndProcessAsync(0, 5000, audioPath, configPath);
+                    //await _GeminiService.RecordAndProcessAsync(0, 5000, audioPath, configPath);
 
                     // 錄音完成後刷新 Config 列表
                     RefreshConfigOptions();

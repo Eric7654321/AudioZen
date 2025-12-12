@@ -1,4 +1,6 @@
 ﻿using AudioUI;
+using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -8,16 +10,21 @@ using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 
-namespace AudioAI
+namespace AudioUI   
 {
-    public class PerProcessAudioRecorder
+    public class PerProcessAudioRecorder : IDisposable
     {
-        private AudioSessionService _AudioSessionService = new AudioSessionService();
+        
         // 定義 COM GUIDs
         private static  Guid IID_IAudioClient = new Guid("1CB9AD4C-DBFA-4c32-B178-C2F568A703B2");
         private static  Guid IID_IAudioCaptureClient = new Guid("C8ADBD64-E71E-48A0-A4DE-185C395CD317");
         private const string VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK = "VAD\\Process_Loopback";
+
+        private IWavePlayer _outputDevice;
+        private MixingSampleProvider _mixer;
+        private List<AudioFileReader> _readers;
 
         /// <summary>
         /// [新功能] 建立 Timestamp 資料夾，並對所有有視窗的應用程式同時進行錄音。
@@ -30,8 +37,7 @@ namespace AudioAI
             {
                 throw new NotSupportedException("此功能需要 Windows 10 Build 20348 或 Windows 11 以上版本。");
             }
-
-            //var activeApps = _AudioSessionService.GetAppsWithConfig();
+            
 
             // 1. 建立 Timestamp 資料夾
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
@@ -41,9 +47,15 @@ namespace AudioAI
             // 2. 篩選目標 Process
             // 策略：抓取所有有「視窗標題」的程式，通常這些才是會發出聲音的使用者應用程式。
             // 過濾掉系統核心程序與沒有 UI 的背景服務。
-            var targetProcesses = Process.GetProcesses()
-                .Where(p => !string.IsNullOrEmpty(p.MainWindowTitle))
-                .ToList();
+            AudioSessionService _AudioSessionService = new AudioSessionService();
+            var activeApps = _AudioSessionService.GetAppsWithConfig();
+            var pidsToRecord = activeApps.Select(app => app.ProcessId).ToList();
+            var targetProcesses = new List<Process>();
+            foreach (var pid in pidsToRecord) 
+            {
+                var p = Process.GetProcessById(pid);
+                targetProcesses.Add(p);
+            }
 
             Debug.WriteLine($"找到 {targetProcesses.Count} 個潛在錄音目標。");
 
@@ -80,7 +92,74 @@ namespace AudioAI
             {
                 await Task.WhenAll(recordingTasks);
             }
+            System.Windows.MessageBox.Show($"錄音完成，檔案已儲存在：{sessionFolder}");
         }
+
+        /// <summary>
+        /// 播放指定資料夾內的所有 WAV 檔案
+        /// </summary>
+        /// <param name="folderPath">包含音檔的資料夾路徑</param>
+        public void PlayAllInFolder(string folderPath)
+        {
+            // 1. 先停止並清理之前的播放 (避免重複播放)
+            Stop();
+
+            if (!Directory.Exists(folderPath))
+                throw new DirectoryNotFoundException($"找無此資料夾: {folderPath}");
+
+            var files = Directory.GetFiles(folderPath, "*.wav");
+            if (files.Length == 0)
+                throw new FileNotFoundException("資料夾內沒有 WAV 檔案");
+
+            _readers = new List<AudioFileReader>();
+
+            // 2. 建立 Mixer (設定基準格式：48kHz, Stereo, IEEE Float)
+            // 必須設定與我們錄音時一致或相容的格式
+            var mixerFormat = WaveFormat.CreateIeeeFloatWaveFormat(48000, 2);
+            _mixer = new MixingSampleProvider(mixerFormat)
+            {
+                ReadFully = true // 設為 true 避免沒有輸入時自動停止，或者設為 false 讓它自動結束(視需求)
+            };
+
+            // 3. 讀取所有檔案並加入 Mixer
+            foreach (var file in files)
+            {
+                try
+                {
+                    var reader = new AudioFileReader(file);
+
+                    // 如果檔案格式跟 Mixer 不一樣 (例如錄音是 44.1k)，NAudio 通常會報錯或變快變慢
+                    // 為了保險，我們可以加一個自動重取樣 (Resampler)
+                    ISampleProvider input = reader;
+                    if (reader.WaveFormat.SampleRate != mixerFormat.SampleRate)
+                    {
+                        input = new WdlResamplingSampleProvider(reader, mixerFormat.SampleRate);
+                    }
+
+                    // 確保聲道數一致 (Mono -> Stereo)
+                    if (input.WaveFormat.Channels == 1 && mixerFormat.Channels == 2)
+                    {
+                        input = new MonoToStereoSampleProvider(input);
+                    }
+
+                    _readers.Add(reader); // 存起來以便之後 Dispose
+                    _mixer.AddMixerInput(input);
+                }
+                catch (Exception ex)
+                {
+                    // 略過損壞的檔案
+                    System.Diagnostics.Debug.WriteLine($"無法讀取檔案 {file}: {ex.Message}");
+                }
+            }
+
+            if (_readers.Count == 0) return; // 沒有有效的檔案
+
+            // 4. 初始化輸出裝置並播放
+            _outputDevice = new WaveOutEvent(); // 或使用 WasapiOut
+            _outputDevice.Init(_mixer);
+            _outputDevice.Play();
+        }
+
 
         /// <summary>單一 Process 錄音 (核心邏輯)</summary>
         public static void RecordProcessToWave(Process process, string outputFilePath, TimeSpan duration)
@@ -453,5 +532,49 @@ namespace AudioAI
         [StructLayout(LayoutKind.Sequential)] private struct AUDIOCLIENT_ACTIVATION_PARAMS { public AUDIOCLIENT_ACTIVATION_TYPE ActivationType; public AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS ProcessLoopbackParams; }
         [StructLayout(LayoutKind.Sequential)] private struct PROPVARIANT { public ushort vt; public ushort wReserved1; public ushort wReserved2; public ushort wReserved3; public PROPVARIANT_BLOB blob; }
         [StructLayout(LayoutKind.Sequential)] private struct PROPVARIANT_BLOB { public uint cbSize; public IntPtr pBlobData; }
+
+
+        
+
+
+
+        
+
+        /// <summary>
+        /// 停止播放並釋放資源
+        /// </summary>
+        public void Stop()
+        {
+            if (_outputDevice != null)
+            {
+                _outputDevice.Stop();
+                _outputDevice.Dispose();
+                _outputDevice = null;
+            }
+
+            if (_readers != null)
+            {
+                foreach (var reader in _readers)
+                {
+                    reader.Dispose();
+                }
+                _readers.Clear();
+                _readers = null;
+            }
+
+            // 清空 Mixer 引用
+            if (_mixer != null)
+            {
+                _mixer.RemoveAllMixerInputs();
+                _mixer = null;
+            }
+        }
+
+        public void Dispose()
+        {
+            Stop();
+        }
+
     }
+
 }

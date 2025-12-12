@@ -336,14 +336,11 @@ namespace AudioUI
         /// <summary>
         /// 發送通知
         /// </summary>
-        private void SendConfirmationToast()
+        private void SendNotification(string title, string context)
         {
             new ToastContentBuilder()
-                .AddText("確認通知") // 標題
-                .AddText("請問您是否接受調整？") // 內文
-                                       // 加入按鈕，並設定點擊後回傳的參數 (action=yes 或 action=no)
-                .AddButton(new ToastButton("是", "action=yes"))
-                .AddButton(new ToastButton("否", "action=no"))
+                .AddText(title) // 標題
+                .AddText(context) // 內文
                 .Show(); // 發送通知
         }
 
@@ -436,7 +433,6 @@ namespace AudioUI
             };  
             // 0. 第一次回應
             await _TtsService.SpeakAsync("請問您想如何調整音訊設定"); // constant
-            SendConfirmationToast();
 
             // 1. 錄音recordMs 毫秒
             string audioBase64 = await RecordAudioAsync(audioFilePath, recordMs);

@@ -57,7 +57,7 @@ namespace AudioUI
             try
             {
                 // 信心指數過濾
-                if (e.Result.Confidence < 0.6)
+                if (e.Result.Confidence < 0.5)
                 {
                     // 如果過濾掉，記得要恢復識別
                     _recognizer.RecognizeAsync(RecognizeMode.Multiple);
