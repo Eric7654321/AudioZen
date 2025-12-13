@@ -77,7 +77,7 @@ namespace AudioUI
                 {
                     case "心平氣和":
                         // 這裡可以安全地使用 await
-                        await _geminiServices.RecordAndProcessAsync(-1, audioPath, configPath, 5000);
+                        await _geminiServices.RecordAndProcessAsync(-1, audioPath, configPath, _mainWindow._ChatManager, 5000);
                         break;
                 }
             }

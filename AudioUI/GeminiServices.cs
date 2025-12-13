@@ -4,6 +4,7 @@ using Microsoft.Toolkit.Uwp.Notifications;
 using NAudio.Wave;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -14,6 +15,11 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using static Vanara.PInvoke.Authz;
+using static Vanara.PInvoke.Kernel32;
 
 namespace AudioUI
 {
@@ -426,7 +432,7 @@ namespace AudioUI
         }
 
         // --- 功能 4: 還原設定檔 ---
-        public async Task ConfigRollback(string IdString, string configPath)
+        public async Task ConfigRollback(string IdString, string configPath, ChatManager _ChatManager)
         {
             _ChatManager.PopFront(IdString);
             if (_ChatManager.GetFront(IdString) == null)
@@ -443,9 +449,12 @@ namespace AudioUI
         private void SendNotification(string title, string context)
         {
             new ToastContentBuilder()
-                .AddText(title) // 標題
-                .AddText(context) // 內文
-                .Show(); // 發送通知
+            .AddText(title)   // 標題
+            .AddText(context) // 內文
+            .Show(toast =>
+            {
+                toast.ExpirationTime = DateTimeOffset.Now.AddSeconds(5);
+            });
         }
 
         /// <summary>
@@ -515,27 +524,137 @@ namespace AudioUI
             }
         }
 
+        private string? SaveImageToTempFile(ImageSource? imageSource, string appName)
+        {
+            if (imageSource is not BitmapSource bitmapSource) return null;
+
+            try
+            {
+                // 清理檔名中的非法字元
+                string safeName = string.Join("_", appName.Split(Path.GetInvalidFileNameChars()));
+                string tempPath = Path.Combine(Path.GetTempPath(), $"AudioNotify_{safeName}.png");
+
+                // 如果檔案已存在且很新，可以考慮不重寫 (這裡為了簡單每次都寫入)
+                using (var fileStream = new FileStream(tempPath, FileMode.Create))
+                {
+                    BitmapEncoder encoder = new PngBitmapEncoder();
+                    encoder.Frames.Add(BitmapFrame.Create(bitmapSource));
+                    encoder.Save(fileStream);
+                }
+                return tempPath;
+            }
+            catch
+            {
+                return null; // 存檔失敗回傳 null，之後會顯示預設圖示或空白
+            }
+        }
+
+        public void ShowAppNotification(IEnumerable<AudioAppModel> apps)
+        {
+            if (apps == null || !apps.Any()) return;
+
+            var builder = new ToastContentBuilder()
+                .AddText("心平氣和")
+                .AddText("應用程式狀態列表");
+
+            foreach (var app in apps.Take(5)) // 因為變小了，可以顯示更多個 (例如 5 個)
+            {
+                string iconPath = SaveImageToTempFile(app.Icon, app.Name) ?? "";
+
+                // --- 策略 1: 合併資訊字串 ---
+                // 範例效果: "🔊 80%  |  ✅ 已套用設定  |  🔇 靜音"
+                var infoParts = new List<string>();
+                infoParts.Add($"🔊 {app.SystemVolume}%");
+                infoParts.Add(app.Config != null ? "✅ 已套用" : "⚪ 無設定");
+                if (app.SystemMute) infoParts.Add("🔇 靜音");
+
+                // 使用 " | " 符號將資訊串接成單一行
+                string combinedInfo = string.Join("  |  ", infoParts);
+
+                var group = new AdaptiveGroup()
+                {
+                    Children =
+            {
+                // 左欄：圖示 (縮小寬度權重)
+                new AdaptiveSubgroup()
+                {
+                    HintWeight = 1,
+                    Children =
+                    {
+                        new AdaptiveImage()
+                        {
+                            Source = iconPath,
+                            HintAlign = AdaptiveImageAlign.Center,
+                            // HintCrop = AdaptiveImageCrop.Circle // 視喜好決定是否圓形
+                        }
+                    }
+                },
+
+                // 右欄：文字
+                new AdaptiveSubgroup()
+                {
+                    HintWeight = 4, // 給文字更多空間
+                    HintTextStacking = AdaptiveSubgroupTextStacking.Center, // 讓文字垂直置中對齊圖片
+                    Children =
+                    {
+                        // --- 策略 2: 縮小標題 ---
+                        // 使用 Base 搭配 Bold，比 Subtitle 更省空間但依然明顯
+                        new AdaptiveText()
+                        {
+                            Text = app.Name,
+                            HintStyle = AdaptiveTextStyle.Base,
+                        },
+
+                        // --- 策略 3: 單行顯示詳細資訊 ---
+                        // CaptionSubtle 是最小的灰色字體
+                        new AdaptiveText()
+                        {
+                            Text = combinedInfo,
+                            HintStyle = AdaptiveTextStyle.CaptionSubtle,
+                            HintWrap = true // 允許換行 (如果視窗太窄)
+                        }
+                    }
+                }
+            }
+                };
+
+                builder.AddVisualChild(group);
+            }
+
+            if (apps.Count() > 5)
+            {
+                builder.AddText($"... 還有 {apps.Count() - 5} 個應用程式");
+            }
+
+            builder.Show(toast =>
+            {
+                toast.Tag = "AudioAppsCompact";
+                toast.Group = "AudioMonitor";
+                toast.ExpirationTime = DateTimeOffset.Now.AddSeconds(5);
+            });
+        }
 
 
 
-
-        private const string API_KEY = "AIzaSyBnaa04JNMcjsraKZYs3oitjsJIrt5zaQQ"; // constant AIzaSyCMRnOADLA-VpgjY0e9dfAPLAkd-LApf_8
+        private const string API_KEY = "AIzaSyAbcdVglE0htVqhzzajRshijkK41qBblPg"; // constant AIzaSyCMRnOADLA-VpgjY0e9dfAPLAkd-LApf_8
         private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + API_KEY; // todo
         TtsService _TtsService = new TtsService();
-        ChatManager _ChatManager = new ChatManager();
+        AudioSessionService _AudioSessionService = new AudioSessionService();
 
         /// <summary>
         /// 完整的進行一次錄音、分析與寫入的過程 (goal 1)
         /// </summary>
-        public async Task RecordAndProcessAsync(int situationId,string audioFilePath, string eqConfigPath, int recordMs = 5000)
+        public async Task RecordAndProcessAsync(int situationId,string audioFilePath, string eqConfigPath, ChatManager _ChatManager, int recordMs = 5000)
         {
             Task<string> recordPathTask = PerProcessAudioRecorder.RecordAllActiveAppsAsync(
                         Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "record"),
                         TimeSpan.FromSeconds(6));
 
+            var appsConfig = _AudioSessionService.GetAppsWithConfig();
             // 0. 第一次回應
-            await _TtsService.SpeakAsync("請問您想如何調整音訊設定"); // constant
+            ShowAppNotification(appsConfig); // 呼叫上面第 2 種方法
 
+            await _TtsService.SpeakAsync("請問您想如何調整音訊設定"); // constant
             // 1. 錄音recordMs 毫秒
             string audioBase64 = await RecordAudioAsync(audioFilePath, recordMs);
 
@@ -585,13 +704,15 @@ namespace AudioUI
                 };
 
                 string recordPath = await recordPathTask;
+                
 
+                
                 // 6. 詢問是否套用設定
                 _ChatManager.PushFront("-1", newCreateData);
                 if (await SendNotificationAndWaitAsync("回退確認","是否要取消此設定"))
                 {
                     // rollback
-                    await ConfigRollback("-1", configTxtPath);
+                    await ConfigRollback("-1", configTxtPath, _ChatManager);
                 }
                 else
                 {
