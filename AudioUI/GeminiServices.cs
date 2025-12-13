@@ -86,11 +86,11 @@ namespace AudioUI
             return tcs.Task;
         }
 
-        Dictionary<string,string>  myDeviceMap = new Dictionary<string, string>
+        public Dictionary<string,string>  myDeviceMap = new Dictionary<string, string>
         {
-            { "Voicemeeter Input VB-Audio Voicemeeter VAIO {7bac9b47-61e4-4f81-b81b-2ad6c8186abc}", "chrome" },  // constant
-            { "Voicemeeter AUX Input VB-Audio Voicemeeter VAIO {ba00bb3e-8c53-44ca-ab44-10c3715d3dbd}", "discord" },
-            { "CABLE Input VB-Audio Virtual Cable {0a4eba8e-e0ec-457a-90de-e84ce08d5844}", "games" }
+            { "Voicemeeter Input VB-Audio Voicemeeter VAIO {7bac9b47-61e4-4f81-b81b-2ad6c8186abc}", "chrome.exe" },  // constant
+            { "Voicemeeter AUX Input VB-Audio Voicemeeter VAIO {ba00bb3e-8c53-44ca-ab44-10c3715d3dbd}", "discord.exe" },
+            { "CABLE Input VB-Audio Virtual Cable {0a4eba8e-e0ec-457a-90de-e84ce08d5844}", "msedge.exe, eldenring.exe, VALORANT-Win64-Shipping.exe" }
         };
 
 
@@ -100,9 +100,9 @@ namespace AudioUI
         "Based on the request, generate an Equalizer APO configuration. " +
         "You manage 4 specific targets: " +
         "1. 'all': Applies to everything (Global). " +
-        "2. 'Voicemeeter Input VB-Audio Voicemeeter VAIO {7bac9b47-61e4-4f81-b81b-2ad6c8186abc}': chrome" + 
-        "3. 'Voicemeeter AUX Input VB-Audio Voicemeeter VAIO {ba00bb3e-8c53-44ca-ab44-10c3715d3dbd}': discord" +
-        "4. 'CABLE Input VB-Audio Virtual Cable {0a4eba8e-e0ec-457a-90de-e84ce08d5844}': games " +
+        "2. 'Voicemeeter Input VB-Audio Voicemeeter VAIO {7bac9b47-61e4-4f81-b81b-2ad6c8186abc}': chrome.exe" +
+        "3. 'Voicemeeter AUX Input VB-Audio Voicemeeter VAIO {ba00bb3e-8c53-44ca-ab44-10c3715d3dbd}': discord.exe" +
+        "4. 'CABLE Input VB-Audio Virtual Cable {0a4eba8e-e0ec-457a-90de-e84ce08d5844}': msedge.exe, eldenring.exe, VALORANT-Win64-Shipping.exe " +
         "Frequencies: 25, 40, 63, 100, 160, 250, 400, 630, 1000, 1600, 2500, 4000, 6300, 10000, 16000. " +
         "Rules: " +
         "1. Decide which target(s) to modify based on the user's intent. If vague, use 'all'. You can return multiple configs if needed. " +
@@ -565,7 +565,7 @@ namespace AudioUI
                 // 範例效果: "🔊 80%  |  ✅ 已套用設定  |  🔇 靜音"
                 var infoParts = new List<string>();
                 infoParts.Add($"🔊 {app.SystemVolume}%");
-                infoParts.Add(app.Config != null ? "✅ 已套用" : "⚪ 無設定");
+                infoParts.Add(app.CurrentEffectInfo ?? "未設定");
                 if (app.SystemMute) infoParts.Add("🔇 靜音");
 
                 // 使用 " | " 符號將資訊串接成單一行
