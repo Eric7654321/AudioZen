@@ -81,7 +81,7 @@ namespace AudioUI
         private GeminiServices _GeminiService = new GeminiServices();
         private TtsService _TtsService = new TtsService();
         private KeyMappingService _KeyMapService = new KeyMappingService();
-        private WakeWordTrigger _WakeWordTrigger = new WakeWordTrigger();
+        private WakeWordTrigger _WakeWordTrigger;
         private PerProcessAudioRecorder _PerProcessAudioRecorder = new PerProcessAudioRecorder();
         public ChatManager _ChatManager = new ChatManager();
 
@@ -122,6 +122,7 @@ namespace AudioUI
         public MainWindow()
         {
             InitializeComponent();
+            _WakeWordTrigger = new WakeWordTrigger(this);
             _WakeWordTrigger.InitializeSpeechRecognition();
             this.DataContext = this;
 
