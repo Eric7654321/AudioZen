@@ -527,7 +527,7 @@ namespace AudioUI
         /// <summary>
         /// 完整的進行一次錄音、分析與寫入的過程 (goal 1)
         /// </summary>
-        public async Task RecordAndProcessAsync(int situationId, int recordMs,string audioFilePath, string eqConfigPath)
+        public async Task RecordAndProcessAsync(int situationId,string audioFilePath, string eqConfigPath, int recordMs = 5000)
         {
             Task<string> recordPathTask = PerProcessAudioRecorder.RecordAllActiveAppsAsync(
                         Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "record"),
@@ -595,6 +595,11 @@ namespace AudioUI
                 }
                 else
                 {
+                    if(situationIdString != "-1")
+                    {
+                        _ChatManager.PushFront(situationIdString, newCreateData);
+                    }
+
                     // 7. 詢問是否需要儲存成preset
                     await _TtsService.SpeakAsync("是否需要存為preset"); // constant
 

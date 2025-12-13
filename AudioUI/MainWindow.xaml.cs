@@ -96,6 +96,8 @@ namespace AudioUI
         private ConfigOptionItem? _selectedConfigToBind;
         private SortMode _currentSortMode = SortMode.NameAsc;
 
+        internal float recognitionConfidience = 0.3f;
+
         // Commands
         public ICommand MinimizeCommand { get; }
         public ICommand MaximizeCommand { get; }
@@ -106,6 +108,7 @@ namespace AudioUI
         {
             InitializeComponent();
             _WakeWordTrigger.InitializeSpeechRecognition();
+            
             this.DataContext = this;
 
             MinimizeCommand = new RelayCommand(_ => WindowState = WindowState.Minimized);
@@ -131,7 +134,7 @@ namespace AudioUI
                     //    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "record"),
                     //    TimeSpan.FromSeconds(3));
 
-                    await _GeminiService.RecordAndProcessAsync(0, 5000, audioPath, configPath);
+                    await _GeminiService.RecordAndProcessAsync(-1, audioPath, configPath, 5000);
 
                     // 錄音完成後刷新 Config 列表
                     RefreshConfigOptions();
