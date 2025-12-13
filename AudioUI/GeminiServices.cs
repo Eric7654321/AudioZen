@@ -426,7 +426,7 @@ namespace AudioUI
         }
 
         // --- 功能 4: 還原設定檔 ---
-        public async Task ConfigRollback(string IdString, string configPath)
+        public async Task ConfigRollback(string IdString, string configPath, ChatManager _ChatManager)
         {
             _ChatManager.PopFront(IdString);
             if (_ChatManager.GetFront(IdString) == null)
@@ -519,15 +519,14 @@ namespace AudioUI
 
 
 
-        private const string API_KEY = "AIzaSyBnaa04JNMcjsraKZYs3oitjsJIrt5zaQQ"; // constant AIzaSyCMRnOADLA-VpgjY0e9dfAPLAkd-LApf_8
+        private const string API_KEY = "AIzaSyAbcdVglE0htVqhzzajRshijkK41qBblPg"; // constant AIzaSyCMRnOADLA-VpgjY0e9dfAPLAkd-LApf_8
         private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + API_KEY; // todo
         TtsService _TtsService = new TtsService();
-        ChatManager _ChatManager = new ChatManager();
 
         /// <summary>
         /// 完整的進行一次錄音、分析與寫入的過程 (goal 1)
         /// </summary>
-        public async Task RecordAndProcessAsync(int situationId,string audioFilePath, string eqConfigPath, int recordMs = 5000)
+        public async Task RecordAndProcessAsync(int situationId,string audioFilePath, string eqConfigPath, ChatManager _ChatManager, int recordMs = 5000)
         {
             Task<string> recordPathTask = PerProcessAudioRecorder.RecordAllActiveAppsAsync(
                         Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "record"),
@@ -585,13 +584,15 @@ namespace AudioUI
                 };
 
                 string recordPath = await recordPathTask;
+                
 
+                
                 // 6. 詢問是否套用設定
                 _ChatManager.PushFront("-1", newCreateData);
                 if (await SendNotificationAndWaitAsync("回退確認","是否要取消此設定"))
                 {
                     // rollback
-                    await ConfigRollback("-1", configTxtPath);
+                    await ConfigRollback("-1", configTxtPath, _ChatManager);
                 }
                 else
                 {

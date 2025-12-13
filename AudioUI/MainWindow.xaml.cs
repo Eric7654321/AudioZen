@@ -70,10 +70,10 @@ namespace AudioUI
         private AudioSessionService _AudioService = new AudioSessionService();
         private GeminiServices _GeminiService = new GeminiServices();
         private TtsService _TtsService = new TtsService();
-        private ChatManager _ChatManager = new ChatManager();
         private KeyMappingService _KeyMapService = new KeyMappingService();
         private WakeWordTrigger _WakeWordTrigger = new WakeWordTrigger();
         private PerProcessAudioRecorder _PerProcessAudioRecorder = new PerProcessAudioRecorder();
+        public ChatManager _ChatManager = new ChatManager();
 
         // 背景執行與快捷鍵服務
         private HotkeyService _HotkeyService = new HotkeyService();
@@ -134,7 +134,7 @@ namespace AudioUI
                     //    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "record"),
                     //    TimeSpan.FromSeconds(3));
 
-                    await _GeminiService.RecordAndProcessAsync(-1, audioPath, configPath, 5000);
+                    await _GeminiService.RecordAndProcessAsync(-1, audioPath, configPath, _ChatManager, 5000);
 
                     // 錄音完成後刷新 Config 列表
                     RefreshConfigOptions();

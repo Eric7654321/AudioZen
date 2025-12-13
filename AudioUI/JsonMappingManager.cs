@@ -127,8 +127,8 @@ namespace AudioUI
             // 未建立 -> 新增一個
             if (item == null)
             {
-                string title = chatName.Length > 10
-                ? chatName.Substring(0, 10) + "..."
+                string title = chatName.Length > 20
+                ? chatName.Substring(0, 20) + "..."
                 : chatName;
 
                 item = new FileMapItem { Id = id, ChatName = title, RecordPath = recordPath };
