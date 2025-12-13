@@ -127,11 +127,11 @@ namespace AudioUI
                     if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
                     _TtsService.Stop();
-                    await PerProcessAudioRecorder.RecordAllActiveAppsAsync(
-                        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "record"),
-                        TimeSpan.FromSeconds(3));
+                    //await PerProcessAudioRecorder.RecordAllActiveAppsAsync(
+                    //    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "record"),
+                    //    TimeSpan.FromSeconds(3));
 
-                    //await _GeminiService.RecordAndProcessAsync(0, 5000, audioPath, configPath);
+                    await _GeminiService.RecordAndProcessAsync(0, 5000, audioPath, configPath);
 
                     // 錄音完成後刷新 Config 列表
                     RefreshConfigOptions();

@@ -520,7 +520,7 @@ namespace AudioUI
 
 
         private const string API_KEY = "AIzaSyBnaa04JNMcjsraKZYs3oitjsJIrt5zaQQ"; // constant AIzaSyCMRnOADLA-VpgjY0e9dfAPLAkd-LApf_8
-        private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-lite:generateContent?key=" + API_KEY; // todo
+        private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + API_KEY; // todo
         TtsService _TtsService = new TtsService();
         ChatManager _ChatManager = new ChatManager();
 
