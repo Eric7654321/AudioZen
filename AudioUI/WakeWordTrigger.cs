@@ -11,6 +11,12 @@ namespace AudioUI
     {
         private SpeechRecognitionEngine _recognizer;
         private GeminiServices _geminiServices = new GeminiServices();
+        private MainWindow _currentMainWindow;
+
+        public WakeWordTrigger(MainWindow mainWindow)
+        {
+            _currentMainWindow = mainWindow;
+        }
 
         public void InitializeSpeechRecognition()
         {
@@ -53,12 +59,11 @@ namespace AudioUI
         {
             // 建議：暫停識別，避免在處理過程中因為背景聲音再次觸發
             _recognizer.RecognizeAsyncStop();
-            MainWindow _mainWindow = new MainWindow();
 
             try
             {
                 // 信心指數過濾
-                if (e.Result.Confidence < _mainWindow.recognitionConfidience)
+                if (e.Result.Confidence < _currentMainWindow.recognitionConfidience)
                 {
                     // 如果過濾掉，記得要恢復識別
                     _recognizer.RecognizeAsync(RecognizeMode.Multiple);
@@ -77,7 +82,7 @@ namespace AudioUI
                 {
                     case "心平氣和":
                         // 這裡可以安全地使用 await
-                        await _geminiServices.RecordAndProcessAsync(-1, audioPath, configPath, _mainWindow._ChatManager, 5000);
+                        await _geminiServices.RecordAndProcessAsync(-1, audioPath, configPath, _currentMainWindow._ChatManager, 5000);
                         break;
                 }
             }

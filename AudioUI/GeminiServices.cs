@@ -636,7 +636,7 @@ namespace AudioUI
 
 
 
-        private const string API_KEY = "AIzaSyAbcdVglE0htVqhzzajRshijkK41qBblPg"; // constant AIzaSyCMRnOADLA-VpgjY0e9dfAPLAkd-LApf_8
+        private const string API_KEY = "AIzaSyBikL00cm6ihnOfYHLBOabHWuVzHd7MsQI"; // constant AIzaSyCMRnOADLA-VpgjY0e9dfAPLAkd-LApf_8
         private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + API_KEY; // todo
         TtsService _TtsService = new TtsService();
         AudioSessionService _AudioSessionService = new AudioSessionService();
