@@ -14,6 +14,7 @@ using System.Security.Policy;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -382,6 +383,12 @@ namespace AudioUI
                     {
                         // 1. 處理 Device 行
                         string targetKey = config.Target;
+                        targetKey = Regex.Replace(
+                            targetKey,
+                            @"^Voice\w*",
+                            "Voicemeeter",
+                            RegexOptions.IgnoreCase
+                        );
                         if (targetKey == "all")
                         {
                             // 如果是 all，通常不需要指定 Device，或者您可以根據需求決定是否要重置 Device 選擇
