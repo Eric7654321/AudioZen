@@ -34,7 +34,9 @@
 
   <ItemGroup>
     <Resource Include="hamster.png" />
-    <Resource Include="icon.ico" />
+    <Content Include="icon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Resource Include="icon.png" />
     <Resource Include="keyboard.png" />
     <Resource Include="mouse.png" />
