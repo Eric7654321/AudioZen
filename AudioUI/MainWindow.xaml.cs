@@ -136,10 +136,10 @@ namespace AudioUI
 
         private ConfigOptionItem? _selectedConfigToBind;
         private SortMode _currentSortMode = SortMode.NameAsc;
-        internal float recognitionConfidience = 0.3f;
+        internal float recognitionConfidience = 0.55f;
 
         // ★★★ API KEY 設定 (填入你的 Key) ★★★
-        private const string API_KEY = "AIzaSyDqHnczJh1sO1v7qK5amXd8kb0poB6Sv18"; // 
+        private const string API_KEY = "AIzaSyBpU6kLymZnQOFxRYawwSdBlDx5ehJ8Hbs"; // 
         private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + API_KEY;
 
         public ICommand MinimizeCommand { get; }
@@ -360,9 +360,9 @@ namespace AudioUI
 
                     var deviceMap = new Dictionary<string, string>
                     {
-                        { "first", "Speakers (Realtek(R) Audio)" },
-                        { "second", "Headphones (HyperX Cloud II)" },
-                        { "third", "VG279Q (NVIDIA High Definition Audio)" }
+                        { "Voicemeeter Input VB-Audio Voicemeeter VAIO {7bac9b47-61e4-4f81-b81b-2ad6c8186abc}", "chrome.exe" },  // constant
+                        { "Voicemeeter AUX Input VB-Audio Voicemeeter VAIO {ba00bb3e-8c53-44ca-ab44-10c3715d3dbd}", "discord.exe" },
+                        { "CABLE Input VB-Audio Virtual Cable {0a4eba8e-e0ec-457a-90de-e84ce08d5844}", "msedge.exe, eldenring.exe, VALORANT-Win64-Shipping.exe" }
                     };
 
                     string aiMessage = _GeminiService.ParseAndWriteConfig(geminiResponse, configPath, deviceMap);
