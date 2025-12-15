@@ -48,10 +48,14 @@ namespace AudioUI
             }
         }
 
+        private bool _isProcessing = false;
+
         private async void Recognizer_SpeechRecognizedAsync(object sender, SpeechRecognizedEventArgs e)
         {
             // 暫停識別，避免處理中重複觸發
-            _recognizer.RecognizeAsyncStop();
+            //_recognizer.RecognizeAsyncStop();
+            if (_isProcessing) return;
+            _isProcessing = true;
 
             try
             {
@@ -99,7 +103,8 @@ namespace AudioUI
             finally
             {
                 // 恢復監聽
-                _recognizer.RecognizeAsync(RecognizeMode.Multiple);
+                //_recognizer.RecognizeAsync(RecognizeMode.Multiple);
+                _isProcessing = false;
             }
         }
 
