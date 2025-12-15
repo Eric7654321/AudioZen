@@ -107,11 +107,12 @@ namespace AudioUI
         "Frequencies: 25, 40, 63, 100, 160, 250, 400, 630, 1000, 1600, 2500, 4000, 6300, 10000, 16000. " +
         "Rules: " +
         "1. Decide which target(s) to modify based on the user's intent. If vague, use 'all'. You can return multiple configs if needed. " +
-        "2. For each config, calculate 'preamp_db' (must be negative, |preamp| >= max_gain). " +
+        "2. For each config, calculate 'preamp_db' (usually negative, |preamp| >= max_gain). " +
+        "   - positive value only available if user intend to increase the volume, but max_gain must be <= 6.0" +
         "3. Construct 'graphic_eq_string'. " +
         "   [CRITICAL FORMATTING RULE ABOUT RULE 3]: " +
 "   - The output MUST differ from standard filter syntax. " +
-"   - CORRECT FORMAT: '25 0.5; 40 1.2; 63 -2.0; ...' (Frequency[space]Gain[semicolon]). " +
+"   - CORRECT FORMAT: '25 4.3; 40 1.5; 63 -4.0; ...' (Frequency[space]Gain[semicolon]) (Gain ranges from -10.0 to 10.0). " +
 "   - WRONG FORMAT: 'Filter: ON PK Fc 25 Hz...' (DO NOT USE THIS). " +
 "   - FORBIDDEN WORDS: 'Filter', 'ON', 'PK', 'Fc', 'Hz', 'Gain', 'Q', ':'. " +
 "   - ONLY use numbers, spaces, and semicolons. " +
@@ -643,7 +644,7 @@ namespace AudioUI
 
 
 
-        private const string API_KEY = "AIzaSyBikL00cm6ihnOfYHLBOabHWuVzHd7MsQI"; // constant AIzaSyCMRnOADLA-VpgjY0e9dfAPLAkd-LApf_8
+        private const string API_KEY = "AIzaSyDqHnczJh1sO1v7qK5amXd8kb0poB6Sv18"; // constant AIzaSyCMRnOADLA-VpgjY0e9dfAPLAkd-LApf_8
         private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + API_KEY; // todo
         TtsService _TtsService = new TtsService();
         AudioSessionService _AudioSessionService = new AudioSessionService();

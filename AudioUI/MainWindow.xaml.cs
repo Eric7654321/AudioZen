@@ -139,7 +139,7 @@ namespace AudioUI
         internal float recognitionConfidience = 0.3f;
 
         // ★★★ API KEY 設定 (填入你的 Key) ★★★
-        private const string API_KEY = "AIzaSyCG3tw4Whn_8XmdN_p2FaFl8IDzubYGk3k"; // 
+        private const string API_KEY = "AIzaSyDqHnczJh1sO1v7qK5amXd8kb0poB6Sv18"; // 
         private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + API_KEY;
 
         public ICommand MinimizeCommand { get; }

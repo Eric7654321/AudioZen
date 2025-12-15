@@ -74,7 +74,7 @@ namespace AudioUI
                 {
                     case "心平氣和":
                         // 1. 播放提示音或通知 (選用)
-                        SendNotification("語音喚醒", "正在聆聽您的指令...");
+                        // SendNotification("語音喚醒", "正在聆聽您的指令...");
 
                         // 2. 執行錄音與 AI 分析
                         await _geminiServices.RecordAndProcessAsync(-1, audioPath, configPath, _currentMainWindow._ChatManager, 5000);
@@ -132,7 +132,7 @@ namespace AudioUI
                 Console.WriteLine($"Config Applied: {sourcePath} -> {apoPath}");
 
                 // 成功通知
-                SendNotification("設定已更新", "✅ AI 設定已套用 (語音喚醒)");
+                //SendNotification("設定已更新", "✅ AI 設定已套用 (語音喚醒)");
             }
             catch (Exception ex)
             {
