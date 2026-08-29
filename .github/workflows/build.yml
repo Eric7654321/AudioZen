@@ -96,8 +96,11 @@ jobs:
           if ($failedTests.Count -gt 0) { $lines += '--- failed tests ---'; $lines += $failedTests }
           if ($warnByCode) { $lines += '--- warnings by code ---'; $lines += ($warnByCode -join ', ') }
 
-          # 只出現一兩次的警告代碼全文列出：數量少代表它不是「整個 codebase 的通病」，
-          # 而是某一處特別的事，值得逐條看。
+          # 分兩種看。宣告層的警告（欄位沒初始化、null 當預設值）是「整份 codebase 沒為
+          # nullable 寫過」的通病，逐條讀沒有意義。流程層的警告代表真的有 null 在程式裡流動，
+          # 每一條都可能是執行期崩潰——CS8604 那次就是這樣抓到的。
+          $declarationNoise = @('CS8618', 'CS8625')
+
           $rareCodes = $warnLines |
             ForEach-Object { if ($_ -match 'warning (CS\d+|[A-Z]+\d+)') { $Matches[1] } } |
             Group-Object | Where-Object { $_.Count -le 2 } | ForEach-Object { $_.Name }
@@ -106,6 +109,12 @@ jobs:
             $lines += ($warnLines | Where-Object { $l = $_; $rareCodes | Where-Object { $l -match "warning $_" } } |
                        Select-Object -First 20)
           }
+
+          $flow = $warnLines | Where-Object {
+            $l = $_
+            ($l -match 'warning CS8\d+') -and -not ($declarationNoise | Where-Object { $l -match "warning $_" })
+          } | Select-Object -Unique -First 30
+          if ($flow) { $lines += '--- nullable flow warnings ---'; $lines += $flow }
           New-Item -ItemType Directory -Force -Path out | Out-Null
           $lines -join "`n" | Set-Content -Path out/status.md -Encoding utf8
 
