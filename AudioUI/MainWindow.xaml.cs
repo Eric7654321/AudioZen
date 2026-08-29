@@ -53,52 +53,6 @@ namespace AudioUI
     // --- 資料模型 ---
     public enum SortMode { NameAsc, NameDesc, VolumeDesc }
 
-    public class DeviceInfoModel
-    {
-        public string Name { get; set; } = "";
-        public string Description { get; set; } = "";
-        public string ImagePath { get; set; } = "";
-    }
-
-    public class ConfigOptionItem
-    {
-        public string SituationId { get; set; }
-        public string DisplayName { get; set; }
-        public string Description { get; set; }
-        public string FilePath { get; set; }
-    }
-
-    public class MacroKeyModel : INotifyPropertyChanged
-    {
-        public string KeyId { get; set; }
-        public string KeyName { get; set; }
-
-        private string _boundActionName;
-        public string BoundActionName
-        {
-            get => _boundActionName;
-            set { _boundActionName = value; OnPropertyChanged(); }
-        }
-        public string BoundConfigId { get; set; }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-    }
-
-    // UI 用對話模型 (純資料版)
-    public class ChatMessageModel
-    {
-        public bool IsUser { get; set; }
-        public string Message { get; set; }
-        public string AudioFolderPath { get; set; } // 這是預覽音檔路徑
-        public string ConfigPath { get; set; }      // ★★★ 新增：這是該次生成的 Config 路徑 ★★★
-
-        public bool HasAudio => !string.IsNullOrEmpty(AudioFolderPath);
-        // 如果有 ConfigPath，代表這是 AI 的回應，可以顯示「套用」按鈕
-        public bool CanApply => !IsUser && !string.IsNullOrEmpty(ConfigPath);
-    }
-
     // --- 主視窗邏輯 ---
     public partial class MainWindow : Window, INotifyPropertyChanged
     {

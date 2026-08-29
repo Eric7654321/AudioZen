@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.36717.8
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AudioUI", "AudioUI\AudioUI.csproj", "{2CFE8FBC-65DA-4A23-836B-9D0E94435691}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AudioUI.Core", "AudioUI.Core\AudioUI.Core.csproj", "{2C1240EA-0BBA-45C3-BD7A-B927A4AF428B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{2CFE8FBC-65DA-4A23-836B-9D0E94435691}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2CFE8FBC-65DA-4A23-836B-9D0E94435691}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2CFE8FBC-65DA-4A23-836B-9D0E94435691}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2C1240EA-0BBA-45C3-BD7A-B927A4AF428B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2C1240EA-0BBA-45C3-BD7A-B927A4AF428B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2C1240EA-0BBA-45C3-BD7A-B927A4AF428B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2C1240EA-0BBA-45C3-BD7A-B927A4AF428B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
