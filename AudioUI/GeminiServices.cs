@@ -168,13 +168,13 @@ namespace AudioUI
             string transcribedText = await _llm.TranscribeAsync(audioBase64); // STT
             AudioIntent? intent = await _llm.InterpretAsync(transcribedText);
 
-            if (!string.IsNullOrEmpty(geminiResponse))
+            if (intent != null)
             {
                 // 4. 解析回傳並寫入 Config
                 string ttsMessage = WriteConfig(intent, eqConfigPath);
                 int retryCount = 0;
 
-                // 處理geminiResponse的無效回應
+                // 模型偶爾會回出不成形的內容，重試幾次通常就過了
                 while (ttsMessage=="-1" && retryCount < 3)
                 {
                     intent = await _llm.InterpretAsync(transcribedText);
