@@ -18,6 +18,9 @@ namespace AudioUI
         /// 所以這是最常需要按機器覆寫的一段。</summary>
         [JsonPropertyName("routes")]
         public List<AudioRoute>? Routes { get; set; }
+
+        [JsonPropertyName("apo")]
+        public ApoSettings Apo { get; set; } = new ApoSettings();
     }
 
     public sealed class GeminiSettings
@@ -49,6 +52,12 @@ namespace AudioUI
 
         /// <summary>app 與虛擬裝置的對應。所有需要這份知識的地方都從這裡拿，不各自持有一份。</summary>
         public static RouteTable Routes => _routes.Value;
+
+        /// <summary>套用設定的後端。唯一知道設定該寫到哪裡的地方。</summary>
+        public static IAudioBackend AudioBackend => _backend.Value;
+
+        private static readonly Lazy<IAudioBackend> _backend =
+            new Lazy<IAudioBackend>(() => new EqualizerApoBackend(Settings.Apo));
 
         /// <summary>設定是否可用。UI 想在送出前先擋掉可以看這個，不必接例外。</summary>
         public static bool IsConfigured => !string.IsNullOrWhiteSpace(Settings.Gemini.ApiKey);

@@ -88,9 +88,14 @@ namespace AudioUI
         }
 
         private readonly RouteTable _routes;
+        private readonly IAudioBackend _backend;
 
-        /// <summary>路由表可注入，測試才有辦法在不碰使用者 appsettings.json 的情況下換一份。</summary>
-        public GeminiServices(RouteTable? routes = null) => _routes = routes ?? AppConfig.Routes;
+        /// <summary>兩者都可注入，測試才有辦法在不碰使用者設定、也不真的寫進 APO 的情況下跑。</summary>
+        public GeminiServices(RouteTable? routes = null, IAudioBackend? backend = null)
+        {
+            _routes = routes ?? AppConfig.Routes;
+            _backend = backend ?? AppConfig.AudioBackend;
+        }
 
 
         // --- 功能 2: 呼叫 Gemini API ---
@@ -438,7 +443,7 @@ namespace AudioUI
         }
 
         // --- 功能 4: 還原設定檔 ---
-        public async Task ConfigRollback(string IdString, string configPath, ChatManager _ChatManager)
+        public async Task ConfigRollback(string IdString, ChatManager _ChatManager)
         {
             _ChatManager.PopFront(IdString);
             if (_ChatManager.GetFront(IdString) == null)
@@ -447,7 +452,7 @@ namespace AudioUI
                 return;
             }
             string originconfigPath = _ChatManager.GetFront(IdString).FileName;
-            File.Copy(originconfigPath, configPath, overwrite: true);
+            _backend.Apply(originconfigPath);
         }
         /// <summary>
         /// 發送通知
@@ -691,12 +696,10 @@ namespace AudioUI
                     await _TtsService.SpeakAsync("很抱歉，無法產生有效指令，請稍後再試");
                 }
 
-                // 套用到config.txt
-                string configTxtPath = Path.Combine(".", "config", "config.txt"); // constant
                 string situationIdString = situationId.ToString();
                 SendNotification("已套用設定", "心頻氣和已完成解析並套用設定");
 
-                File.Copy(eqConfigPath, configTxtPath, overwrite: true);
+                _backend.Apply(eqConfigPath);
 
                 // 5. 使用 TTS 播放回應訊息
                 await _TtsService.SpeakAsync(ttsMessage);
@@ -719,7 +722,7 @@ namespace AudioUI
                 if (await SendNotificationAndWaitAsync("回退確認","是否要取消此設定"))
                 {
                     // rollback
-                    await ConfigRollback("-1", configTxtPath, _ChatManager);
+                    await ConfigRollback("-1", _ChatManager);
                 }
                 else
                 {

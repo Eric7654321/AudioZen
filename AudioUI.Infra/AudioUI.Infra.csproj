@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 目前只做檔案讀寫，所以維持 net8.0；哪天需要讀登錄檔自動偵測 APO 安裝位置，再升到 net8.0-windows。 -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Platforms>AnyCPU;x64</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AudioUI.Core\AudioUI.Core.csproj" />
+  </ItemGroup>
+
+</Project>

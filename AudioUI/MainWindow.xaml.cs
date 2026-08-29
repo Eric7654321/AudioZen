@@ -452,11 +452,9 @@ namespace AudioUI
 
         private async Task ExecuteConfig(string configId)
         {
-            string apoPath = @"C:\Program Files\EqualizerAPO\config\config.txt";
-
             if (configId == "cmd_rollback")
             {
-                try { await _GeminiService.ConfigRollback("-1", apoPath, _ChatManager); SendNotification("快捷鍵觸發", "↩️ 已回復上一個設定"); RefreshConfigOptions(); }
+                try { await _GeminiService.ConfigRollback("-1", _ChatManager); SendNotification("快捷鍵觸發", "↩️ 已回復上一個設定"); RefreshConfigOptions(); }
                 catch { SendNotification("無法回復", "沒有歷史紀錄可供還原。"); }
                 return;
             }
@@ -484,9 +482,7 @@ namespace AudioUI
 
         private void ApplyConfigToAPO(string sourcePath)
         {
-            if (!File.Exists(sourcePath)) { SendNotification("檔案遺失", $"找不到來源：{Path.GetFileName(sourcePath)}"); return; }
-            string apoPath = @"C:\Program Files\EqualizerAPO\config\config.txt";
-            try { var dir = Path.GetDirectoryName(apoPath); if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir); File.Copy(sourcePath, apoPath, true); Console.WriteLine($"Config Applied: {sourcePath} -> {apoPath}"); }
+            try { AppConfig.AudioBackend.Apply(sourcePath); }
             catch (Exception ex) { SendNotification("套用失敗", ex.Message); }
         }
 

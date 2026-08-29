@@ -21,8 +21,11 @@ Windows 沒有 per-application 的 DSP API，Equalizer APO 只能對「音訊裝
 | Windows 中文（台灣）語音辨識套件 | 喚醒詞辨識，`zh-TW` | 喚醒詞失效，仍可用介面手動操作 |
 | Gemini API key | 自然語言 → 音訊參數 | 核心功能失效 |
 
-Melda 的 DLL 路徑寫死在 `AudioUI/GeminiServices.cs`，預設 `C:\Program Files\VstPlugins\MeldaProduction\`。
-APO 設定檔路徑同樣寫死為 `C:\Program Files\EqualizerAPO\config\config.txt`。裝在別的位置要改 code。
+APO 的設定目錄在 `appsettings.json` 的 `apo.configDirectory`，裝在別的位置改這裡。
+本程式寫的是 `apo.fragmentFileName`（預設 `audiozen.txt`），再由 APO 的 `config.txt` 用 `Include:` 引入，
+所以你原本在 APO 裡調的東西不會被蓋掉。那行 `Include:` 只在缺少時補一次。
+
+Melda 的 DLL 路徑仍寫死在 `AudioUI/GeminiServices.cs`，預設 `C:\Program Files\VstPlugins\MeldaProduction\`。
 
 ## 建置與執行
 

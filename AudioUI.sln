@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AudioUI", "AudioUI\AudioUI.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AudioUI.Core", "AudioUI.Core\AudioUI.Core.csproj", "{2C1240EA-0BBA-45C3-BD7A-B927A4AF428B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AudioUI.Infra", "AudioUI.Infra\AudioUI.Infra.csproj", "{8EB6CCDB-3D26-44A8-9081-054828F5E34A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{2C1240EA-0BBA-45C3-BD7A-B927A4AF428B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2C1240EA-0BBA-45C3-BD7A-B927A4AF428B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2C1240EA-0BBA-45C3-BD7A-B927A4AF428B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8EB6CCDB-3D26-44A8-9081-054828F5E34A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8EB6CCDB-3D26-44A8-9081-054828F5E34A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8EB6CCDB-3D26-44A8-9081-054828F5E34A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8EB6CCDB-3D26-44A8-9081-054828F5E34A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

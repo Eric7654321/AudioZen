@@ -117,27 +117,11 @@ namespace AudioUI
             }
         }
 
-        // ★★★ 這是你搬過來的函式，現在正確被呼叫了 ★★★
         private void ApplyConfigToAPO(string sourcePath)
         {
-            if (!File.Exists(sourcePath))
-            {
-                SendNotification("檔案遺失", $"找不到來源：{Path.GetFileName(sourcePath)}");
-                return;
-            }
-
-            string apoPath = @"C:\Program Files\EqualizerAPO\config\config.txt";
-
             try
             {
-                var dir = Path.GetDirectoryName(apoPath);
-                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-
-                File.Copy(sourcePath, apoPath, true);
-                Console.WriteLine($"Config Applied: {sourcePath} -> {apoPath}");
-
-                // 成功通知
-                //SendNotification("設定已更新", "✅ AI 設定已套用 (語音喚醒)");
+                AppConfig.AudioBackend.Apply(sourcePath);
             }
             catch (Exception ex)
             {
