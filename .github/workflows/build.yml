@@ -32,6 +32,15 @@ jobs:
           dotnet build AudioUI.sln -c Release --nologo 2>&1 | Tee-Object -FilePath build.log
           exit $LASTEXITCODE
 
+      - name: Test
+        id: test
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          dotnet test AudioUI.sln -c Release --no-build --nologo 2>&1 | Tee-Object -FilePath test.log
+          exit $LASTEXITCODE
+
       - name: Write status
         if: always()
         shell: pwsh
@@ -47,7 +56,22 @@ jobs:
           # 只有一個訊號的話，判斷寫錯就會變成永遠的 PASS，而讀這份檔的人不會發現。
           $stepOk = '${{ steps.build.outcome }}' -eq 'success'
           $logOk  = $errors.Count -eq 0
-          $result = if ($stepOk -and $logOk) { 'PASS' } elseif (-not $stepOk -and -not $logOk) { 'FAIL' } else { 'INCONSISTENT' }
+          $buildResult = if ($stepOk -and $logOk) { 'PASS' } elseif (-not $stepOk -and -not $logOk) { 'FAIL' } else { 'INCONSISTENT' }
+
+          # 測試沒跑（build 就掛了）與測試跑了但失敗，是兩件不同的事，別混成同一個字。
+          $testOutcome = '${{ steps.test.outcome }}'
+          $testSummary = if (Test-Path test.log) {
+            (Select-String -Path test.log -Pattern 'Passed!|Failed!|error' | ForEach-Object { $_.Line.Trim() } |
+             Select-Object -Unique -First 10) -join ' | '
+          } else { '(未執行)' }
+          $failedTests = if (Test-Path test.log) {
+            Select-String -Path test.log -Pattern '^\s*(Failed|X)\s+\S' | ForEach-Object { $_.Line.Trim() } |
+            Select-Object -Unique -First 20
+          } else { @() }
+
+          $result = if ($buildResult -ne 'PASS') { $buildResult }
+                    elseif ($testOutcome -eq 'success') { 'PASS' }
+                    else { 'TESTS_FAILED' }
 
           $lines = @(
             "commit: ${{ github.sha }}"
@@ -55,10 +79,13 @@ jobs:
             "step_outcome: ${{ steps.build.outcome }}"
             "errors: $($errors.Count)"
             "warnings: $warnCount"
+            "tests: $testOutcome"
+            "test_summary: $testSummary"
             "finished: $(Get-Date -Format o)"
             ""
           )
           if ($errors.Count -gt 0) { $lines += '--- errors ---'; $lines += ($errors | Select-Object -First 40) }
+          if ($failedTests.Count -gt 0) { $lines += '--- failed tests ---'; $lines += $failedTests }
           New-Item -ItemType Directory -Force -Path out | Out-Null
           $lines -join "`n" | Set-Content -Path out/status.md -Encoding utf8
 
@@ -76,7 +103,7 @@ jobs:
           git commit -q -m "ci: ${{ github.sha }}"
           git push -f origin ci-status
 
-      - name: Fail the job if the build failed
-        if: steps.build.outcome != 'success'
+      - name: Fail the job if the build or the tests failed
+        if: steps.build.outcome != 'success' || steps.test.outcome != 'success'
         shell: bash
         run: exit 1
