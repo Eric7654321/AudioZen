@@ -49,8 +49,16 @@ jobs:
           # MSBuild 同一則診斷會印兩次（inline 一次、結尾摘要一次），所以一律去重後再數。
           $errors = Select-String -Path build.log -Pattern ': error ' -ErrorAction SilentlyContinue |
                     ForEach-Object { $_.Line.Trim() } | Select-Object -Unique
-          $warnCount = (Select-String -Path build.log -Pattern ': warning ' -ErrorAction SilentlyContinue |
-                        ForEach-Object { $_.Line.Trim() } | Select-Object -Unique).Count
+          $warnLines = Select-String -Path build.log -Pattern ': warning ' -ErrorAction SilentlyContinue |
+                       ForEach-Object { $_.Line.Trim() } | Select-Object -Unique
+          $warnCount = $warnLines.Count
+
+          # 依警告代碼分組：88 個警告逐條讀沒有意義，但「CS8618 有 40 個、CS4014 有 1 個」
+          # 立刻看得出哪些是雜訊、哪些是孤例——孤例通常才是真的。
+          $warnByCode = $warnLines |
+            ForEach-Object { if ($_ -match 'warning (CS\d+|[A-Z]+\d+)') { $Matches[1] } } |
+            Group-Object | Sort-Object Count -Descending |
+            ForEach-Object { "$($_.Name) x$($_.Count)" }
 
           # 兩個獨立訊號：build step 的結果，以及 log 裡有沒有 error 行。
           # 只有一個訊號的話，判斷寫錯就會變成永遠的 PASS，而讀這份檔的人不會發現。
@@ -86,6 +94,18 @@ jobs:
           )
           if ($errors.Count -gt 0) { $lines += '--- errors ---'; $lines += ($errors | Select-Object -First 40) }
           if ($failedTests.Count -gt 0) { $lines += '--- failed tests ---'; $lines += $failedTests }
+          if ($warnByCode) { $lines += '--- warnings by code ---'; $lines += ($warnByCode -join ', ') }
+
+          # 只出現一兩次的警告代碼全文列出：數量少代表它不是「整個 codebase 的通病」，
+          # 而是某一處特別的事，值得逐條看。
+          $rareCodes = $warnLines |
+            ForEach-Object { if ($_ -match 'warning (CS\d+|[A-Z]+\d+)') { $Matches[1] } } |
+            Group-Object | Where-Object { $_.Count -le 2 } | ForEach-Object { $_.Name }
+          if ($rareCodes) {
+            $lines += '--- rare warnings ---'
+            $lines += ($warnLines | Where-Object { $l = $_; $rareCodes | Where-Object { $l -match "warning $_" } } |
+                       Select-Object -First 20)
+          }
           New-Item -ItemType Directory -Force -Path out | Out-Null
           $lines -join "`n" | Set-Content -Path out/status.md -Encoding utf8
 
