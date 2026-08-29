@@ -263,7 +263,7 @@ namespace AudioUI
         private async void HandleGlobalHotkey(int keyCode)
         {
             string btnId = _vm.GetBtnIdByKeyCode(keyCode); if (string.IsNullOrEmpty(btnId)) return;
-            string configId = _KeyMapService.GetBoundConfigId(btnId); if (string.IsNullOrEmpty(configId)) return;
+            string? configId = _KeyMapService.GetBoundConfigId(btnId); if (string.IsNullOrEmpty(configId)) return;
             try { await _vm.ExecuteConfig(configId); }
             catch (Exception ex) { SendNotification("快捷鍵失敗", ex.Message); }
         }
@@ -306,7 +306,7 @@ namespace AudioUI
                 var labels = new[] { "7", "8", "9", "4", "5", "6", "1", "2", "3", "0", ".", "Enter" };
                 for (int i = 0; i < 12; i++)
                 {
-                    string keyId = $"btn{i + 1:00}"; string boundId = _KeyMapService.GetBoundConfigId(keyId); string display = labels[i];
+                    string keyId = $"btn{i + 1:00}"; string? boundId = _KeyMapService.GetBoundConfigId(keyId); string display = labels[i];
                     if (!string.IsNullOrEmpty(boundId))
                     {
                         var cfg = ConfigOptions.FirstOrDefault(x => x.SituationId == boundId);
@@ -341,7 +341,7 @@ namespace AudioUI
         }
         private void Tab_Click(object sender, RoutedEventArgs e)
         {
-            var btn = sender as System.Windows.Controls.Button; if (btn == null) return; string tag = btn.Tag.ToString(); ResetTabs();
+            var btn = sender as System.Windows.Controls.Button; if (btn == null) return; string tag = btn.Tag?.ToString() ?? ""; ResetTabs();
             if (tag == "Entrance") { SidebarBorder.Visibility = Visibility.Visible; HighlightTab(TabEntrance, LineEntrance); EntranceView.Visibility = Visibility.Visible; }
             else if (tag == "Control") { SidebarBorder.Visibility = Visibility.Collapsed; HighlightTab(TabControl, LineControl); ControlView.Visibility = Visibility.Visible; _vm.RefreshAudioApps(); }
             else if (tag == "Device") { SidebarBorder.Visibility = Visibility.Collapsed; HighlightTab(TabDevice, LineDevice); if (this.FindName("DeviceView") is Grid v) v.Visibility = Visibility.Visible; BackToDeviceList_Click(null, null); }
@@ -367,7 +367,7 @@ namespace AudioUI
         private void SortBtn_Click(object sender, RoutedEventArgs e) { if (sender is System.Windows.Controls.Button btn && btn.ContextMenu != null) { btn.ContextMenu.PlacementTarget = btn; btn.ContextMenu.IsOpen = true; } }
         private void SortOption_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is MenuItem item) { string tag = item.Tag.ToString(); switch (tag) { case "NameAsc": _vm.CurrentSortMode = SortMode.NameAsc; SortModeText.Text = "排序模式: 名稱 (A-Z)"; break; case "NameDesc": _vm.CurrentSortMode = SortMode.NameDesc; SortModeText.Text = "排序模式: 名稱 (Z-A)"; break; case "VolumeDesc": _vm.CurrentSortMode = SortMode.VolumeDesc; SortModeText.Text = "排序模式: 音量 (大-小)"; break; } _vm.RefreshAudioApps(); }
+            if (sender is MenuItem item) { string tag = item.Tag?.ToString() ?? ""; switch (tag) { case "NameAsc": _vm.CurrentSortMode = SortMode.NameAsc; SortModeText.Text = "排序模式: 名稱 (A-Z)"; break; case "NameDesc": _vm.CurrentSortMode = SortMode.NameDesc; SortModeText.Text = "排序模式: 名稱 (Z-A)"; break; case "VolumeDesc": _vm.CurrentSortMode = SortMode.VolumeDesc; SortModeText.Text = "排序模式: 音量 (大-小)"; break; } _vm.RefreshAudioApps(); }
         }
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

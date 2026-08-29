@@ -177,8 +177,8 @@ namespace AudioUI
 
         private static void RecordProcessLoopbackInternal(Process process, string filePath, TimeSpan duration)
         {
-            IAudioClient audioClient = null;
-            IAudioCaptureClient captureClient = null;
+            IAudioClient? audioClient = null;
+            IAudioCaptureClient? captureClient = null;
 
             try
             {

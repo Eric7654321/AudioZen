@@ -91,7 +91,7 @@ namespace AudioUI
         }
 
         // 查詢某個按鍵綁定了什麼 (沒綁定回傳 null)
-        public string GetBoundConfigId(string keyId)
+        public string? GetBoundConfigId(string keyId)
         {
             return _bindings.ContainsKey(keyId) ? _bindings[keyId] : null;
         }

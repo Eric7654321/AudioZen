@@ -227,9 +227,9 @@ namespace AudioUI
                 string originalWav = Directory.Exists(recordFolder)
                     ? Directory.GetFiles(recordFolder, "*.wav").FirstOrDefault() ?? ""
                     : "";
-                string previewWavPath = !string.IsNullOrEmpty(originalWav)
+                string previewWavPath = (!string.IsNullOrEmpty(originalWav)
                     ? AudioProcessor.GeneratePreview(originalWav, configPath)
-                    : "";
+                    : "") ?? "";
 
                 var newData = new SituationEntry
                 {

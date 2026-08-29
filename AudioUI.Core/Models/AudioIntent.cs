@@ -43,8 +43,8 @@ namespace AudioUI
 
     /// <summary>把 JSON 的純量原樣還原成 object。Melda 的參數表混雜數字、布林與字串，
     /// 而編碼時要寫回原本的型別，所以不能一律當字串收。</summary>
-public class ObjectToNativeConverter : JsonConverter<object>{
-        public override object Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options){
+public class ObjectToNativeConverter : JsonConverter<object?>{
+        public override object? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options){
             switch (reader.TokenType){
                 case JsonTokenType.True:
                     return true;
@@ -63,7 +63,12 @@ public class ObjectToNativeConverter : JsonConverter<object>{
             }
         }
 
-        public override void Write(Utf8JsonWriter writer, object value, JsonSerializerOptions options){
+        public override void Write(Utf8JsonWriter writer, object? value, JsonSerializerOptions options){
+            // 靠 value.GetType() 決定要怎麼寫，所以 null 得先擋下來，否則是 NullReferenceException。
+            if (value is null){
+                writer.WriteNullValue();
+                return;
+            }
             JsonSerializer.Serialize(writer, value, value.GetType(), options);
         }
     }

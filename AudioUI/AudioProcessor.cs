@@ -14,7 +14,7 @@ namespace AudioUI
         /// <summary>
         /// 讀取原始錄音，根據 Config (Preamp + EQ) 產生預覽檔
         /// </summary>
-        public static string GeneratePreview(string inputWavPath, string configPath)
+        public static string? GeneratePreview(string inputWavPath, string configPath)
         {
             if (!File.Exists(inputWavPath) || !File.Exists(configPath)) return null;
 
