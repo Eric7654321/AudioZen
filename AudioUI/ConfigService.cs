@@ -62,7 +62,7 @@ namespace AudioUI
                         string deviceName = tLine.Substring(7).Trim();
                         currentConfig.TargetDevice = deviceName;
 
-                        // ★ 反查 ProcessName (對應 GeminiServices 裡的 myDeviceMap)
+                        // 反查介面要顯示的 App 名稱
                         currentConfig.ProcessName = MapDeviceToProcessName(deviceName);
                     }
                     // 2. 解析 Preamp (音量)
@@ -111,23 +111,13 @@ namespace AudioUI
             return $"{current} + {newEffect}";
         }
 
-        // ★★★ 關鍵映射：把落落長的裝置名稱轉回 App 名稱 ★★★
-        // 這是根據 GeminiServices.cs 裡面的 myDeviceMap 反推回來的
+        // 把設定檔裡落落長的裝置名稱轉回介面要顯示的 App 名稱。
         private string MapDeviceToProcessName(string deviceName)
         {
-            if (deviceName.Contains("Voicemeeter Input", StringComparison.OrdinalIgnoreCase))
-                return "chrome";
+            if (deviceName.Equals(RouteTable.GlobalTargetId, StringComparison.OrdinalIgnoreCase))
+                return "System";
 
-            if (deviceName.Contains("Voicemeeter AUX Input", StringComparison.OrdinalIgnoreCase))
-                return "discord";
-
-            if (deviceName.Contains("CABLE Input", StringComparison.OrdinalIgnoreCase))
-                return "games"; // 或者對應 eldenring, VALORANT
-
-            if (deviceName.Equals("all", StringComparison.OrdinalIgnoreCase))
-                return "System"; // 整體調整
-
-            return "Unknown";
+            return AppConfig.Routes.ByDeviceLine(deviceName)?.DisplayName ?? "Unknown";
         }
 
         // 供查詢完整路徑

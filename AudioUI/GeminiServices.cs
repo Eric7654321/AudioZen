@@ -87,23 +87,21 @@ namespace AudioUI
             return tcs.Task;
         }
 
-        public Dictionary<string,string>  myDeviceMap = new Dictionary<string, string>
-        {
-            { "Voicemeeter Input VB-Audio Voicemeeter VAIO {7bac9b47-61e4-4f81-b81b-2ad6c8186abc}", "chrome.exe" },  // constant
-            { "Voicemeeter AUX Input VB-Audio Voicemeeter VAIO {ba00bb3e-8c53-44ca-ab44-10c3715d3dbd}", "discord.exe" },
-            { "CABLE Input VB-Audio Virtual Cable {0a4eba8e-e0ec-457a-90de-e84ce08d5844}", "msedge.exe, eldenring.exe, VALORANT-Win64-Shipping.exe" }
-        };
+        private readonly RouteTable _routes;
+
+        /// <summary>路由表可注入，測試才有辦法在不碰使用者 appsettings.json 的情況下換一份。</summary>
+        public GeminiServices(RouteTable? routes = null) => _routes = routes ?? AppConfig.Routes;
 
 
         // --- 功能 2: 呼叫 Gemini API ---
-        string optimizeText = // constant
+        // 目標清單由路由表生成，所以 prompt 與實際能解析的目標不可能講不一樣的話。
+        // 模型只需要吐 browser / voice_chat / game 這種代號，不必複述含 GUID 的裝置全名。
+        string optimizeText =>
         "You are an audio engineer. Analyze to the user's text command. " +
         "Based on the request, generate an Equalizer APO configuration. " +
-        "You manage 4 specific targets: " +
+        $"You manage {_routes.TargetCount} specific targets: " +
         "1. 'all': Applies to everything (Global). " +
-        "2. 'Voicemeeter Input VB-Audio Voicemeeter VAIO {7bac9b47-61e4-4f81-b81b-2ad6c8186abc}': chrome.exe" +
-        "3. 'Voicemeeter AUX Input VB-Audio Voicemeeter VAIO {ba00bb3e-8c53-44ca-ab44-10c3715d3dbd}': discord.exe" +
-        "4. 'CABLE Input VB-Audio Virtual Cable {0a4eba8e-e0ec-457a-90de-e84ce08d5844}': msedge.exe, eldenring.exe, VALORANT-Win64-Shipping.exe " +
+        _routes.PromptTargetLines() +
         "Frequencies: 25, 40, 63, 100, 160, 250, 400, 630, 1000, 1600, 2500, 4000, 6300, 10000, 16000. " +
         "Rules: " +
         "1. Decide which target(s) to modify based on the user's intent. If vague, use 'all'. You can return multiple configs if needed. " +
@@ -200,7 +198,7 @@ namespace AudioUI
         "  \"message_for_user\": \"string (Explain in 15 words in Traditional Chinese)\", " +
         "  \"configs\": [ " +
         "    { " +
-        "      \"target\": \"all\"|\"Voicemeeter Input VB-Audio Voicemeeter VAIO {7bac9b47-61e4-4f81-b81b-2ad6c8186abc}\"|\"Voicemeeter AUX Input VB-Audio Voicemeeter VAIO {ba00bb3e-8c53-44ca-ab44-10c3715d3dbd}\"|\"CABLE Input VB-Audio Virtual Cable {0a4eba8e-e0ec-457a-90de-e84ce08d5844}\", " +
+        "      \"target\": " + _routes.PromptTargetUnion() + ", " +
         "      \"preamp_db\": float, " +
         "      \"graphic_eq_string\": \"string\" " +
         "      \"comp_json\": [ ... ], " +
@@ -363,7 +361,7 @@ namespace AudioUI
         
 
         // --- 功能 3: 解析回傳並寫入 Config ---
-        public string ParseAndWriteConfig(string rawResponse, string outputPath, Dictionary<string, string> deviceMap)
+        public string ParseAndWriteConfig(string rawResponse, string outputPath)
         {
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var geminiResponse = JsonSerializer.Deserialize<GeminiResponse>(rawResponse, options);
@@ -396,28 +394,15 @@ namespace AudioUI
                     foreach (var config in eqResponse.Configs)
                     {
                         // 1. 處理 Device 行
-                        string targetKey = config.Target;
-                        targetKey = Regex.Replace(
-                            targetKey,
-                            @"^Voice\w*",
-                            "Voicemeeter",
-                            RegexOptions.IgnoreCase
-                        );
-                        if (targetKey == "all")
+                        string? devicePattern = _routes.ResolveDevicePattern(config.Target);
+                        if (devicePattern != null)
                         {
-                            // 如果是 all，通常不需要指定 Device，或者您可以根據需求決定是否要重置 Device 選擇
-                            sw.WriteLine($"Device: all");
-                        }
-                        else if (!string.IsNullOrEmpty(targetKey) && deviceMap.ContainsKey(targetKey))
-                        {
-                            // 根據 map 寫入實際裝置名稱
-                            sw.WriteLine($"Device: {targetKey}");
+                            sw.WriteLine($"Device: {devicePattern}");
                         }
                         else
                         {
-                            // 如果 AI 回傳了 first 但 map 裡沒有，可以選擇跳過或記錄錯誤
-                            // 這裡選擇寫入一個預設註解以供除錯
-                            sw.WriteLine($"# Unknown Target: {targetKey}");
+                            // 認不得的目標寫成註解：APO 會忽略它，而檔案本身留下了為什麼這段沒生效。
+                            sw.WriteLine($"# Unknown Target: {config.Target}");
                         }
 
                         // 2. 寫入 Preamp
@@ -691,14 +676,14 @@ namespace AudioUI
             if (!string.IsNullOrEmpty(geminiResponse))
             {
                 // 4. 解析回傳並寫入 Config
-                string ttsMessage = ParseAndWriteConfig(geminiResponse, eqConfigPath, myDeviceMap);
+                string ttsMessage = ParseAndWriteConfig(geminiResponse, eqConfigPath);
                 int retryCount = 0;
 
                 // 處理geminiResponse的無效回應
                 while (ttsMessage=="-1" && retryCount < 3)
                 {
                     geminiResponse = await CallGeminiApiAsync(transcribedText, GEMINI_URL);
-                    ttsMessage = ParseAndWriteConfig(geminiResponse, eqConfigPath, myDeviceMap);
+                    ttsMessage = ParseAndWriteConfig(geminiResponse, eqConfigPath);
                     retryCount++;
                 }
                 if (retryCount == 3)

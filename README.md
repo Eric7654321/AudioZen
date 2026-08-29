@@ -49,15 +49,21 @@ copy AudioUI\appsettings.example.json AudioUI\appsettings.json
 換成新 key 之後沿用舊型號會拿到 404。
 
 **app → 虛擬裝置對應** — 決定哪個程式的聲音走哪張虛擬音效卡，換機器一定要調整。
-寫死在三個地方，改一個就要三個一起改：
+改 `appsettings.json` 的 `routes` 一處即可，程式的其他地方都從這裡讀。
 
-| 檔案 | 內容 |
+| 欄位 | 意義 |
 |---|---|
-| `AudioUI/AudioSessionService.cs` | 程序名 → 裝置名 |
-| `AudioUI/MainWindow.xaml.cs` | 裝置全名（含 GUID）→ 程序名 |
-| `AudioUI/GeminiServices.cs` | 同上，另有一份寫在送給 Gemini 的 prompt 裡 |
+| `id` | 給模型用的邏輯代號。模型只吐這個，不必複述裝置全名 |
+| `displayName` | 介面上顯示的名字 |
+| `devicePattern` | 寫進 APO `Device:` 後面的比對樣式 |
+| `matchKeyword` | 讀回設定檔時用來認出這條路由；省略時自動取 `devicePattern` 前兩個字詞 |
+| `processes` | 走這條路由的程式檔名 |
 
-裝置全名與 GUID 每台機器不同，可用 Equalizer APO 的 Configurator 取得。
+`devicePattern` 每台機器不同，可用 Equalizer APO 的 Configurator 取得。APO 的比對規則是
+「以空白分隔的字詞全部都要出現在 `裝置名稱 連接名稱 GUID` 裡」，所以 `Voicemeeter Input`
+這種短樣式就會中，不一定要寫完整含 GUID 的字串。
+
+省略整個 `routes` 區塊時採用內建預設值（見 `AudioUI.Core/RouteTable.cs`）。
 
 搭配的 Voicemeeter 路由要自己在 Voicemeeter 裡接：把各 app 的輸出指到對應的虛擬輸入，
 再由 Voicemeeter 匯出到實體喇叭。

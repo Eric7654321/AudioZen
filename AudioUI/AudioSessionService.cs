@@ -48,20 +48,13 @@ namespace AudioUI
             // ==========================================
             // 步驟 1: 定義應用程式與裝置關鍵字的對照表 (路由表)
             // ==========================================
-            var appToDeviceMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "chrome.exe", "Voicemeeter Input" },
-                { "msedge.exe", "CABLE Input" },
-                { "eldenring.exe", "CABLE Input" },
-                { "VALORANT-Win64-Shipping.exe", "CABLE Input" },
-                { "discord.exe", "Voicemeeter AUX Input" }
-            };
+            var routes = AppConfig.Routes;
 
             // ==========================================
             // 步驟 2: 讀取 Config 並建立 [裝置關鍵字 -> 效果摘要] 的對照表
             // ==========================================
             // 我們只關心路由表中用到的那些裝置名稱
-            var deviceKeywords = appToDeviceMap.Values.Distinct().ToList();
+            var deviceKeywords = routes.Routes.Select(r => r.MatchKeyword).Distinct().ToList();
 
             Dictionary<string, string> deviceEffectMap = new Dictionary<string, string>();
             try
@@ -109,24 +102,11 @@ namespace AudioUI
                                 string finalSummary = "無";
 
                                 // 3.1 查表：這個 App 是否在我們定義的路由表中？
-                                if (appToDeviceMap.TryGetValue(fullProcessName, out string targetDeviceKeyword))
+                                // ByProcess 本身就忽略 .exe，所以不必為了「有沒有副檔名」查兩次。
+                                var route = routes.ByProcess(fullProcessName) ?? routes.ByProcess(processName);
+                                if (route != null && deviceEffectMap.TryGetValue(route.MatchKeyword, out string? effect))
                                 {
-                                    // 3.2 查設定：如果 Config 檔有針對該裝置的設定
-                                    if (deviceEffectMap.ContainsKey(targetDeviceKeyword))
-                                    {
-                                        finalSummary = deviceEffectMap[targetDeviceKeyword];
-                                    }
-                                }
-                                else
-                                {
-                                    // (選項) 如果不在表格內，也可以嘗試用 processName (不含.exe) 再查一次
-                                    if (appToDeviceMap.TryGetValue(processName, out string targetDeviceKeyword2))
-                                    {
-                                        if (deviceEffectMap.ContainsKey(targetDeviceKeyword2))
-                                        {
-                                            finalSummary = deviceEffectMap[targetDeviceKeyword2];
-                                        }
-                                    }
+                                    finalSummary = effect;
                                 }
 
                                 var app = new AudioAppModel

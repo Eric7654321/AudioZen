@@ -311,14 +311,7 @@ namespace AudioUI
                     string configFileName = $"config_{timestamp}.txt";
                     string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", configFileName);
 
-                    var deviceMap = new Dictionary<string, string>
-                    {
-                        { "Voicemeeter Input VB-Audio Voicemeeter VAIO {7bac9b47-61e4-4f81-b81b-2ad6c8186abc}", "chrome.exe" },  // constant
-                        { "Voicemeeter AUX Input VB-Audio Voicemeeter VAIO {ba00bb3e-8c53-44ca-ab44-10c3715d3dbd}", "discord.exe" },
-                        { "CABLE Input VB-Audio Virtual Cable {0a4eba8e-e0ec-457a-90de-e84ce08d5844}", "msedge.exe, eldenring.exe, VALORANT-Win64-Shipping.exe" }
-                    };
-
-                    string aiMessage = _GeminiService.ParseAndWriteConfig(geminiResponse, configPath, deviceMap);
+                    string aiMessage = _GeminiService.ParseAndWriteConfig(geminiResponse, configPath);
                     if (aiMessage == "-1") aiMessage = "抱歉，我無法理解您的調整需求。";
 
                     // 3. ★★★ 關鍵修改：不直接 Apply，而是生成預覽音檔 ★★★
@@ -433,11 +426,14 @@ namespace AudioUI
             _HotkeyService.OnHotkeyPressed += HandleGlobalHotkey;
         }
 
-        private void HandleGlobalHotkey(int keyCode)
+        // async void 是事件處理器唯一能等待 Task 的形狀，代價是例外不會往外傳，
+        // 所以這裡必須自己接完——否則熱鍵套用失敗會安靜到連按的人都不知道發生過什麼。
+        private async void HandleGlobalHotkey(int keyCode)
         {
             string btnId = GetBtnIdByKeyCode(keyCode); if (string.IsNullOrEmpty(btnId)) return;
             string configId = _KeyMapService.GetBoundConfigId(btnId); if (string.IsNullOrEmpty(configId)) return;
-            ExecuteConfig(configId);
+            try { await ExecuteConfig(configId); }
+            catch (Exception ex) { SendNotification("快捷鍵失敗", ex.Message); }
         }
 
         private string GetBtnIdByKeyCode(int code)

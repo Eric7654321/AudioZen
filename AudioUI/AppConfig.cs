@@ -13,6 +13,11 @@ namespace AudioUI
     {
         [JsonPropertyName("gemini")]
         public GeminiSettings Gemini { get; set; } = new GeminiSettings();
+
+        /// <summary>省略時採用 <see cref="RouteTable.Default"/>。裝置名稱與 GUID 逐機不同，
+        /// 所以這是最常需要按機器覆寫的一段。</summary>
+        [JsonPropertyName("routes")]
+        public List<AudioRoute>? Routes { get; set; }
     }
 
     public sealed class GeminiSettings
@@ -37,7 +42,13 @@ namespace AudioUI
 
         private static readonly Lazy<AppSettings> _settings = new Lazy<AppSettings>(Load);
 
+        private static readonly Lazy<RouteTable> _routes =
+            new Lazy<RouteTable>(() => Settings.Routes is { Count: > 0 } r ? new RouteTable(r) : RouteTable.Default());
+
         public static AppSettings Settings => _settings.Value;
+
+        /// <summary>app 與虛擬裝置的對應。所有需要這份知識的地方都從這裡拿，不各自持有一份。</summary>
+        public static RouteTable Routes => _routes.Value;
 
         /// <summary>設定是否可用。UI 想在送出前先擋掉可以看這個，不必接例外。</summary>
         public static bool IsConfigured => !string.IsNullOrWhiteSpace(Settings.Gemini.ApiKey);
@@ -69,7 +80,13 @@ namespace AudioUI
             {
                 try
                 {
-                    settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path)) ?? new AppSettings();
+                    // 讓 JSON 用 camelCase 寫，與 GeminiSettings 上已有的 JsonPropertyName 慣例一致。
+                    var opts = new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                        PropertyNameCaseInsensitive = true,
+                    };
+                    settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), opts) ?? new AppSettings();
                 }
                 catch (JsonException ex)
                 {
