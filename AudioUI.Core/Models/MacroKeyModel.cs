@@ -15,7 +15,8 @@ namespace AudioUI
             get => _boundActionName;
             set { _boundActionName = value; OnPropertyChanged(); }
         }
-        public string BoundConfigId { get; set; }
+        /// <summary>沒有綁定任何情境時為 null。</summary>
+        public string? BoundConfigId { get; set; }
 
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string name = null)
