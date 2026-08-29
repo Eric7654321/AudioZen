@@ -71,13 +71,8 @@ namespace AudioUI
             {
                 try
                 {
-                    // 讓 JSON 用 camelCase 寫，與 GeminiSettings 上已有的 JsonPropertyName 慣例一致。
-                    var opts = new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        PropertyNameCaseInsensitive = true,
-                    };
-                    settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), opts) ?? new AppSettings();
+                    settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), AppSettings.JsonOptions)
+                               ?? new AppSettings();
                 }
                 catch (JsonException ex)
                 {

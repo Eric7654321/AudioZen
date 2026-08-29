@@ -371,6 +371,8 @@ namespace AudioUI
         }
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-        private class RelayCommand : ICommand { private readonly Action<object?> _execute; public RelayCommand(Action<object?> execute) { _execute = execute; } public bool CanExecute(object? parameter) => true; public void Execute(object? parameter) => _execute(parameter); public event EventHandler? CanExecuteChanged; }
+        private class RelayCommand : ICommand { private readonly Action<object?> _execute; public RelayCommand(Action<object?> execute) { _execute = execute; } public bool CanExecute(object? parameter) => true; public void Execute(object? parameter) => _execute(parameter);
+            // 接到 WPF 的重新查詢機制，而不是宣告一個永遠沒人觸發的事件。
+            public event EventHandler? CanExecuteChanged { add => CommandManager.RequerySuggested += value; remove => CommandManager.RequerySuggested -= value; } }
     }
 }

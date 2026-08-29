@@ -15,6 +15,11 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
   </ItemGroup>
 
+  <!-- 拿真實的樣板檔來測，才驗得到「樣板」與「讀它的程式」有沒有漂移。 -->
+  <ItemGroup>
+    <None Include="..\AudioUI\appsettings.example.json" Link="appsettings.example.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\AudioUI.Core\AudioUI.Core.csproj" />
     <ProjectReference Include="..\AudioUI.Infra\AudioUI.Infra.csproj" />

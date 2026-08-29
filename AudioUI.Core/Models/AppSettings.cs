@@ -1,3 +1,4 @@
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace AudioUI
@@ -8,6 +9,16 @@ namespace AudioUI
     /// </summary>
     public sealed class AppSettings
     {
+        /// <summary>
+        /// 讀 appsettings.json 用的選項。放這裡而不是讀檔的地方，是為了讓測試能用同一份——
+        /// 兩邊各寫一份的話，測試會證明一個實際上沒人在跑的設定。
+        /// </summary>
+        public static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            PropertyNameCaseInsensitive = true,
+        };
+
         [JsonPropertyName("gemini")]
         public GeminiSettings Gemini { get; set; } = new GeminiSettings();
 
