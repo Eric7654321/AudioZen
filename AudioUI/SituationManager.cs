@@ -50,24 +50,6 @@ namespace AudioUI
 
 
 
-        string promptText =
-        "You are an audio engineer. Listen to the user's voice command. " +
-        "Based on the request, generate an Equalizer APO GraphicEQ configuration using these specific 15 frequency bands: " +
-        "25, 40, 63, 100, 160, 250, 400, 630, 1000, 1600, 2500, 4000, 6300, 10000, 16000. " +
-        "Rules for generation: " +
-        "1. Determine the gain (dB) for each band based on the user's intent and return in floating number. " +
-        "Besides, the gain should be larger than 7.0dB, or just remain no gain." +
-        "2. Calculate 'preamp_db'. logic: Identify the maximum positive gain among all bands. " +
-        "The preamp_db must be negative and its absolute value must be greater than or equal to that maximum gain (e.g., if max gain is +15.2dB, preamp must be -15.2dB or lower, like -15.8dB). " +
-        "3. Construct 'graphic_eq_string' in the format: '25 [gain]; 40 [gain]; ...' " +
-        "WARNING: Output ONLY a JSON object with this exact structure: " +
-        "{ " +
-        "  \"message_for_user\": \"string (Explain briefly what you changed in 15 words in Traditional Chinese)\", " +
-        "  \"preamp_db\": float, " +
-        "  \"graphic_eq_string\": \"string (The formatted frequency-gain pairs separated by semicolons)\" " +
-        "  \"graphic_eq_string\": \"string (The formatted frequency-gain pairs separated by semicolons)\" " +
-        "  \"graphic_eq_string\": \"string (The formatted frequency-gain pairs separated by semicolons)\" " +
-        "}";
 
 
 
@@ -79,13 +61,15 @@ namespace AudioUI
         public async Task ConfigRollback(string IdString)
         {
             _store.PopFront(IdString);
-            if (_store.Front(IdString) == null)
+
+            var previous = _store.Front(IdString);
+            if (previous == null)
             {
                 await _TtsService.SpeakAsync("已經沒有更早的設定可以還原"); // constant
                 return;
             }
-            string originconfigPath = _store.Front(IdString).FileName;
-            _backend.Apply(originconfigPath);
+
+            _backend.Apply(previous.FileName);
         }
         private readonly ITextToSpeech _TtsService;
         AudioSessionService _AudioSessionService = new AudioSessionService();

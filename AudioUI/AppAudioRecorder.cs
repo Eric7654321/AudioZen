@@ -166,9 +166,9 @@ namespace AudioUI
             // 這是給外部單獨呼叫用的接口，批次功能使用的是 RecordAllActiveAppsAsync
             if (process == null) throw new ArgumentNullException(nameof(process));
 
-            // 確保路徑存在
-            string folder = Path.GetDirectoryName(outputFilePath);
-            if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+            // GetDirectoryName 對純檔名回空字串、對根路徑回 null，兩種都不能直接餵給 CreateDirectory。
+            string? folder = Path.GetDirectoryName(outputFilePath);
+            if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder)) Directory.CreateDirectory(folder);
 
             RecordProcessLoopbackInternal(process, outputFilePath, duration);
         }

@@ -50,7 +50,7 @@ namespace AudioUI
 
         private bool _isProcessing = false;
 
-        private async void Recognizer_SpeechRecognizedAsync(object sender, SpeechRecognizedEventArgs e)
+        private async void Recognizer_SpeechRecognizedAsync(object? sender, SpeechRecognizedEventArgs e)
         {
             // 暫停識別，避免處理中重複觸發
             //_recognizer.RecognizeAsyncStop();
