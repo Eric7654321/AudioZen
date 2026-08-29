@@ -89,12 +89,14 @@ namespace AudioUI
 
         private readonly RouteTable _routes;
         private readonly IAudioBackend _backend;
+        private readonly INotifier _notifier;
 
-        /// <summary>兩者都可注入，測試才有辦法在不碰使用者設定、也不真的寫進 APO 的情況下跑。</summary>
-        public GeminiServices(RouteTable? routes = null, IAudioBackend? backend = null)
+        /// <summary>三者都可注入，測試才有辦法在不碰使用者設定、不真的寫進 APO、不跳通知的情況下跑。</summary>
+        public GeminiServices(RouteTable? routes = null, IAudioBackend? backend = null, INotifier? notifier = null)
         {
             _routes = routes ?? AppConfig.Routes;
             _backend = backend ?? AppConfig.AudioBackend;
+            _notifier = notifier ?? AppConfig.Notifier;
         }
 
 
@@ -457,197 +459,11 @@ namespace AudioUI
         /// <summary>
         /// 發送通知
         /// </summary>
-        private void SendNotification(string title, string context)
-        {
-            new ToastContentBuilder()
-            .AddText(title)   // 標題
-            .AddText(context) // 內文
-            .Show(toast =>
-            {
-                toast.ExpirationTime = DateTimeOffset.Now.AddSeconds(5);
-            });
-        }
-
-        /// <summary>
+                /// <summary>
         /// 發送通知並「非同步等待」使用者回應
         /// </summary>
         /// <returns>Task<bool>: True=接受, False=拒絕或超時</returns>
-        public async Task<bool> SendNotificationAndWaitAsync(string title, string context)
-        {
-            // 1. 建立一個任務完成來源，用來當作暫停點
-            var tcs = new TaskCompletionSource<bool>();
-
-            // 2. 定義臨時的事件處理邏輯
-            // 這裡我們用 lambda 抓取回傳結果
-            void handler(ToastNotificationActivatedEventArgsCompat e)
-            {
-                var args = ToastArguments.Parse(e.Argument);
-
-                // 檢查是否有 action 參數
-                if (args.TryGetValue("action", out string action))
-                {
-                    // 根據使用者的選擇設定結果
-                    if (action == "yes")
-                    {
-                        tcs.TrySetResult(true);
-                    }
-                    else
-                    {
-                        tcs.TrySetResult(false);
-                    }
-                }
-            };
-
-            // 3. 註冊事件監聽
-            ToastNotificationManagerCompat.OnActivated += handler;
-
-            try
-            {
-                // 4. 建構並發送通知
-                new ToastContentBuilder()
-                    .AddText(title)
-                    .AddText(context)
-                    .AddButton(new ToastButton("是", "action=yes"))
-                    .AddButton(new ToastButton("否", "action=no"))
-                    .Show();
-
-                // 5. 等待使用者回應，或是等待 10 秒超時 (避免程式永遠卡住)
-                // Task.WhenAny 會回傳最先完成的那個 Task
-                var completedTask = await Task.WhenAny(tcs.Task, Task.Delay(10000));
-
-                if (completedTask == tcs.Task)
-                {
-                    // 使用者在時間內回應了
-                    return await tcs.Task;
-                }
-                else
-                {
-                    // 超時
-                    // 這裡可以選擇清除通知，避免過期點擊
-                    ToastNotificationManagerCompat.History.Clear();
-                    return false; // 預設回傳 false
-                }
-            }
-            finally
-            {
-                // 6. 重要：無論結果如何，一定要取消註冊事件，避免記憶體洩漏或重複觸發
-                ToastNotificationManagerCompat.OnActivated -= handler;
-            }
-        }
-
-        private string? SaveImageToTempFile(ImageSource? imageSource, string appName)
-        {
-            if (imageSource is not BitmapSource bitmapSource) return null;
-
-            try
-            {
-                // 清理檔名中的非法字元
-                string safeName = string.Join("_", appName.Split(Path.GetInvalidFileNameChars()));
-                string tempPath = Path.Combine(Path.GetTempPath(), $"AudioNotify_{safeName}.png");
-
-                // 如果檔案已存在且很新，可以考慮不重寫 (這裡為了簡單每次都寫入)
-                using (var fileStream = new FileStream(tempPath, FileMode.Create))
-                {
-                    BitmapEncoder encoder = new PngBitmapEncoder();
-                    encoder.Frames.Add(BitmapFrame.Create(bitmapSource));
-                    encoder.Save(fileStream);
-                }
-                return tempPath;
-            }
-            catch
-            {
-                return null; // 存檔失敗回傳 null，之後會顯示預設圖示或空白
-            }
-        }
-
-        public void ShowAppNotification(IEnumerable<AudioAppModel> apps)
-        {
-            if (apps == null || !apps.Any()) return;
-
-            var builder = new ToastContentBuilder()
-                .AddText("心平氣和")
-                .AddText("應用程式狀態列表");
-
-            foreach (var app in apps.Take(5)) // 因為變小了，可以顯示更多個 (例如 5 個)
-            {
-                string iconPath = SaveImageToTempFile(app.Icon, app.Name) ?? "";
-
-                // --- 策略 1: 合併資訊字串 ---
-                // 範例效果: "🔊 80%  |  ✅ 已套用設定  |  🔇 靜音"
-                var infoParts = new List<string>();
-                infoParts.Add($"🔊 {app.SystemVolume}%");
-                infoParts.Add(app.CurrentEffectInfo ?? "未設定");
-                if (app.SystemMute) infoParts.Add("🔇 靜音");
-
-                // 使用 " | " 符號將資訊串接成單一行
-                string combinedInfo = string.Join("  |  ", infoParts);
-
-                var group = new AdaptiveGroup()
-                {
-                    Children =
-            {
-                // 左欄：圖示 (縮小寬度權重)
-                new AdaptiveSubgroup()
-                {
-                    HintWeight = 1,
-                    Children =
-                    {
-                        new AdaptiveImage()
-                        {
-                            Source = iconPath,
-                            HintAlign = AdaptiveImageAlign.Center,
-                            // HintCrop = AdaptiveImageCrop.Circle // 視喜好決定是否圓形
-                        }
-                    }
-                },
-
-                // 右欄：文字
-                new AdaptiveSubgroup()
-                {
-                    HintWeight = 4, // 給文字更多空間
-                    HintTextStacking = AdaptiveSubgroupTextStacking.Center, // 讓文字垂直置中對齊圖片
-                    Children =
-                    {
-                        // --- 策略 2: 縮小標題 ---
-                        // 使用 Base 搭配 Bold，比 Subtitle 更省空間但依然明顯
-                        new AdaptiveText()
-                        {
-                            Text = app.Name,
-                            HintStyle = AdaptiveTextStyle.Base,
-                        },
-
-                        // --- 策略 3: 單行顯示詳細資訊 ---
-                        // CaptionSubtle 是最小的灰色字體
-                        new AdaptiveText()
-                        {
-                            Text = combinedInfo,
-                            HintStyle = AdaptiveTextStyle.CaptionSubtle,
-                            HintWrap = true // 允許換行 (如果視窗太窄)
-                        }
-                    }
-                }
-            }
-                };
-
-                builder.AddVisualChild(group);
-            }
-
-            if (apps.Count() > 5)
-            {
-                builder.AddText($"... 還有 {apps.Count() - 5} 個應用程式");
-            }
-
-            builder.Show(toast =>
-            {
-                toast.Tag = "AudioAppsCompact";
-                toast.Group = "AudioMonitor";
-                toast.ExpirationTime = DateTimeOffset.Now.AddSeconds(5);
-            });
-        }
-
-
-
-        // 用 property 而非欄位：設定是延遲載入的，若在型別初始化時去讀檔，
+                                // 用 property 而非欄位：設定是延遲載入的，若在型別初始化時去讀檔，
         // 讀檔失敗會以 TypeInitializationException 的形式冒出來，看不出真正原因。
         private static string GEMINI_URL => AppConfig.GeminiUrl;
         TtsService _TtsService = new TtsService();
@@ -664,14 +480,14 @@ namespace AudioUI
 
             var appsConfig = _AudioSessionService.GetAppsWithConfig();
             // 0. 第一次回應
-            ShowAppNotification(appsConfig); // 呼叫上面第 2 種方法
+            new AppListNotifier().ShowAppNotification(appsConfig);
 
             await _TtsService.SpeakAsync("請問您想如何調整音訊設定"); // constant
             // 1. 錄音recordMs 毫秒
             string audioBase64 = await RecordAudioAsync(audioFilePath, recordMs);
 
             // 2. 提示正在解析
-            SendNotification("解析中", "心頻氣和正在分析內容");
+            _notifier.Notify("解析中", "心頻氣和正在分析內容");
             await _TtsService.SpeakAsync("正在解析中"); // constant
 
             // 3. 呼叫 Gemini API
@@ -697,7 +513,7 @@ namespace AudioUI
                 }
 
                 string situationIdString = situationId.ToString();
-                SendNotification("已套用設定", "心頻氣和已完成解析並套用設定");
+                _notifier.Notify("已套用設定", "心頻氣和已完成解析並套用設定");
 
                 _backend.Apply(eqConfigPath);
 
@@ -719,7 +535,7 @@ namespace AudioUI
                 
                 // 6. 詢問是否套用設定
                 _ChatManager.PushFront("-1", newCreateData);
-                if (await SendNotificationAndWaitAsync("回退確認","是否要取消此設定"))
+                if (await _notifier.ConfirmAsync("回退確認","是否要取消此設定"))
                 {
                     // rollback
                     await ConfigRollback("-1", _ChatManager);
@@ -734,7 +550,7 @@ namespace AudioUI
                     // 7. 詢問是否需要儲存成preset
                     await _TtsService.SpeakAsync("是否需要存為preset"); // constant
 
-                    if (await SendNotificationAndWaitAsync("preset設定", "是否要存為preset"))
+                    if (await _notifier.ConfirmAsync("preset設定", "是否要存為preset"))
                     {
                         _ChatManager.PushFront(_ChatManager.GetNextId().ToString(), newCreateData, transcribedText, recordPath);
                     }
@@ -743,7 +559,7 @@ namespace AudioUI
                 // Inserted wait for one second as requested (非阻塞)
                 await Task.Delay(1000);
 
-                SendNotification("設定結束", "調整已結束，請享受更好的聲音");
+                _notifier.Notify("設定結束", "調整已結束，請享受更好的聲音");
                 // 儲存 Chat
                 _ChatManager.SaveToJson();
             }

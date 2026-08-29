@@ -59,6 +59,11 @@ namespace AudioUI
         private static readonly Lazy<IAudioBackend> _backend =
             new Lazy<IAudioBackend>(() => new EqualizerApoBackend(Settings.Apo));
 
+        /// <summary>對使用者說話的管道。</summary>
+        public static INotifier Notifier => _notifier.Value;
+
+        private static readonly Lazy<INotifier> _notifier = new Lazy<INotifier>(() => new ToastNotifier());
+
         /// <summary>設定是否可用。UI 想在送出前先擋掉可以看這個，不必接例外。</summary>
         public static bool IsConfigured => !string.IsNullOrWhiteSpace(Settings.Gemini.ApiKey);
 

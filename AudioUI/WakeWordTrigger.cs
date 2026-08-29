@@ -129,12 +129,6 @@ namespace AudioUI
             }
         }
 
-        private void SendNotification(string title, string content)
-        {
-            new ToastContentBuilder()
-                .AddText(title)
-                .AddText(content)
-                .Show(t => t.ExpirationTime = DateTimeOffset.Now.AddSeconds(5));
-        }
+        private void SendNotification(string title, string content) => AppConfig.Notifier.Notify(title, content);
     }
 }

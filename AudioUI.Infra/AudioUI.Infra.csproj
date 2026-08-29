@@ -1,12 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- 目前只做檔案讀寫，所以維持 net8.0；哪天需要讀登錄檔自動偵測 APO 安裝位置，再升到 net8.0-windows。 -->
+  <!-- Windows toast 通知需要 Windows TFM。刻意不開 UseWPF：這層不該看得到 WPF 型別。 -->
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\AudioUI.Core\AudioUI.Core.csproj" />
