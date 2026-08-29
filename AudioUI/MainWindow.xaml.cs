@@ -138,9 +138,8 @@ namespace AudioUI
         private SortMode _currentSortMode = SortMode.NameAsc;
         internal float recognitionConfidience = 0.55f;
 
-        // ★★★ API KEY 設定 (填入你的 Key) ★★★
-        private const string API_KEY = "AIzaSyBpU6kLymZnQOFxRYawwSdBlDx5ehJ8Hbs"; // 
-        private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + API_KEY;
+        // key 從 AppConfig 讀（appsettings.json / 環境變數），不再硬編。
+        private static string GEMINI_URL => AppConfig.GeminiUrl;
 
         public ICommand MinimizeCommand { get; }
         public ICommand MaximizeCommand { get; }

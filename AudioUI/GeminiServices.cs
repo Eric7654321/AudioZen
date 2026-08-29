@@ -368,7 +368,15 @@ namespace AudioUI
                 return "-1";
             }
 
-            string innerJsonText = geminiResponse.Candidates[0].Content.Parts[0].Text;
+            // Gemini 3.x 會在 parts 裡夾帶只有 thoughtSignature、沒有 text 的思考片段，
+            // 直接取 Parts[0] 會拿到 null。取第一個真的有內容的 part。
+            string? innerJsonText = geminiResponse.Candidates[0].Content?.Parts
+                ?.FirstOrDefault(p => !string.IsNullOrWhiteSpace(p.Text))?.Text;
+
+            if (string.IsNullOrWhiteSpace(innerJsonText))
+            {
+                return "-1";
+            }
 
             // 清理 Markdown
             innerJsonText = innerJsonText.Replace("```json", "").Replace("```", "").Trim();
@@ -644,8 +652,9 @@ namespace AudioUI
 
 
 
-        private const string API_KEY = "AIzaSyBpU6kLymZnQOFxRYawwSdBlDx5ehJ8Hbs"; // constant AIzaSyCMRnOADLA-VpgjY0e9dfAPLAkd-LApf_8
-        private const string GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + API_KEY; // todo
+        // key 從 AppConfig 讀（appsettings.json / 環境變數），不再硬編。
+        // 用 property 而非欄位：設定是延遲載入的，型別初始化時去讀檔會讓錯誤發生在看不出原因的地方。
+        private static string GEMINI_URL => AppConfig.GeminiUrl;
         TtsService _TtsService = new TtsService();
         AudioSessionService _AudioSessionService = new AudioSessionService();
 

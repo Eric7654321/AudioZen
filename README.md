@@ -37,8 +37,16 @@ dotnet run --project AudioUI/AudioUI.csproj
 
 ## 設定
 
-**Gemini API key** — 目前寫死在 code，兩個地方要一起改：
-`AudioUI/GeminiServices.cs` 與 `AudioUI/MainWindow.xaml.cs` 的 `API_KEY` 常數。
+**Gemini API key** — 複製樣板再填，設定檔不進版控：
+
+```powershell
+copy AudioUI\appsettings.example.json AudioUI\appsettings.json
+```
+
+填 `gemini.apiKey`。也可以改設環境變數 `AUDIOZEN_GEMINI_API_KEY`，優先於檔案，適合不想在磁碟留 key 的場合。
+
+`gemini.model` 預設 `gemini-3.5-flash-lite`。舊的 `gemini-2.5-flash-lite` 已經不對新 key 開放，
+換成新 key 之後沿用舊型號會拿到 404。
 
 **app → 虛擬裝置對應** — 決定哪個程式的聲音走哪張虛擬音效卡，換機器一定要調整。
 寫死在三個地方，改一個就要三個一起改：
