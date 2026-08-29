@@ -59,27 +59,24 @@ namespace AudioUI
         private bool isDrawerOpen = false;
 
         // 服務層
-        private AudioSessionService _AudioService = new AudioSessionService();
-        private SituationManager _situations = new SituationManager();
-        private TtsService _TtsService = new TtsService();
+        private readonly MainWindowViewModel _vm = new MainWindowViewModel();
         private KeyMappingService _KeyMapService = new KeyMappingService();
         private WakeWordTrigger _WakeWordTrigger;
         private PerProcessAudioRecorder _PerProcessAudioRecorder = new PerProcessAudioRecorder();
-        public IConfigStore _store = AppConfig.ConfigStore;
 
         private HotkeyService _HotkeyService = new HotkeyService();
         private WinForms.NotifyIcon _notifyIcon;
 
         // UI 綁定集合
-        public ObservableCollection<AudioAppModel> AppList { get; set; } = new ObservableCollection<AudioAppModel>();
-        public ObservableCollection<AudioAppModel> RecentAppList { get; set; } = new ObservableCollection<AudioAppModel>();
-        public ObservableCollection<DeviceInfoModel> DeviceList { get; set; } = new ObservableCollection<DeviceInfoModel>();
-        public ObservableCollection<ConfigOptionItem> ConfigOptions { get; set; } = new ObservableCollection<ConfigOptionItem>();
-        public ObservableCollection<MacroKeyModel> MacroKeys { get; set; } = new ObservableCollection<MacroKeyModel>();
-        public ObservableCollection<SituationSummary> ChatList { get; set; } = new ObservableCollection<SituationSummary>();
-        public ObservableCollection<ChatMessageModel> ChatMessages { get; set; } = new ObservableCollection<ChatMessageModel>();
+        // XAML 綁在視窗上，實際內容由 ViewModel 持有；轉發是為了讓繫結路徑一個字都不用改。
+        public ObservableCollection<AudioAppModel> AppList => _vm.AppList;
+        public ObservableCollection<AudioAppModel> RecentAppList => _vm.RecentAppList;
+        public ObservableCollection<DeviceInfoModel> DeviceList => _vm.DeviceList;
+        public ObservableCollection<ConfigOptionItem> ConfigOptions => _vm.ConfigOptions;
+        public ObservableCollection<MacroKeyModel> MacroKeys => _vm.MacroKeys;
+        public ObservableCollection<SituationSummary> ChatList => _vm.ChatList;
+        public ObservableCollection<ChatMessageModel> ChatMessages => _vm.ChatMessages;
 
-        private int _currentSituationId = -1;
         private string _selectedDeviceName = "";
 
         public string SelectedDeviceName
@@ -89,7 +86,6 @@ namespace AudioUI
         }
 
         private ConfigOptionItem? _selectedConfigToBind;
-        private SortMode _currentSortMode = SortMode.NameAsc;
         internal float recognitionConfidience = 0.55f;
 
         public ICommand MinimizeCommand { get; }
@@ -108,56 +104,16 @@ namespace AudioUI
             MaximizeCommand = new RelayCommand(_ => { WindowState = (WindowState == WindowState.Maximized) ? WindowState.Normal : WindowState.Maximized; });
             CloseCommand = new RelayCommand(_ => this.Close());
 
-            MicrophoneCommand = new RelayCommand(async _ =>
-            {
-                // ★★★ 確保路徑指向正確的 BaseDirectory (解決路徑跑掉問題) ★★★
-                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                string configDir = Path.Combine(baseDir, "config");
-                string audioPath = Path.Combine(configDir, "command.wav");
-
-                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                string configFileName = $"config_{timestamp}.txt";
-                string configPath = Path.Combine(configDir, configFileName);
-
-                try
-                {
-                    if (!Directory.Exists(configDir)) Directory.CreateDirectory(configDir);
-
-                    _TtsService.Stop();
-
-                    // 呼叫錄音並處理
-                    await _situations.RecordAndProcessAsync(_currentSituationId, audioPath, configPath, 5000);
-
-                    // 刷新 UI
-                    RefreshConfigOptions();
-                    RefreshChatList();
-
-                    if (_currentSituationId != -1)
-                    {
-                        LoadChatHistory(_currentSituationId.ToString());
-                    }
-                    else
-                    {
-                        RefreshChatList();
-                    }
-
-                    ApplyConfigToAPO(configPath);
-                }
-                catch (Exception ex)
-                {
-                    System.Windows.MessageBox.Show($"錯誤: {ex.Message}");
-                }
-            });
+            MicrophoneCommand = new RelayCommand(async _ => await _vm.RecordAndProcessCurrentAsync());
 
             this.MouseLeftButtonDown += (s, e) => { if (e.ButtonState == MouseButtonState.Pressed) this.DragMove(); };
 
-            RefreshAudioApps();
-            InitDevices();
-
-            _store.Load();
-            InitMuteConfig();
+            _vm.RefreshAudioApps();
+            _vm.InitDevices();
+            _vm.Load();
+            _vm.InitMuteConfig();
             _KeyMapService.Load();
-            RefreshChatList();
+            _vm.RefreshChatList();
 
             InitSystemTray();
             this.Loaded += (s, e) => InitGlobalHotkeys();
@@ -165,19 +121,10 @@ namespace AudioUI
 
         // --- 1. 聊天室邏輯 ---
 
-        private void RefreshChatList()
-        {
-            ChatList.Clear();
-            var sessions = _store.Summaries();
-            foreach (var session in sessions)
-            {
-                ChatList.Add(session);
-            }
-        }
 
         private void NewChat_Click(object sender, RoutedEventArgs e)
         {
-            _currentSituationId = -1;
+            _vm.CurrentSituationId = -1;
             if (this.FindName("DefaultEntrancePanel") is Grid home) home.Visibility = Visibility.Visible;
             if (this.FindName("ChatSessionPanel") is Grid chat) chat.Visibility = Visibility.Collapsed;
         }
@@ -186,60 +133,14 @@ namespace AudioUI
         {
             if (sender is System.Windows.Controls.Button btn && btn.Tag is string idStr && int.TryParse(idStr, out int id))
             {
-                _currentSituationId = id;
-                LoadChatHistory(idStr);
+                _vm.CurrentSituationId = id;
+                _vm.LoadChatHistory(idStr);
 
                 if (this.FindName("DefaultEntrancePanel") is Grid home) home.Visibility = Visibility.Collapsed;
                 if (this.FindName("ChatSessionPanel") is Grid chat) chat.Visibility = Visibility.Visible;
             }
         }
 
-        private void LoadChatHistory(string id)
-        {
-            ChatMessages.Clear();
-
-            var mapItem = _store.ById(id);
-
-            if (mapItem == null)
-            {
-                System.Windows.MessageBox.Show($"找不到 ID: {id} 的資料");
-                return;
-            }
-
-            string recordPath = mapItem.RecordPath ?? "";
-            var history = _store.History(id, 20);
-
-            // ★★★ 除錯：印出對話內容 ★★★
-            string debugMsg = $"ID: {id}, RecordPath: {recordPath}\n抓到 {history.Count} 筆對話:\n";
-            foreach (var h in history)
-            {
-                debugMsg += $"User: {h.UserInput}\nAI: {h.AiResponse}\n---\n";
-            }
-            System.Windows.MessageBox.Show(debugMsg, "對話內容檢查");
-
-            // 填入 ChatMessages
-            foreach (var msg in history)
-            {
-                if (!string.IsNullOrEmpty(msg.UserInput))
-                {
-                    ChatMessages.Add(new ChatMessageModel
-                    {
-                        IsUser = true,
-                        Message = msg.UserInput
-                    });
-                }
-
-                if (!string.IsNullOrEmpty(msg.AiResponse))
-                {
-                    ChatMessages.Add(new ChatMessageModel
-                    {
-                        IsUser = false,
-                        Message = msg.AiResponse,
-                        AudioFolderPath = recordPath
-                    });
-                }
-            }
-        }
 
         private void PlayAudio_Click(object sender, RoutedEventArgs e)
         {
@@ -288,78 +189,12 @@ namespace AudioUI
 
         private async void SendAdjustment_Click(object sender, RoutedEventArgs e)
         {
-            if (this.FindName("AdjustmentInputBox") is System.Windows.Controls.TextBox inputBox && !string.IsNullOrWhiteSpace(inputBox.Text))
+            if (this.FindName("AdjustmentInputBox") is System.Windows.Controls.TextBox inputBox
+                && !string.IsNullOrWhiteSpace(inputBox.Text))
             {
                 string userText = inputBox.Text;
                 inputBox.Text = "";
-
-                // 1. 顯示 User 訊息
-                ChatMessages.Add(new ChatMessageModel { IsUser = true, Message = userText });
-
-                var thinkingMsg = new ChatMessageModel { IsUser = false, Message = "思考中..." };
-                ChatMessages.Add(thinkingMsg);
-
-                try
-                {
-                    // 2. 呼叫 Gemini 生成新 Config
-                    AudioIntent? intent = await AppConfig.LlmClient.InterpretAsync(userText);
-
-                    string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                    string configFileName = $"config_{timestamp}.txt";
-                    string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", configFileName);
-
-                    string? aiMessage = AppConfig.AudioBackend.Write(intent, configPath);
-                    if (aiMessage == null) aiMessage = "抱歉，我無法理解您的調整需求。";
-
-                    // 3. ★★★ 關鍵修改：不直接 Apply，而是生成預覽音檔 ★★★
-                    // ApplyConfigToAPO(configPath); <--- 註解掉這行！
-
-                    // 取得原始錄音檔路徑
-                    // 假設原始錄音檔叫做 command.wav，或者在 RecordPath 裡
-                    var currentChat = _store.ById(_currentSituationId.ToString());
-                    string recordFolder = currentChat?.RecordPath ?? "";
-
-                    // 嘗試找到原始錄音檔 (假設是資料夾裡的第一個 wav)
-                    string originalWav = "";
-                    if (Directory.Exists(recordFolder))
-                    {
-                        originalWav = Directory.GetFiles(recordFolder, "*.wav").FirstOrDefault();
-                    }
-
-                    // 生成預覽檔 (Preview)
-                    string previewWavPath = "";
-                    if (!string.IsNullOrEmpty(originalWav))
-                    {
-                        previewWavPath = AudioProcessor.GeneratePreview(originalWav, configPath);
-                    }
-
-                    // 4. 留下紀錄
-                    var newData = new SituationEntry
-                    {
-                        FileName = configPath,
-                        UserInput = userText,
-                        AiResponse = aiMessage
-                    };
-                    _store.PushFront(_currentSituationId.ToString(), newData, userText, recordFolder);
-                    _store.Save();
-
-                    // 5. 更新 UI
-                    ChatMessages.Remove(thinkingMsg);
-                    ChatMessages.Add(new ChatMessageModel
-                    {
-                        IsUser = false,
-                        Message = aiMessage,
-                        AudioFolderPath = !string.IsNullOrEmpty(previewWavPath) ? previewWavPath : recordFolder, // 優先播預覽檔
-                        ConfigPath = configPath // ★★★ 綁定 Config 路徑 ★★★
-                    });
-
-                    RefreshChatList();
-                }
-                catch (Exception ex)
-                {
-                    ChatMessages.Remove(thinkingMsg);
-                    ChatMessages.Add(new ChatMessageModel { IsUser = false, Message = $"發生錯誤: {ex.Message}" });
-                }
+                await _vm.SendAdjustmentAsync(userText);
             }
         }
 
@@ -371,10 +206,10 @@ namespace AudioUI
                 if (File.Exists(configPath))
                 {
                     // 1. 這裡 "不" 呼叫 ApplyConfigToAPO
-                    // ApplyConfigToAPO(configPath); <--- 拿掉這行
+                    // _vm.ApplyConfigToAPO(configPath); <--- 拿掉這行
 
                     // 2. 邏輯說明：
-                    // 在 SendAdjustment_Click 時，我們已經呼叫了 _store.PushFront
+                    // 送出時 ViewModel 已經把這份設定推進該情境的紀錄
                     // 所以這份 Config 已經是該情境 (SituationID) 的 "最新設定" 了。
                     // 使用者點擊這個按鈕，代表他 "確認" 這是他要的。
 
@@ -427,91 +262,24 @@ namespace AudioUI
         // 所以這裡必須自己接完——否則熱鍵套用失敗會安靜到連按的人都不知道發生過什麼。
         private async void HandleGlobalHotkey(int keyCode)
         {
-            string btnId = GetBtnIdByKeyCode(keyCode); if (string.IsNullOrEmpty(btnId)) return;
+            string btnId = _vm.GetBtnIdByKeyCode(keyCode); if (string.IsNullOrEmpty(btnId)) return;
             string configId = _KeyMapService.GetBoundConfigId(btnId); if (string.IsNullOrEmpty(configId)) return;
-            try { await ExecuteConfig(configId); }
+            try { await _vm.ExecuteConfig(configId); }
             catch (Exception ex) { SendNotification("快捷鍵失敗", ex.Message); }
         }
 
-        private string GetBtnIdByKeyCode(int code)
-        {
-            if (code == 103) return "btn01"; if (code == 104) return "btn02"; if (code == 105) return "btn03";
-            if (code == 100) return "btn04"; if (code == 101) return "btn05"; if (code == 102) return "btn06";
-            if (code == 97) return "btn07"; if (code == 98) return "btn08"; if (code == 99) return "btn09";
-            if (code == 96) return "btn10"; if (code == 110) return "btn11"; if (code == 13) return "btn12";
-            return "";
-        }
 
         private void SendNotification(string title, string content) => AppConfig.Notifier.Notify(title, content);
 
-        private async Task ExecuteConfig(string configId)
-        {
-            if (configId == "cmd_rollback")
-            {
-                try { await _situations.ConfigRollback(SituationIds.Transient); SendNotification("快捷鍵觸發", "↩️ 已回復上一個設定"); RefreshConfigOptions(); }
-                catch { SendNotification("無法回復", "沒有歷史紀錄可供還原。"); }
-                return;
-            }
-            else if (configId == "cmd_mute" || configId == SituationIds.Mute)
-            {
-                var muteItem = _store.ById(SituationIds.Mute);
-                if (muteItem != null && muteItem.FileDatas.Count > 0) { ApplyConfigToAPO(muteItem.FileDatas[0].FileName); SendNotification("快捷鍵觸發", "🔇 已全域靜音"); }
-                else SendNotification("錯誤", "找不到靜音設定檔");
-                return;
-            }
-            else
-            {
-                var mapItem = _store.ById(configId);
-                if (mapItem == null) { _store.Load(); mapItem = _store.ById(configId); }
 
-                if (mapItem != null && mapItem.FileDatas.Count > 0)
-                {
-                    ApplyConfigToAPO(mapItem.FileDatas[0].FileName);
-                    string name = string.IsNullOrEmpty(mapItem.ChatName) ? $"情境 {configId}" : mapItem.ChatName;
-                    SendNotification("設定已套用", $"⚡ 已切換至：{name}");
-                }
-                else SendNotification("設定失敗", $"找不到情境 ID: {configId}");
-            }
-        }
 
-        private void ApplyConfigToAPO(string sourcePath)
-        {
-            try { AppConfig.AudioBackend.Apply(sourcePath); }
-            catch (Exception ex) { SendNotification("套用失敗", ex.Message); }
-        }
 
-        // --- 4. UI 互動與初始化 ---
-        private void InitDevices()
-        {
-            DeviceList.Clear();
-            DeviceList.Add(new DeviceInfoModel { Name = "自定義宏鍵盤", Description = "交大創客特供版", ImagePath = "keyboard.png" });
-            DeviceList.Add(new DeviceInfoModel { Name = "g304", Description = "Logitech G304 Lightspeed", ImagePath = "mouse.png" });
-            DeviceList.Add(new DeviceInfoModel { Name = "Mouse", Description = "Standard Pointing Device", ImagePath = "hamster.png" });
-        }
-
-        private void InitMuteConfig()
-        {
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string configDir = Path.Combine(baseDir, "config");
-            if (!Directory.Exists(configDir)) Directory.CreateDirectory(configDir);
-
-            string muteFilePath = Path.Combine(configDir, "mute.txt");
-            if (!File.Exists(muteFilePath)) File.WriteAllText(muteFilePath, "Device: all\r\nPreamp: -100 dB\r\n# System Mute Config");
-
-            var existing = _store.ById(SituationIds.Mute);
-            if (existing == null)
-            {
-                var muteData = new SituationEntry { FileName = muteFilePath, UserInput = "系統強制靜音", AiResponse = "已將前級擴大 (Preamp) 設為 -100dB。" };
-                _store.PushFront(SituationIds.Mute, muteData, "全域靜音", "");
-                _store.Save();
-            }
-        }
 
         private void DeviceCard_Click(object sender, RoutedEventArgs e)
         {
             if (sender is FrameworkElement fe && fe.DataContext is DeviceInfoModel device)
             {
-                SelectedDeviceName = device.Name; RefreshConfigOptions(); LoadKeyButtons(device.Name);
+                SelectedDeviceName = device.Name; _vm.RefreshConfigOptions(); LoadKeyButtons(device.Name);
                 if (this.FindName("DeviceListContainer") is FrameworkElement list) list.Visibility = Visibility.Collapsed;
                 if (this.FindName("DeviceDetailPanel") is FrameworkElement detail) detail.Visibility = Visibility.Visible;
             }
@@ -529,18 +297,6 @@ namespace AudioUI
             if (System.Windows.MessageBox.Show("重置所有按鍵設定？", "確認", MessageBoxButton.YesNo) == MessageBoxResult.Yes) { _KeyMapService.ClearAll(); LoadKeyButtons(SelectedDeviceName); }
         }
 
-        private void RefreshConfigOptions()
-        {
-            ConfigOptions.Clear(); _store.Load();
-            ConfigOptions.Add(new ConfigOptionItem { SituationId = "cmd_unbind", DisplayName = "解除綁定 (Unbind)", Description = "清除按鍵設定" });
-            ConfigOptions.Add(new ConfigOptionItem { SituationId = "cmd_rollback", DisplayName = "Rollback", Description = "回復上一個操作" });
-
-            foreach (var map in _store.Situations.Where(x => x.Id != SituationIds.Transient))
-            {
-                var latest = map.FileDatas.FirstOrDefault();
-                if (latest != null) ConfigOptions.Add(new ConfigOptionItem { SituationId = map.Id, DisplayName = string.IsNullOrEmpty(map.ChatName) ? $"情境 {map.Id}" : map.ChatName, Description = latest.UserInput ?? "AI 設定", FilePath = latest.FileName });
-            }
-        }
 
         private void LoadKeyButtons(string deviceName)
         {
@@ -587,7 +343,7 @@ namespace AudioUI
         {
             var btn = sender as System.Windows.Controls.Button; if (btn == null) return; string tag = btn.Tag.ToString(); ResetTabs();
             if (tag == "Entrance") { SidebarBorder.Visibility = Visibility.Visible; HighlightTab(TabEntrance, LineEntrance); EntranceView.Visibility = Visibility.Visible; }
-            else if (tag == "Control") { SidebarBorder.Visibility = Visibility.Collapsed; HighlightTab(TabControl, LineControl); ControlView.Visibility = Visibility.Visible; RefreshAudioApps(); }
+            else if (tag == "Control") { SidebarBorder.Visibility = Visibility.Collapsed; HighlightTab(TabControl, LineControl); ControlView.Visibility = Visibility.Visible; _vm.RefreshAudioApps(); }
             else if (tag == "Device") { SidebarBorder.Visibility = Visibility.Collapsed; HighlightTab(TabDevice, LineDevice); if (this.FindName("DeviceView") is Grid v) v.Visibility = Visibility.Visible; BackToDeviceList_Click(null, null); }
         }
         private void ResetTabs()
@@ -605,20 +361,13 @@ namespace AudioUI
         {
             DoubleAnimation heightAnimation = new DoubleAnimation(); heightAnimation.Duration = TimeSpan.FromSeconds(0.3); heightAnimation.EasingFunction = new QuadraticEase();
             if (isDrawerOpen) { heightAnimation.To = 0; DrawerIcon.Kind = MahApps.Metro.IconPacks.PackIconMaterialKind.ChevronUp; }
-            else { heightAnimation.To = 230; DrawerIcon.Kind = MahApps.Metro.IconPacks.PackIconMaterialKind.ChevronDown; RefreshAudioApps(); }
+            else { heightAnimation.To = 230; DrawerIcon.Kind = MahApps.Metro.IconPacks.PackIconMaterialKind.ChevronDown; _vm.RefreshAudioApps(); }
             StatusDrawer.BeginAnimation(FrameworkElement.HeightProperty, heightAnimation); isDrawerOpen = !isDrawerOpen;
         }
         private void SortBtn_Click(object sender, RoutedEventArgs e) { if (sender is System.Windows.Controls.Button btn && btn.ContextMenu != null) { btn.ContextMenu.PlacementTarget = btn; btn.ContextMenu.IsOpen = true; } }
         private void SortOption_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is MenuItem item) { string tag = item.Tag.ToString(); switch (tag) { case "NameAsc": _currentSortMode = SortMode.NameAsc; SortModeText.Text = "排序模式: 名稱 (A-Z)"; break; case "NameDesc": _currentSortMode = SortMode.NameDesc; SortModeText.Text = "排序模式: 名稱 (Z-A)"; break; case "VolumeDesc": _currentSortMode = SortMode.VolumeDesc; SortModeText.Text = "排序模式: 音量 (大-小)"; break; } RefreshAudioApps(); }
-        }
-        private void RefreshAudioApps()
-        {
-            AppList.Clear(); RecentAppList.Clear();
-            var globalApp = new AudioAppModel { Name = "整體調整", SystemVolume = 100, Config = new AppConfigData { TargetDevice = "System" } };
-            RecentAppList.Add(globalApp); AppList.Add(globalApp);
-            try { var sessions = _AudioService.GetAppsWithConfig(); var sessionList = new List<AudioAppModel>(sessions); foreach (var app in sessionList.Take(3)) RecentAppList.Add(app); var sorted = _currentSortMode switch { SortMode.NameDesc => sessionList.OrderByDescending(x => x.Name), SortMode.VolumeDesc => sessionList.OrderByDescending(x => x.SystemVolume), _ => sessionList.OrderBy(x => x.Name) }; foreach (var app in sorted) AppList.Add(app); } catch { }
+            if (sender is MenuItem item) { string tag = item.Tag.ToString(); switch (tag) { case "NameAsc": _vm.CurrentSortMode = SortMode.NameAsc; SortModeText.Text = "排序模式: 名稱 (A-Z)"; break; case "NameDesc": _vm.CurrentSortMode = SortMode.NameDesc; SortModeText.Text = "排序模式: 名稱 (Z-A)"; break; case "VolumeDesc": _vm.CurrentSortMode = SortMode.VolumeDesc; SortModeText.Text = "排序模式: 音量 (大-小)"; break; } _vm.RefreshAudioApps(); }
         }
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
