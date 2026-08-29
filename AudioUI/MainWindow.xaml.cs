@@ -92,9 +92,6 @@ namespace AudioUI
         private SortMode _currentSortMode = SortMode.NameAsc;
         internal float recognitionConfidience = 0.55f;
 
-        // 設定的唯一持有者是 AppConfig，這裡只轉一手，不自己存 key。
-        private static string GEMINI_URL => AppConfig.GeminiUrl;
-
         public ICommand MinimizeCommand { get; }
         public ICommand MaximizeCommand { get; }
         public ICommand CloseCommand { get; }
@@ -305,13 +302,13 @@ namespace AudioUI
                 try
                 {
                     // 2. 呼叫 Gemini 生成新 Config
-                    string geminiResponse = await _GeminiService.CallGeminiApiAsync(userText, GEMINI_URL);
+                    AudioIntent? intent = await AppConfig.LlmClient.InterpretAsync(userText);
 
                     string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                     string configFileName = $"config_{timestamp}.txt";
                     string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", configFileName);
 
-                    string aiMessage = _GeminiService.ParseAndWriteConfig(geminiResponse, configPath);
+                    string aiMessage = _GeminiService.WriteConfig(intent, configPath);
                     if (aiMessage == "-1") aiMessage = "抱歉，我無法理解您的調整需求。";
 
                     // 3. ★★★ 關鍵修改：不直接 Apply，而是生成預覽音檔 ★★★

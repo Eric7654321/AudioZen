@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -7,30 +7,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace AudioUI{
-    public class ObjectToNativeConverter : JsonConverter<object>{
-        public override object Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options){
-            switch (reader.TokenType){
-                case JsonTokenType.True:
-                    return true;
-                case JsonTokenType.False:
-                    return false;
-                case JsonTokenType.Number:
-                    if(reader.TryGetInt64(out long l))
-                        return l;
-                    return reader.GetDouble();
-                case JsonTokenType.String:
-                    return reader.GetString();
-                case JsonTokenType.Null:
-                    return null;
-                default:
-                    return JsonDocument.ParseValue(ref reader).RootElement.Clone();
-            }
-        }
-
-        public override void Write(Utf8JsonWriter writer, object value, JsonSerializerOptions options){
-            JsonSerializer.Serialize(writer, value, value.GetType(), options);
-        }
-    }
 
     public class MeldaEncoder{
         public static string EncodeMeldaChunk(string header, List<MeldaEntry> entries){
