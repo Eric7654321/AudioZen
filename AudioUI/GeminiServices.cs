@@ -27,76 +27,19 @@ namespace AudioUI
     public class GeminiServices
     {
         // --- 功能 1: 使用 NAudio 錄音 ---
-        public Task<string> RecordAudioAsync(string filePath, int durationMs)
-        {
-            // 1. 改成 TaskCompletionSource<string> 以便回傳字串
-            var tcs = new TaskCompletionSource<string>();
-
-            var waveFormat = new WaveFormat(44100, 16, 1);
-            var waveIn = new WaveInEvent();
-            waveIn.WaveFormat = waveFormat;
-
-            var writer = new WaveFileWriter(filePath, waveIn.WaveFormat);
-
-            waveIn.DataAvailable += (s, a) =>
-            {
-                writer.Write(a.Buffer, 0, a.BytesRecorded);
-            };
-
-            // 2. 將讀取檔案與回傳結果的邏輯移到 RecordingStopped 事件中
-            waveIn.RecordingStopped += (s, a) =>
-            {
-                try
-                {
-                    // 必須先 Dispose 釋放檔案鎖定 (File Lock)
-                    writer.Dispose();
-                    waveIn.Dispose();
-
-                    // 檢查錄音過程是否有錯誤
-                    if (a.Exception != null)
-                    {
-                        tcs.SetException(a.Exception);
-                        return;
-                    }
-
-                    // 此時檔案已經存檔完畢且解除鎖定，可以安全讀取
-                    byte[] bytes = File.ReadAllBytes(filePath);
-                    string returnString = Convert.ToBase64String(bytes);
-                    //string configPath = Path.Combine(".", "fixedCommand.wav");
-                    //byte[] bytes = File.ReadAllBytes(configPath);
-
-                    // 設定 Task 完成並回傳字串
-                    tcs.SetResult(returnString);
-                }
-                catch (Exception ex)
-                {
-                    // 捕捉讀檔過程可能發生的錯誤
-                    tcs.SetException(ex);
-                }
-            };
-
-            waveIn.StartRecording();
-
-            // 設定計時器，時間到停止錄音 (這會觸發上面的 RecordingStopped 事件)
-            Task.Delay(durationMs).ContinueWith(_ =>
-            {
-                waveIn.StopRecording();
-            });
-
-            // 回傳 Task，等待 RecordingStopped 裡的 SetResult 被呼叫
-            return tcs.Task;
-        }
-
-        private readonly RouteTable _routes;
+                private readonly RouteTable _routes;
         private readonly IAudioBackend _backend;
         private readonly INotifier _notifier;
+        private readonly ISpeechInput _speech;
 
-        /// <summary>三者都可注入，測試才有辦法在不碰使用者設定、不真的寫進 APO、不跳通知的情況下跑。</summary>
-        public GeminiServices(RouteTable? routes = null, IAudioBackend? backend = null, INotifier? notifier = null)
+        /// <summary>全部可注入，測試才有辦法在不碰使用者設定、不寫進 APO、不跳通知、不用真的講話的情況下跑。</summary>
+        public GeminiServices(RouteTable? routes = null, IAudioBackend? backend = null,
+                              INotifier? notifier = null, ISpeechInput? speech = null)
         {
             _routes = routes ?? AppConfig.Routes;
             _backend = backend ?? AppConfig.AudioBackend;
             _notifier = notifier ?? AppConfig.Notifier;
+            _speech = speech ?? AppConfig.SpeechInput;
         }
 
 
@@ -484,7 +427,7 @@ namespace AudioUI
 
             await _TtsService.SpeakAsync("請問您想如何調整音訊設定"); // constant
             // 1. 錄音recordMs 毫秒
-            string audioBase64 = await RecordAudioAsync(audioFilePath, recordMs);
+            string audioBase64 = await _speech.RecordAsync(audioFilePath, recordMs);
 
             // 2. 提示正在解析
             _notifier.Notify("解析中", "心頻氣和正在分析內容");

@@ -64,6 +64,11 @@ namespace AudioUI
 
         private static readonly Lazy<INotifier> _notifier = new Lazy<INotifier>(() => new ToastNotifier());
 
+        /// <summary>麥克風輸入。</summary>
+        public static ISpeechInput SpeechInput => _speech.Value;
+
+        private static readonly Lazy<ISpeechInput> _speech = new Lazy<ISpeechInput>(() => new NAudioSpeechInput());
+
         /// <summary>設定是否可用。UI 想在送出前先擋掉可以看這個，不必接例外。</summary>
         public static bool IsConfigured => !string.IsNullOrWhiteSpace(Settings.Gemini.ApiKey);
 
