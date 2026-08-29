@@ -14,7 +14,7 @@ namespace AudioUI
         private readonly AudioSessionService _AudioService = new AudioSessionService();
         private readonly SituationManager _situations = new SituationManager();
         private readonly IConfigStore _store = AppConfig.ConfigStore;
-        private readonly TtsService _TtsService = new TtsService();
+        private readonly ITextToSpeech _TtsService = new TtsService();
 
         public ObservableCollection<AudioAppModel> AppList { get; } = new ObservableCollection<AudioAppModel>();
         public ObservableCollection<AudioAppModel> RecentAppList { get; } = new ObservableCollection<AudioAppModel>();

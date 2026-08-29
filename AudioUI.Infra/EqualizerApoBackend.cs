@@ -16,11 +16,13 @@
         private readonly string _configDirectory;
         private readonly string _fragmentFileName;
         private readonly RouteTable _routes;
+        private readonly string _vstDirectory;
 
         public EqualizerApoBackend(ApoSettings? settings = null, RouteTable? routes = null)
         {
             settings ??= new ApoSettings();
             _routes = routes ?? RouteTable.Default();
+            _vstDirectory = settings.VstDirectory;
             _configDirectory = settings.ConfigDirectory;
             _fragmentFileName = string.IsNullOrWhiteSpace(settings.FragmentFileName)
                 ? new ApoSettings().FragmentFileName
@@ -65,16 +67,14 @@
 
                         if (config.CompJson != null && config.CompJson.Count > 0)
                         {
-                            string header = "MBXXMCompressorsettings";
-                            string base64String = MeldaEncoder.EncodeMeldaChunk(header, config.CompJson);
-                            sw.WriteLine($"VSTPlugin: Library \"C:\\Program Files\\VstPlugins\\MeldaProduction\\Dynamics\\MCompressor.dll\" ChunkData \"{base64String}\"");
+                            string base64String = MeldaEncoder.EncodeMeldaChunk("MBXXMCompressorsettings", config.CompJson);
+                            sw.WriteLine(VstPluginLine(Path.Combine("Dynamics", "MCompressor.dll"), base64String));
                         }
 
                         if (config.ReverbJson != null && config.ReverbJson.Count > 0)
                         {
-                            string header = "MBXXMCharmVerbsettings";
-                            string base64String = MeldaEncoder.EncodeMeldaChunk(header, config.ReverbJson);
-                            sw.WriteLine($"VSTPlugin: Library \"C:\\Program Files\\VstPlugins\\MeldaProduction\\Reverb\\MCharmVerb.dll\" ChunkData \"{base64String}\"");
+                            string base64String = MeldaEncoder.EncodeMeldaChunk("MBXXMCharmVerbsettings", config.ReverbJson);
+                            sw.WriteLine(VstPluginLine(Path.Combine("Reverb", "MCharmVerb.dll"), base64String));
                         }
 
                         // 4. 加入一個空行分隔不同裝置的設定 (可選)
@@ -85,6 +85,10 @@
 
             return eqResponse.MessageForUser;
         }
+
+        /// <summary>APO 的 VSTPlugin 指令要絕對路徑，DLL 位置則隨 Melda 的安裝目錄走。</summary>
+        private string VstPluginLine(string relativeDll, string chunkData) =>
+            $"VSTPlugin: Library \"{Path.Combine(_vstDirectory, relativeDll)}\" ChunkData \"{chunkData}\"";
 
         public void Apply(string configFilePath)
         {

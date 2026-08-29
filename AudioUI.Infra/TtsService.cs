@@ -1,9 +1,9 @@
 ﻿using System.Speech.Synthesis; 
-using System.Threading.Tasks;
 
 namespace AudioUI
 {
-    public class TtsService
+    /// <summary>用 Windows 內建語音合成實作 <see cref="ITextToSpeech"/>。</summary>
+    public sealed class TtsService : ITextToSpeech
     {
         private SpeechSynthesizer _synthesizer;
 

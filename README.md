@@ -25,7 +25,8 @@ APO 的設定目錄在 `appsettings.json` 的 `apo.configDirectory`，裝在別�
 本程式寫的是 `apo.fragmentFileName`（預設 `audiozen.txt`），再由 APO 的 `config.txt` 用 `Include:` 引入，
 所以你原本在 APO 裡調的東西不會被蓋掉。那行 `Include:` 只在缺少時補一次。
 
-Melda 的 DLL 路徑仍寫死在 `AudioUI/GeminiServices.cs`，預設 `C:\Program Files\VstPlugins\MeldaProduction\`。
+Melda VST 的安裝目錄在 `apo.vstDirectory`，壓縮器與殘響的 DLL 從這裡往下找
+（`Dynamics\MCompressor.dll`、`Reverb\MCharmVerb.dll`）。
 
 ## 建置與執行
 

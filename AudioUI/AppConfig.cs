@@ -31,6 +31,11 @@ namespace AudioUI
 
         private static readonly Lazy<INotifier> _notifier = new Lazy<INotifier>(() => new ToastNotifier());
 
+        /// <summary>語音回覆。</summary>
+        public static ITextToSpeech TextToSpeech => _tts.Value;
+
+        private static readonly Lazy<ITextToSpeech> _tts = new Lazy<ITextToSpeech>(() => new TtsService());
+
         /// <summary>麥克風輸入。</summary>
         public static ISpeechInput SpeechInput => _speech.Value;
 

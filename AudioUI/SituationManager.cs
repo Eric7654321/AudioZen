@@ -36,8 +36,9 @@ namespace AudioUI
         /// <summary>全部可注入，測試才有辦法在不碰使用者設定、不寫進 APO、不跳通知、不講話也不打 API 的情況下跑。</summary>
         public SituationManager(IAudioBackend? backend = null, INotifier? notifier = null,
                                ISpeechInput? speech = null, ILlmClient? llm = null,
-                               IConfigStore? store = null)
+                               IConfigStore? store = null, ITextToSpeech? tts = null)
         {
+            _TtsService = tts ?? AppConfig.TextToSpeech;
             _store = store ?? AppConfig.ConfigStore;
             _backend = backend ?? AppConfig.AudioBackend;
             _notifier = notifier ?? AppConfig.Notifier;
@@ -86,7 +87,7 @@ namespace AudioUI
             string originconfigPath = _store.Front(IdString).FileName;
             _backend.Apply(originconfigPath);
         }
-        TtsService _TtsService = new TtsService();
+        private readonly ITextToSpeech _TtsService;
         AudioSessionService _AudioSessionService = new AudioSessionService();
 
         /// <summary>

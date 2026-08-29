@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 
 namespace AudioUI.Tests
 {
@@ -57,6 +57,35 @@ namespace AudioUI.Tests
 
             Assert.Null(Backend(dir).Write(null, path));
             Assert.False(File.Exists(path));
+        }
+
+        [Fact]
+        public void Write_VST_路徑跟著設定的安裝目錄走()
+        {
+            using var dir = new TempDir();
+            string path = dir.File("out.txt");
+            var backend = new EqualizerApoBackend(
+                new ApoSettings { ConfigDirectory = dir.Path, VstDirectory = @"D:\Plugins\Melda" }, Routes());
+
+            var intent = Intent("game");
+            intent.Configs[0].CompJson = new List<MeldaEntry> { new MeldaEntry { RawKey = "ratio", Value = 4 } };
+
+            backend.Write(intent, path);
+
+            string text = File.ReadAllText(path);
+            Assert.Contains(@"D:\Plugins\Melda\Dynamics\MCompressor.dll", text);
+            Assert.DoesNotContain(@"C:\Program Files\VstPlugins", text);
+        }
+
+        [Fact]
+        public void Write_沒有壓縮器參數時不寫_VSTPlugin_行()
+        {
+            using var dir = new TempDir();
+            string path = dir.File("out.txt");
+
+            Backend(dir).Write(Intent("game"), path);
+
+            Assert.DoesNotContain("VSTPlugin:", File.ReadAllText(path));
         }
 
         [Fact]
