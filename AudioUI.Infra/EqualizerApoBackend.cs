@@ -31,10 +31,10 @@
 
         public string FragmentPath => Path.Combine(_configDirectory, _fragmentFileName);
 
-        /// <summary>把意圖寫成 APO 設定檔。無法產出時回 "-1"，呼叫端據此換成給使用者看的訊息。</summary>
-        public string Write(AudioIntent? eqResponse, string outputPath)
+        /// <summary>把意圖寫成 APO 設定檔。無法產出時回 null。</summary>
+        public string? Write(AudioIntent? eqResponse, string outputPath)
         {
-            if (eqResponse == null) return "-1";
+            if (eqResponse == null) return null;
 
             using (StreamWriter sw = new StreamWriter(outputPath, false)) // false 表示覆寫檔案
             {

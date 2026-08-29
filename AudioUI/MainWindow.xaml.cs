@@ -65,7 +65,7 @@ namespace AudioUI
         private KeyMappingService _KeyMapService = new KeyMappingService();
         private WakeWordTrigger _WakeWordTrigger;
         private PerProcessAudioRecorder _PerProcessAudioRecorder = new PerProcessAudioRecorder();
-        public ChatManager _ChatManager = new ChatManager();
+        public IConfigStore _store = AppConfig.ConfigStore;
 
         private HotkeyService _HotkeyService = new HotkeyService();
         private WinForms.NotifyIcon _notifyIcon;
@@ -76,7 +76,7 @@ namespace AudioUI
         public ObservableCollection<DeviceInfoModel> DeviceList { get; set; } = new ObservableCollection<DeviceInfoModel>();
         public ObservableCollection<ConfigOptionItem> ConfigOptions { get; set; } = new ObservableCollection<ConfigOptionItem>();
         public ObservableCollection<MacroKeyModel> MacroKeys { get; set; } = new ObservableCollection<MacroKeyModel>();
-        public ObservableCollection<ChatSessionInfo> ChatList { get; set; } = new ObservableCollection<ChatSessionInfo>();
+        public ObservableCollection<SituationSummary> ChatList { get; set; } = new ObservableCollection<SituationSummary>();
         public ObservableCollection<ChatMessageModel> ChatMessages { get; set; } = new ObservableCollection<ChatMessageModel>();
 
         private int _currentSituationId = -1;
@@ -126,7 +126,7 @@ namespace AudioUI
                     _TtsService.Stop();
 
                     // 呼叫錄音並處理
-                    await _situations.RecordAndProcessAsync(_currentSituationId, audioPath, configPath, _ChatManager, 5000);
+                    await _situations.RecordAndProcessAsync(_currentSituationId, audioPath, configPath, 5000);
 
                     // 刷新 UI
                     RefreshConfigOptions();
@@ -154,7 +154,7 @@ namespace AudioUI
             RefreshAudioApps();
             InitDevices();
 
-            _ChatManager.LoadFromJson();
+            _store.Load();
             InitMuteConfig();
             _KeyMapService.Load();
             RefreshChatList();
@@ -168,7 +168,7 @@ namespace AudioUI
         private void RefreshChatList()
         {
             ChatList.Clear();
-            var sessions = _ChatManager.GetChatList();
+            var sessions = _store.Summaries();
             foreach (var session in sessions)
             {
                 ChatList.Add(session);
@@ -198,7 +198,7 @@ namespace AudioUI
         {
             ChatMessages.Clear();
 
-            var mapItem = _ChatManager.MapList.FirstOrDefault(x => x.Id == id);
+            var mapItem = _store.ById(id);
 
             if (mapItem == null)
             {
@@ -207,7 +207,7 @@ namespace AudioUI
             }
 
             string recordPath = mapItem.RecordPath ?? "";
-            var history = _ChatManager.GetHistory(id, 20);
+            var history = _store.History(id, 20);
 
             // ★★★ 除錯：印出對話內容 ★★★
             string debugMsg = $"ID: {id}, RecordPath: {recordPath}\n抓到 {history.Count} 筆對話:\n";
@@ -308,15 +308,15 @@ namespace AudioUI
                     string configFileName = $"config_{timestamp}.txt";
                     string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", configFileName);
 
-                    string aiMessage = AppConfig.AudioBackend.Write(intent, configPath);
-                    if (aiMessage == "-1") aiMessage = "抱歉，我無法理解您的調整需求。";
+                    string? aiMessage = AppConfig.AudioBackend.Write(intent, configPath);
+                    if (aiMessage == null) aiMessage = "抱歉，我無法理解您的調整需求。";
 
                     // 3. ★★★ 關鍵修改：不直接 Apply，而是生成預覽音檔 ★★★
                     // ApplyConfigToAPO(configPath); <--- 註解掉這行！
 
                     // 取得原始錄音檔路徑
                     // 假設原始錄音檔叫做 command.wav，或者在 RecordPath 裡
-                    var currentChat = _ChatManager.MapList.FirstOrDefault(x => x.Id == _currentSituationId.ToString());
+                    var currentChat = _store.ById(_currentSituationId.ToString());
                     string recordFolder = currentChat?.RecordPath ?? "";
 
                     // 嘗試找到原始錄音檔 (假設是資料夾裡的第一個 wav)
@@ -333,15 +333,15 @@ namespace AudioUI
                         previewWavPath = AudioProcessor.GeneratePreview(originalWav, configPath);
                     }
 
-                    // 4. 存入 ChatManager (保持紀錄)
-                    var newData = new FileCreateData
+                    // 4. 留下紀錄
+                    var newData = new SituationEntry
                     {
                         FileName = configPath,
                         UserInput = userText,
                         AiResponse = aiMessage
                     };
-                    _ChatManager.PushFront(_currentSituationId.ToString(), newData, userText, recordFolder);
-                    _ChatManager.SaveToJson();
+                    _store.PushFront(_currentSituationId.ToString(), newData, userText, recordFolder);
+                    _store.Save();
 
                     // 5. 更新 UI
                     ChatMessages.Remove(thinkingMsg);
@@ -374,7 +374,7 @@ namespace AudioUI
                     // ApplyConfigToAPO(configPath); <--- 拿掉這行
 
                     // 2. 邏輯說明：
-                    // 在 SendAdjustment_Click 時，我們已經呼叫了 _ChatManager.PushFront
+                    // 在 SendAdjustment_Click 時，我們已經呼叫了 _store.PushFront
                     // 所以這份 Config 已經是該情境 (SituationID) 的 "最新設定" 了。
                     // 使用者點擊這個按鈕，代表他 "確認" 這是他要的。
 
@@ -448,21 +448,21 @@ namespace AudioUI
         {
             if (configId == "cmd_rollback")
             {
-                try { await _situations.ConfigRollback("-1", _ChatManager); SendNotification("快捷鍵觸發", "↩️ 已回復上一個設定"); RefreshConfigOptions(); }
+                try { await _situations.ConfigRollback(SituationIds.Transient); SendNotification("快捷鍵觸發", "↩️ 已回復上一個設定"); RefreshConfigOptions(); }
                 catch { SendNotification("無法回復", "沒有歷史紀錄可供還原。"); }
                 return;
             }
-            else if (configId == "cmd_mute" || configId == "114514")
+            else if (configId == "cmd_mute" || configId == SituationIds.Mute)
             {
-                var muteItem = _ChatManager.MapList.FirstOrDefault(x => x.Id == "114514");
+                var muteItem = _store.ById(SituationIds.Mute);
                 if (muteItem != null && muteItem.FileDatas.Count > 0) { ApplyConfigToAPO(muteItem.FileDatas[0].FileName); SendNotification("快捷鍵觸發", "🔇 已全域靜音"); }
                 else SendNotification("錯誤", "找不到靜音設定檔");
                 return;
             }
             else
             {
-                var mapItem = _ChatManager.MapList.FirstOrDefault(x => x.Id == configId);
-                if (mapItem == null) { _ChatManager.LoadFromJson(); mapItem = _ChatManager.MapList.FirstOrDefault(x => x.Id == configId); }
+                var mapItem = _store.ById(configId);
+                if (mapItem == null) { _store.Load(); mapItem = _store.ById(configId); }
 
                 if (mapItem != null && mapItem.FileDatas.Count > 0)
                 {
@@ -498,12 +498,12 @@ namespace AudioUI
             string muteFilePath = Path.Combine(configDir, "mute.txt");
             if (!File.Exists(muteFilePath)) File.WriteAllText(muteFilePath, "Device: all\r\nPreamp: -100 dB\r\n# System Mute Config");
 
-            var existing = _ChatManager.MapList.FirstOrDefault(x => x.Id == "114514");
+            var existing = _store.ById(SituationIds.Mute);
             if (existing == null)
             {
-                var muteData = new FileCreateData { FileName = muteFilePath, UserInput = "系統強制靜音", AiResponse = "已將前級擴大 (Preamp) 設為 -100dB。" };
-                _ChatManager.PushFront("114514", muteData, "全域靜音", "");
-                _ChatManager.SaveToJson();
+                var muteData = new SituationEntry { FileName = muteFilePath, UserInput = "系統強制靜音", AiResponse = "已將前級擴大 (Preamp) 設為 -100dB。" };
+                _store.PushFront(SituationIds.Mute, muteData, "全域靜音", "");
+                _store.Save();
             }
         }
 
@@ -531,11 +531,11 @@ namespace AudioUI
 
         private void RefreshConfigOptions()
         {
-            ConfigOptions.Clear(); _ChatManager.LoadFromJson();
+            ConfigOptions.Clear(); _store.Load();
             ConfigOptions.Add(new ConfigOptionItem { SituationId = "cmd_unbind", DisplayName = "解除綁定 (Unbind)", Description = "清除按鍵設定" });
             ConfigOptions.Add(new ConfigOptionItem { SituationId = "cmd_rollback", DisplayName = "Rollback", Description = "回復上一個操作" });
 
-            foreach (var map in _ChatManager.MapList.Where(x => x.Id != "-1"))
+            foreach (var map in _store.Situations.Where(x => x.Id != SituationIds.Transient))
             {
                 var latest = map.FileDatas.FirstOrDefault();
                 if (latest != null) ConfigOptions.Add(new ConfigOptionItem { SituationId = map.Id, DisplayName = string.IsNullOrEmpty(map.ChatName) ? $"情境 {map.Id}" : map.ChatName, Description = latest.UserInput ?? "AI 設定", FilePath = latest.FileName });
@@ -555,7 +555,7 @@ namespace AudioUI
                     {
                         var cfg = ConfigOptions.FirstOrDefault(x => x.SituationId == boundId);
                         display = cfg != null ? cfg.DisplayName : boundId;
-                        if (boundId == "cmd_rollback") display = "Rollback"; if (boundId == "114514") display = "Mute";
+                        if (boundId == "cmd_rollback") display = "Rollback"; if (boundId == SituationIds.Mute) display = "Mute";
                     }
                     MacroKeys.Add(new MacroKeyModel { KeyId = keyId, KeyName = labels[i], BoundConfigId = boundId, BoundActionName = display });
                 }
@@ -575,7 +575,7 @@ namespace AudioUI
                     {
                         key.BoundConfigId = _selectedConfigToBind.SituationId; key.BoundActionName = _selectedConfigToBind.DisplayName;
                         _KeyMapService.SetBinding(key.KeyId, _selectedConfigToBind.SituationId); _KeyMapService.Save();
-                        string msg = _selectedConfigToBind.SituationId == "114514" ? "全域靜音" : _selectedConfigToBind.DisplayName;
+                        string msg = _selectedConfigToBind.SituationId == SituationIds.Mute ? "全域靜音" : _selectedConfigToBind.DisplayName;
                         System.Windows.MessageBox.Show($"綁定成功！\n[{key.KeyName}] -> [{msg}]");
                     }
                     _selectedConfigToBind = null;

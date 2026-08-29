@@ -41,6 +41,16 @@ namespace AudioUI
 
         public static string GeminiUrl => Settings.Gemini.BuildGenerateContentUrl();
 
+        /// <summary>情境與調整紀錄的存放處。開檔時載入一次，之後大家共用同一份。</summary>
+        public static IConfigStore ConfigStore => _store.Value;
+
+        private static readonly Lazy<IConfigStore> _store = new Lazy<IConfigStore>(() =>
+        {
+            var store = new JsonConfigStore(Notifier);
+            store.Load();
+            return store;
+        });
+
         /// <summary>把人話翻成音訊意圖的模型。</summary>
         public static ILlmClient LlmClient => _llm.Value;
 

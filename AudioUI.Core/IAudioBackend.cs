@@ -13,9 +13,9 @@
 
         /// <summary>
         /// 把意圖寫成這個後端看得懂的設定檔。回傳要給使用者看的訊息；
-        /// 內容不成形時回 <c>"-1"</c>，呼叫端據此決定是否重試。
+        /// 意圖不成形而寫不出東西時回 <c>null</c>，呼叫端據此決定是否重試。
         /// </summary>
-        string Write(AudioIntent? intent, string outputPath);
+        string? Write(AudioIntent? intent, string outputPath);
 
         /// <summary>套用一份已生成的設定檔。失敗時丟例外，訊息要能讓使用者知道下一步做什麼。</summary>
         void Apply(string configFilePath);

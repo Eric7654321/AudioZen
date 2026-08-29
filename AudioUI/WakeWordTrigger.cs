@@ -81,7 +81,7 @@ namespace AudioUI
                         // SendNotification("語音喚醒", "正在聆聽您的指令...");
 
                         // 2. 執行錄音與 AI 分析
-                        await _situations.RecordAndProcessAsync(-1, audioPath, configPath, _currentMainWindow._ChatManager, 5000);
+                        await _situations.RecordAndProcessAsync(-1, audioPath, configPath, 5000);
 
                         // 3. ★★★ 補上這行：將生成的 Config 套用到 APO ★★★
                         ApplyConfigToAPO(configPath);

@@ -31,11 +31,14 @@ namespace AudioUI
         private readonly INotifier _notifier;
         private readonly ISpeechInput _speech;
         private readonly ILlmClient _llm;
+        private readonly IConfigStore _store;
 
         /// <summary>全部可注入，測試才有辦法在不碰使用者設定、不寫進 APO、不跳通知、不講話也不打 API 的情況下跑。</summary>
         public SituationManager(IAudioBackend? backend = null, INotifier? notifier = null,
-                               ISpeechInput? speech = null, ILlmClient? llm = null)
+                               ISpeechInput? speech = null, ILlmClient? llm = null,
+                               IConfigStore? store = null)
         {
+            _store = store ?? AppConfig.ConfigStore;
             _backend = backend ?? AppConfig.AudioBackend;
             _notifier = notifier ?? AppConfig.Notifier;
             _speech = speech ?? AppConfig.SpeechInput;
@@ -72,15 +75,15 @@ namespace AudioUI
         // --- 功能 3: 解析回傳並寫入 Config ---
 
         // --- 功能 4: 還原設定檔 ---
-        public async Task ConfigRollback(string IdString, ChatManager _ChatManager)
+        public async Task ConfigRollback(string IdString)
         {
-            _ChatManager.PopFront(IdString);
-            if (_ChatManager.GetFront(IdString) == null)
+            _store.PopFront(IdString);
+            if (_store.Front(IdString) == null)
             {
                 await _TtsService.SpeakAsync("已經沒有更早的設定可以還原"); // constant
                 return;
             }
-            string originconfigPath = _ChatManager.GetFront(IdString).FileName;
+            string originconfigPath = _store.Front(IdString).FileName;
             _backend.Apply(originconfigPath);
         }
         TtsService _TtsService = new TtsService();
@@ -89,7 +92,7 @@ namespace AudioUI
         /// <summary>
         /// 完整的進行一次錄音、分析與寫入的過程 (goal 1)
         /// </summary>
-        public async Task RecordAndProcessAsync(int situationId,string audioFilePath, string eqConfigPath, ChatManager _ChatManager, int recordMs = 5000)
+        public async Task RecordAndProcessAsync(int situationId, string audioFilePath, string eqConfigPath, int recordMs = 5000)
         {
             Task<string> recordPathTask = PerProcessAudioRecorder.RecordAllActiveAppsAsync(
                         Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "record"),
@@ -114,19 +117,21 @@ namespace AudioUI
             if (intent != null)
             {
                 // 4. 解析回傳並寫入 Config
-                string ttsMessage = _backend.Write(intent, eqConfigPath);
+                string? ttsMessage = _backend.Write(intent, eqConfigPath);
                 int retryCount = 0;
 
                 // 模型偶爾會回出不成形的內容，重試幾次通常就過了
-                while (ttsMessage=="-1" && retryCount < 3)
+                while (ttsMessage == null && retryCount < 3)
                 {
                     intent = await _llm.InterpretAsync(transcribedText);
                     ttsMessage = _backend.Write(intent, eqConfigPath);
                     retryCount++;
                 }
-                if (retryCount == 3)
+                if (ttsMessage == null)
                 {
+                    // 寫檔是先截斷再寫，所以失敗留下的是空檔或半截檔；套用它等於把設定清掉。
                     await _TtsService.SpeakAsync("很抱歉，無法產生有效指令，請稍後再試");
+                    return;
                 }
 
                 string situationIdString = situationId.ToString();
@@ -139,7 +144,7 @@ namespace AudioUI
 
                 await _TtsService.SpeakAsync("是否需要調整回原本的內容"); // constant
 
-                FileCreateData newCreateData = new FileCreateData
+                SituationEntry newCreateData = new SituationEntry
                 {
                     FileName = eqConfigPath,
                     UserInput = transcribedText,
@@ -151,17 +156,17 @@ namespace AudioUI
 
                 
                 // 6. 詢問是否套用設定
-                _ChatManager.PushFront("-1", newCreateData);
+                _store.PushFront(SituationIds.Transient, newCreateData);
                 if (await _notifier.ConfirmAsync("回退確認","是否要取消此設定"))
                 {
                     // rollback
-                    await ConfigRollback("-1", _ChatManager);
+                    await ConfigRollback(SituationIds.Transient);
                 }
                 else
                 {
-                    if(situationIdString != "-1")
+                    if(situationIdString != SituationIds.Transient)
                     {
-                        _ChatManager.PushFront(situationIdString, newCreateData);
+                        _store.PushFront(situationIdString, newCreateData);
                     }
 
                     // 7. 詢問是否需要儲存成preset
@@ -169,7 +174,7 @@ namespace AudioUI
 
                     if (await _notifier.ConfirmAsync("preset設定", "是否要存為preset"))
                     {
-                        _ChatManager.PushFront(_ChatManager.GetNextId().ToString(), newCreateData, transcribedText, recordPath);
+                        _store.PushFront(_store.NextId().ToString(), newCreateData, transcribedText, recordPath);
                     }
                 }
 
@@ -178,7 +183,7 @@ namespace AudioUI
 
                 _notifier.Notify("設定結束", "調整已結束，請享受更好的聲音");
                 // 儲存 Chat
-                _ChatManager.SaveToJson();
+                _store.Save();
             }
             return;
         }
