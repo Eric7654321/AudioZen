@@ -1,0 +1,16 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+
+# IDE
+.vs/
+.vscode/
+.idea/
+
+# 執行期產生：情境設定、錄音、按鍵綁定
+AudioUI/config/
+
+# 機密設定（key 不進版控）
+appsettings.json
