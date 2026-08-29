@@ -21,15 +21,15 @@ namespace AudioUI
         public string ApiKey { get; set; } = "";
 
         [JsonPropertyName("model")]
-        public string Model { get; set; } = "gemini-3.5-flash-lite";
+        public string Model { get; set; } = "gemini-3.6-flash";
 
         [JsonPropertyName("endpoint")]
         public string Endpoint { get; set; } = "https://generativelanguage.googleapis.com/v1beta";
     }
 
     /// <summary>
-    /// 設定的單一入口。取代原本散在 GeminiServices 與 MainWindow 的兩份 API_KEY 常數
-    /// ——兩份會漂移，而且 const 代表 key 一定進版控。
+    /// 設定的單一入口。key 只在這裡出現一次：多一個地方持有它，就多一個會漂移、
+    /// 也多一個會跟著版控走的地方。刻意不用 const —— const 的值一定寫在原始碼裡。
     /// </summary>
     public static class AppConfig
     {
@@ -43,8 +43,8 @@ namespace AudioUI
         public static bool IsConfigured => !string.IsNullOrWhiteSpace(Settings.Gemini.ApiKey);
 
         /// <summary>
-        /// 帶 key 的 generateContent URL。維持原本「key 放 query string」的形狀，
-        /// 所以 CallGeminiApiAsync 這類吃 url 的方法簽章不用動。
+        /// 帶 key 的 generateContent URL。key 放在 query string，
+        /// 所以吃 url 的呼叫端（CallGeminiApiAsync 等）不需要知道 key 的存在。
         /// </summary>
         public static string GeminiUrl
         {

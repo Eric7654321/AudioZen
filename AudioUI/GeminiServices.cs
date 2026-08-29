@@ -287,8 +287,12 @@ namespace AudioUI
             {
                 // 使用 JsonNode 解析複雜的巢狀結構
                 var node = JsonNode.Parse(responseJson);
-                // 路徑通常是: candidates[0].content.parts[0].text
-                var text = node?["candidates"]?[0]?["content"]?["parts"]?[0]?["text"]?.ToString();
+                // Gemini 3.x 會夾帶只有 thoughtSignature、沒有 text 的思考片段，
+                // 所以不能寫死 parts[0]，要取第一個真的有內容的。
+                var parts = node?["candidates"]?[0]?["content"]?["parts"]?.AsArray();
+                var text = parts?
+                    .Select(p => p?["text"]?.ToString())
+                    .FirstOrDefault(t => !string.IsNullOrWhiteSpace(t));
 
                 return text?.Trim() ?? string.Empty;
             }
@@ -320,8 +324,9 @@ namespace AudioUI
                         return responseBody;
                     }
 
-                    // 若為 5xx 或 429 (rate limit) 或 503，嘗試重試
-                    if ((int)response.StatusCode >= 500 || response.StatusCode == HttpStatusCode.ServiceUnavailable)
+                    // 5xx 與 429 都是等一下再試就會好的暫時性失敗，其餘 4xx 重試幾次也不會變。
+                    // 429 要單獨列：它不在 >= 500 的範圍內，而配額是這裡最常見的失敗原因。
+                    if ((int)response.StatusCode >= 500 || response.StatusCode == HttpStatusCode.TooManyRequests)
                     {
                         // 若已是最後一次重試，拋出包含 body 的例外，便於診斷
                         if (attempt == maxRetries)
@@ -368,8 +373,8 @@ namespace AudioUI
                 return "-1";
             }
 
-            // Gemini 3.x 會在 parts 裡夾帶只有 thoughtSignature、沒有 text 的思考片段，
-            // 直接取 Parts[0] 會拿到 null。取第一個真的有內容的 part。
+            // Gemini 3.x 會夾帶只有 thoughtSignature、沒有 text 的思考片段，
+            // 所以不能寫死 Parts[0]，要取第一個真的有內容的。
             string? innerJsonText = geminiResponse.Candidates[0].Content?.Parts
                 ?.FirstOrDefault(p => !string.IsNullOrWhiteSpace(p.Text))?.Text;
 
@@ -652,8 +657,8 @@ namespace AudioUI
 
 
 
-        // key 從 AppConfig 讀（appsettings.json / 環境變數），不再硬編。
-        // 用 property 而非欄位：設定是延遲載入的，型別初始化時去讀檔會讓錯誤發生在看不出原因的地方。
+        // 用 property 而非欄位：設定是延遲載入的，若在型別初始化時去讀檔，
+        // 讀檔失敗會以 TypeInitializationException 的形式冒出來，看不出真正原因。
         private static string GEMINI_URL => AppConfig.GeminiUrl;
         TtsService _TtsService = new TtsService();
         AudioSessionService _AudioSessionService = new AudioSessionService();

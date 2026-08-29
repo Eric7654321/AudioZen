@@ -138,7 +138,7 @@ namespace AudioUI
         private SortMode _currentSortMode = SortMode.NameAsc;
         internal float recognitionConfidience = 0.55f;
 
-        // key 從 AppConfig 讀（appsettings.json / 環境變數），不再硬編。
+        // 設定的唯一持有者是 AppConfig，這裡只轉一手，不自己存 key。
         private static string GEMINI_URL => AppConfig.GeminiUrl;
 
         public ICommand MinimizeCommand { get; }
