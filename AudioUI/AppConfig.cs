@@ -24,7 +24,7 @@ namespace AudioUI
         public static IAudioBackend AudioBackend => _backend.Value;
 
         private static readonly Lazy<IAudioBackend> _backend =
-            new Lazy<IAudioBackend>(() => new EqualizerApoBackend(Settings.Apo));
+            new Lazy<IAudioBackend>(() => new EqualizerApoBackend(Settings.Apo, Routes));
 
         /// <summary>對使用者說話的管道。</summary>
         public static INotifier Notifier => _notifier.Value;

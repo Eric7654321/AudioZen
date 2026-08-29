@@ -60,7 +60,7 @@ namespace AudioUI
 
         // 服務層
         private AudioSessionService _AudioService = new AudioSessionService();
-        private GeminiServices _GeminiService = new GeminiServices();
+        private SituationManager _situations = new SituationManager();
         private TtsService _TtsService = new TtsService();
         private KeyMappingService _KeyMapService = new KeyMappingService();
         private WakeWordTrigger _WakeWordTrigger;
@@ -126,7 +126,7 @@ namespace AudioUI
                     _TtsService.Stop();
 
                     // 呼叫錄音並處理
-                    await _GeminiService.RecordAndProcessAsync(_currentSituationId, audioPath, configPath, _ChatManager, 5000);
+                    await _situations.RecordAndProcessAsync(_currentSituationId, audioPath, configPath, _ChatManager, 5000);
 
                     // 刷新 UI
                     RefreshConfigOptions();
@@ -308,7 +308,7 @@ namespace AudioUI
                     string configFileName = $"config_{timestamp}.txt";
                     string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", configFileName);
 
-                    string aiMessage = _GeminiService.WriteConfig(intent, configPath);
+                    string aiMessage = AppConfig.AudioBackend.Write(intent, configPath);
                     if (aiMessage == "-1") aiMessage = "抱歉，我無法理解您的調整需求。";
 
                     // 3. ★★★ 關鍵修改：不直接 Apply，而是生成預覽音檔 ★★★
@@ -448,7 +448,7 @@ namespace AudioUI
         {
             if (configId == "cmd_rollback")
             {
-                try { await _GeminiService.ConfigRollback("-1", _ChatManager); SendNotification("快捷鍵觸發", "↩️ 已回復上一個設定"); RefreshConfigOptions(); }
+                try { await _situations.ConfigRollback("-1", _ChatManager); SendNotification("快捷鍵觸發", "↩️ 已回復上一個設定"); RefreshConfigOptions(); }
                 catch { SendNotification("無法回復", "沒有歷史紀錄可供還原。"); }
                 return;
             }

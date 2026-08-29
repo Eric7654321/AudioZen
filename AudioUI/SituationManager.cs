@@ -24,21 +24,18 @@ using static Vanara.PInvoke.Kernel32;
 
 namespace AudioUI
 {
-    public class GeminiServices
+    public class SituationManager
     {
         // --- 功能 1: 使用 NAudio 錄音 ---
-                private readonly RouteTable _routes;
-        private readonly IAudioBackend _backend;
+                private readonly IAudioBackend _backend;
         private readonly INotifier _notifier;
         private readonly ISpeechInput _speech;
         private readonly ILlmClient _llm;
 
         /// <summary>全部可注入，測試才有辦法在不碰使用者設定、不寫進 APO、不跳通知、不講話也不打 API 的情況下跑。</summary>
-        public GeminiServices(RouteTable? routes = null, IAudioBackend? backend = null,
-                              INotifier? notifier = null, ISpeechInput? speech = null,
-                              ILlmClient? llm = null)
+        public SituationManager(IAudioBackend? backend = null, INotifier? notifier = null,
+                               ISpeechInput? speech = null, ILlmClient? llm = null)
         {
-            _routes = routes ?? AppConfig.Routes;
             _backend = backend ?? AppConfig.AudioBackend;
             _notifier = notifier ?? AppConfig.Notifier;
             _speech = speech ?? AppConfig.SpeechInput;
@@ -73,60 +70,6 @@ namespace AudioUI
         
 
         // --- 功能 3: 解析回傳並寫入 Config ---
-        /// <summary>把意圖寫成 APO 設定檔。無法產出時回 "-1"，呼叫端據此換成給使用者看的訊息。</summary>
-        public string WriteConfig(AudioIntent? eqResponse, string outputPath)
-        {
-            if (eqResponse == null) return "-1";
-
-            using (StreamWriter sw = new StreamWriter(outputPath, false)) // false 表示覆寫檔案
-            {
-                if (eqResponse.Configs != null)
-                {
-                    foreach (var config in eqResponse.Configs)
-                    {
-                        // 1. 處理 Device 行
-                        string? devicePattern = _routes.ResolveDevicePattern(config.Target);
-                        if (devicePattern != null)
-                        {
-                            sw.WriteLine($"Device: {devicePattern}");
-                        }
-                        else
-                        {
-                            // 認不得的目標寫成註解：APO 會忽略它，而檔案本身留下了為什麼這段沒生效。
-                            sw.WriteLine($"# Unknown Target: {config.Target}");
-                        }
-
-                        // 2. 寫入 Preamp
-                        sw.WriteLine($"Preamp: {config.PreampDb} dB");
-
-                        // 3. 寫入 GraphicEQ
-                        if (!string.IsNullOrEmpty(config.GraphicEqString))
-                        {
-                            sw.WriteLine($"GraphicEQ: {config.GraphicEqString}");
-                        }
-
-                        if (config.CompJson != null && config.CompJson.Count > 0)
-                        {
-                            string header = "MBXXMCompressorsettings";
-                            string base64String = MeldaEncoder.EncodeMeldaChunk(header, config.CompJson);
-                            sw.WriteLine($"VSTPlugin: Library \"C:\\Program Files\\VstPlugins\\MeldaProduction\\Dynamics\\MCompressor.dll\" ChunkData \"{base64String}\"");
-                        }
-
-                        if (config.ReverbJson != null && config.ReverbJson.Count > 0)
-                        {
-                            string header = "MBXXMCharmVerbsettings";
-                            string base64String = MeldaEncoder.EncodeMeldaChunk(header, config.ReverbJson);
-                            sw.WriteLine($"VSTPlugin: Library \"C:\\Program Files\\VstPlugins\\MeldaProduction\\Reverb\\MCharmVerb.dll\" ChunkData \"{base64String}\"");
-                        }
-
-                        // 4. 加入一個空行分隔不同裝置的設定 (可選)
-                        sw.WriteLine();
-                    }
-                }
-            }
-
-            return eqResponse.MessageForUser;
-        }
 
         // --- 功能 4: 還原設定檔 ---
         public async Task ConfigRollback(string IdString, ChatManager _ChatManager)
@@ -171,14 +114,14 @@ namespace AudioUI
             if (intent != null)
             {
                 // 4. 解析回傳並寫入 Config
-                string ttsMessage = WriteConfig(intent, eqConfigPath);
+                string ttsMessage = _backend.Write(intent, eqConfigPath);
                 int retryCount = 0;
 
                 // 模型偶爾會回出不成形的內容，重試幾次通常就過了
                 while (ttsMessage=="-1" && retryCount < 3)
                 {
                     intent = await _llm.InterpretAsync(transcribedText);
-                    ttsMessage = WriteConfig(intent, eqConfigPath);
+                    ttsMessage = _backend.Write(intent, eqConfigPath);
                     retryCount++;
                 }
                 if (retryCount == 3)

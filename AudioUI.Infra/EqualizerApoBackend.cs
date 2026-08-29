@@ -1,4 +1,4 @@
-namespace AudioUI
+﻿namespace AudioUI
 {
     /// <summary>
     /// 把設定交給 Equalizer APO。
@@ -15,10 +15,12 @@ namespace AudioUI
 
         private readonly string _configDirectory;
         private readonly string _fragmentFileName;
+        private readonly RouteTable _routes;
 
-        public EqualizerApoBackend(ApoSettings? settings = null)
+        public EqualizerApoBackend(ApoSettings? settings = null, RouteTable? routes = null)
         {
             settings ??= new ApoSettings();
+            _routes = routes ?? RouteTable.Default();
             _configDirectory = settings.ConfigDirectory;
             _fragmentFileName = string.IsNullOrWhiteSpace(settings.FragmentFileName)
                 ? new ApoSettings().FragmentFileName
@@ -28,6 +30,61 @@ namespace AudioUI
         public bool IsAvailable => Directory.Exists(_configDirectory);
 
         public string FragmentPath => Path.Combine(_configDirectory, _fragmentFileName);
+
+        /// <summary>把意圖寫成 APO 設定檔。無法產出時回 "-1"，呼叫端據此換成給使用者看的訊息。</summary>
+        public string Write(AudioIntent? eqResponse, string outputPath)
+        {
+            if (eqResponse == null) return "-1";
+
+            using (StreamWriter sw = new StreamWriter(outputPath, false)) // false 表示覆寫檔案
+            {
+                if (eqResponse.Configs != null)
+                {
+                    foreach (var config in eqResponse.Configs)
+                    {
+                        // 1. 處理 Device 行
+                        string? devicePattern = _routes.ResolveDevicePattern(config.Target);
+                        if (devicePattern != null)
+                        {
+                            sw.WriteLine($"Device: {devicePattern}");
+                        }
+                        else
+                        {
+                            // 認不得的目標寫成註解：APO 會忽略它，而檔案本身留下了為什麼這段沒生效。
+                            sw.WriteLine($"# Unknown Target: {config.Target}");
+                        }
+
+                        // 2. 寫入 Preamp
+                        sw.WriteLine($"Preamp: {config.PreampDb} dB");
+
+                        // 3. 寫入 GraphicEQ
+                        if (!string.IsNullOrEmpty(config.GraphicEqString))
+                        {
+                            sw.WriteLine($"GraphicEQ: {config.GraphicEqString}");
+                        }
+
+                        if (config.CompJson != null && config.CompJson.Count > 0)
+                        {
+                            string header = "MBXXMCompressorsettings";
+                            string base64String = MeldaEncoder.EncodeMeldaChunk(header, config.CompJson);
+                            sw.WriteLine($"VSTPlugin: Library \"C:\\Program Files\\VstPlugins\\MeldaProduction\\Dynamics\\MCompressor.dll\" ChunkData \"{base64String}\"");
+                        }
+
+                        if (config.ReverbJson != null && config.ReverbJson.Count > 0)
+                        {
+                            string header = "MBXXMCharmVerbsettings";
+                            string base64String = MeldaEncoder.EncodeMeldaChunk(header, config.ReverbJson);
+                            sw.WriteLine($"VSTPlugin: Library \"C:\\Program Files\\VstPlugins\\MeldaProduction\\Reverb\\MCharmVerb.dll\" ChunkData \"{base64String}\"");
+                        }
+
+                        // 4. 加入一個空行分隔不同裝置的設定 (可選)
+                        sw.WriteLine();
+                    }
+                }
+            }
+
+            return eqResponse.MessageForUser;
+        }
 
         public void Apply(string configFilePath)
         {
