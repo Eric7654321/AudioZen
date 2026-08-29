@@ -1,0 +1,72 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 結果要寫回 ci-status 分支：本機沒有 GitHub token，只有 SSH，
+# 所以讀取結果的唯一管道是 git ref 本身。
+permissions:
+  contents: write
+
+concurrency:
+  group: build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build
+        id: build
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          dotnet build AudioUI.sln -c Release --nologo 2>&1 | Tee-Object -FilePath build.log
+          exit $LASTEXITCODE
+
+      - name: Write status
+        if: always()
+        shell: pwsh
+        run: |
+          $ok = '${{ steps.build.outcome }}' -eq 'success'
+          # 只留錯誤與警告數：完整 log 幾百行，而要判斷「能不能往下做」只需要這些。
+          $errors = Select-String -Path build.log -Pattern ': error ' -ErrorAction SilentlyContinue |
+                    ForEach-Object { $_.Line.Trim() } | Select-Object -Unique -First 40
+          $warnCount = (Select-String -Path build.log -Pattern ': warning ' -ErrorAction SilentlyContinue).Count
+          $lines = @(
+            "commit: ${{ github.sha }}"
+            "result: $(if ($ok) { 'PASS' } else { 'FAIL' })"
+            "warnings: $warnCount"
+            "finished: $(Get-Date -Format o)"
+            ""
+          )
+          if (-not $ok) { $lines += '--- errors ---'; $lines += $errors }
+          New-Item -ItemType Directory -Force -Path out | Out-Null
+          $lines -join "`n" | Set-Content -Path out/status.md -Encoding utf8
+
+      - name: Publish status to ci-status branch
+        if: always()
+        shell: bash
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          # orphan 分支：狀態沒有歷史價值，每次覆蓋，不讓它把 repo 養胖。
+          git checkout --orphan ci-status
+          git rm -rf --cached . >/dev/null
+          cp out/status.md ./status.md
+          git add -f status.md
+          git commit -q -m "ci: ${{ github.sha }}"
+          git push -f origin ci-status
+
+      - name: Fail the job if the build failed
+        if: steps.build.outcome != 'success'
+        shell: bash
+        run: exit 1
