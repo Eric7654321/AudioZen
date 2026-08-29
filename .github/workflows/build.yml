@@ -36,19 +36,29 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          $ok = '${{ steps.build.outcome }}' -eq 'success'
-          # 只留錯誤與警告數：完整 log 幾百行，而要判斷「能不能往下做」只需要這些。
+          # 只留錯誤清單與計數：完整 log 幾百行，而要判斷「能不能往下做」只需要這些。
+          # MSBuild 同一則診斷會印兩次（inline 一次、結尾摘要一次），所以一律去重後再數。
           $errors = Select-String -Path build.log -Pattern ': error ' -ErrorAction SilentlyContinue |
-                    ForEach-Object { $_.Line.Trim() } | Select-Object -Unique -First 40
-          $warnCount = (Select-String -Path build.log -Pattern ': warning ' -ErrorAction SilentlyContinue).Count
+                    ForEach-Object { $_.Line.Trim() } | Select-Object -Unique
+          $warnCount = (Select-String -Path build.log -Pattern ': warning ' -ErrorAction SilentlyContinue |
+                        ForEach-Object { $_.Line.Trim() } | Select-Object -Unique).Count
+
+          # 兩個獨立訊號：build step 的結果，以及 log 裡有沒有 error 行。
+          # 只有一個訊號的話，判斷寫錯就會變成永遠的 PASS，而讀這份檔的人不會發現。
+          $stepOk = '${{ steps.build.outcome }}' -eq 'success'
+          $logOk  = $errors.Count -eq 0
+          $result = if ($stepOk -and $logOk) { 'PASS' } elseif (-not $stepOk -and -not $logOk) { 'FAIL' } else { 'INCONSISTENT' }
+
           $lines = @(
             "commit: ${{ github.sha }}"
-            "result: $(if ($ok) { 'PASS' } else { 'FAIL' })"
+            "result: $result"
+            "step_outcome: ${{ steps.build.outcome }}"
+            "errors: $($errors.Count)"
             "warnings: $warnCount"
             "finished: $(Get-Date -Format o)"
             ""
           )
-          if (-not $ok) { $lines += '--- errors ---'; $lines += $errors }
+          if ($errors.Count -gt 0) { $lines += '--- errors ---'; $lines += ($errors | Select-Object -First 40) }
           New-Item -ItemType Directory -Force -Path out | Out-Null
           $lines -join "`n" | Set-Content -Path out/status.md -Encoding utf8
 
