@@ -88,6 +88,16 @@ namespace AudioUI
         public static AudioTargetConfig ToTargetConfig(string targetId, TonePreset preset) =>
             ToTargetConfig(targetId, preset.BandGains, preset.VolumePercent);
 
+        /// <summary>專業模式的完整輸出：七段增益、音量，加上兩個效果各自選的 preset。</summary>
+        public static AudioTargetConfig ToTargetConfig(string targetId, IReadOnlyList<double> bandGains,
+                                                       double volumePercent, DspPreset? compressor, DspPreset? reverb)
+        {
+            var config = ToTargetConfig(targetId, bandGains, volumePercent);
+            config.CompJson = compressor?.ToList();
+            config.ReverbJson = reverb?.ToList();
+            return config;
+        }
+
         /// <summary>
         /// 音量百分比換成 dB。0% 沒有對應的 dB（是負無限大），交給呼叫端當靜音處理，
         /// 這裡回一個 APO 認得的下限而不是 -∞，否則寫進設定檔的是 "-∞ dB"。
