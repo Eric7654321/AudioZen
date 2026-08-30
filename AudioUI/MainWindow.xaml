@@ -171,7 +171,7 @@
                                 <TextBlock Grid.Row="0" Text="{Binding Name}" FontSize="24" Foreground="White" FontWeight="Normal"/>
                                 <TextBlock Grid.Row="1" Text="{Binding Description}" FontSize="14" Foreground="#888888" Margin="0,5,0,0"/>
                                 <Grid Grid.Row="2" Margin="0,20,0,0">
-                                    <Image Source="{Binding ImagePath}" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <Image Source="{Binding ImagePath, TargetNullValue={x:Null}}" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center">
                                         <Image.Style>
                                             <Style TargetType="Image">
                                                 <Style.Triggers>
@@ -911,7 +911,7 @@
                         </Grid>
                     </Border>
                     <Grid Grid.Column="1" Background="#050505">
-                        <Image Source="{Binding SelectedDeviceImagePath}" Stretch="Uniform" Opacity="1.0" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        <Image Source="{Binding SelectedDeviceImagePath, TargetNullValue={x:Null}}" Stretch="Uniform" Opacity="1.0" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                         <Viewbox Stretch="Uniform">
                             <Grid Width="600" Height="600">
                                 <Border Margin="110,70,110,90" BorderBrush="White" BorderThickness="2" CornerRadius="30" IsHitTestVisible="False"/>

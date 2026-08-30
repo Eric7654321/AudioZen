@@ -15,6 +15,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using System.Windows.Media.Imaging;
 using Drawing = System.Drawing;
 using Path = System.IO.Path;
@@ -137,6 +138,11 @@ namespace AudioUI
 
             InitSystemTray();
             this.Loaded += (s, e) => InitGlobalHotkeys();
+
+            // 繫結要等畫面真的跑過一輪才解得開，所以排在 render 之後的閒置時段，
+            // 不是 Loaded 當下。
+            this.Loaded += (s, e) => Dispatcher.BeginInvoke(
+                DispatcherPriority.ApplicationIdle, new Action(ReportBindingErrors));
         }
 
         // --- 1. 聊天室邏輯 ---
@@ -401,6 +407,25 @@ namespace AudioUI
         }
 
         private async void TestApiKey_Click(object sender, RoutedEventArgs e) => await _vm.TestApiKeyAsync();
+
+        /// <summary>
+        /// 開檔時解不開的繫結，當場講出來。
+        ///
+        /// 這是這個專案唯一驗不到的失效模式：編譯過、測試綠，執行時那一格就是空的，
+        /// 跟「本來就沒東西」長得一模一樣。留一份檔案是因為通知會消失，而這種問題
+        /// 通常要對著 XAML 慢慢看。
+        /// </summary>
+        private void ReportBindingErrors()
+        {
+            var log = App.BindingErrors;
+
+            // 沒有錯誤也寫。檔案不在代表這個檢查根本沒跑，而那跟「跑過而且乾淨」
+            // 是兩件不同的事——少了這個檔就分不出來。
+            string path = BindingErrorListener.Flush(log);
+            if (log.IsEmpty) return;
+
+            AppConfig.Notifier.Notify("畫面繫結有問題", log.Summary + " 詳情：" + path);
+        }
 
         private void InitSystemTray()
         {
