@@ -46,7 +46,7 @@ namespace AudioUI
 
             // 2. 透過AudioSessionService的函式來篩選目標 Process
             AudioSessionService _AudioSessionService = new AudioSessionService();
-            var activeApps = _AudioSessionService.GetAppsWithConfig();
+            var activeApps = _AudioSessionService.List();
             var pidsToRecord = activeApps.Select(app => app.ProcessId).ToList();
             var targetProcesses = new List<Process>();
             foreach (var pid in pidsToRecord) 

@@ -13,13 +13,13 @@ namespace AudioUI
     /// </summary>
     public sealed class MainWindowViewModel : INotifyPropertyChanged
     {
-        private readonly AudioSessionService _AudioService = new AudioSessionService();
+        private readonly IAudioSessions _AudioService = new AudioSessionService();
         private readonly SituationManager _situations = AppConfig.CreateSituationManager();
         private readonly IConfigStore _store = AppConfig.ConfigStore;
         private readonly ITextToSpeech _TtsService = new TtsService();
 
-        public ObservableCollection<AudioAppModel> AppList { get; } = new ObservableCollection<AudioAppModel>();
-        public ObservableCollection<AudioAppModel> RecentAppList { get; } = new ObservableCollection<AudioAppModel>();
+        public ObservableCollection<AudioAppInfo> AppList { get; } = new ObservableCollection<AudioAppInfo>();
+        public ObservableCollection<AudioAppInfo> RecentAppList { get; } = new ObservableCollection<AudioAppInfo>();
         public ObservableCollection<DeviceInfoModel> DeviceList { get; } = new ObservableCollection<DeviceInfoModel>();
         public ObservableCollection<ConfigOptionItem> ConfigOptions { get; } = new ObservableCollection<ConfigOptionItem>();
         public ObservableCollection<MacroKeyModel> MacroKeys { get; } = new ObservableCollection<MacroKeyModel>();
@@ -56,7 +56,7 @@ namespace AudioUI
         public void RefreshDependencies() =>
             Dependencies = DependencyChecker.Check(
                 AppConfig.AudioBackend.IsAvailable,
-                _AudioService.GetRenderDeviceIdentities(),
+                _AudioService.RenderDeviceIdentities(),
                 AppConfig.Routes);
 
         private string _routingStatus = "";
@@ -87,7 +87,7 @@ namespace AudioUI
             var lines = new List<string>();
             int done = 0;
 
-            foreach (var app in _AudioService.GetAppsWithConfig())
+            foreach (var app in _AudioService.List())
             {
                 var route = AppConfig.Routes.ByProcess(app.Name);
                 if (route == null || app.ProcessId <= 0) continue;
@@ -382,9 +382,9 @@ namespace AudioUI
         public void RefreshAudioApps()
         {
             AppList.Clear(); RecentAppList.Clear();
-            var globalApp = new AudioAppModel { Name = "整體調整", SystemVolume = 100, Config = new AppConfigData { TargetDevice = "System" } };
+            var globalApp = new AudioAppInfo { Name = "整體調整", SystemVolume = 100, Config = new AppConfigData { TargetDevice = "System" } };
             RecentAppList.Add(globalApp); AppList.Add(globalApp);
-            try { var sessions = _AudioService.GetAppsWithConfig(); var sessionList = new List<AudioAppModel>(sessions); foreach (var app in sessionList.Take(3)) RecentAppList.Add(app); var sorted = CurrentSortMode switch { SortMode.NameDesc => sessionList.OrderByDescending(x => x.Name), SortMode.VolumeDesc => sessionList.OrderByDescending(x => x.SystemVolume), _ => sessionList.OrderBy(x => x.Name) }; foreach (var app in sorted) AppList.Add(app); } catch { }
+            try { var sessions = _AudioService.List(); var sessionList = new List<AudioAppInfo>(sessions); foreach (var app in sessionList.Take(3)) RecentAppList.Add(app); var sorted = CurrentSortMode switch { SortMode.NameDesc => sessionList.OrderByDescending(x => x.Name), SortMode.VolumeDesc => sessionList.OrderByDescending(x => x.SystemVolume), _ => sessionList.OrderBy(x => x.Name) }; foreach (var app in sorted) AppList.Add(app); } catch { }
         }
 
         /// <summary>

@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:hc="https://handyorg.github.io/handycontrol"
         xmlns:icon="http://metro.mahapps.com/winfx/xaml/iconpacks"
+        xmlns:local="clr-namespace:AudioUI"
         mc:Ignorable="d"
         Title="AI Audio Mixer" Height="700" Width="1129"
         Icon="icon.ico"
@@ -17,6 +18,10 @@
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <!-- 卡片的圖示與框線從 AudioAppInfo 的純資料算出來；那個型別住在 Core，
+             不認得 ImageSource 與 Brush。 -->
+        <local:AppIconConverter x:Key="AppIcon"/>
+        <local:ConfigBorderConverter x:Key="ConfigBorder"/>
         <Style x:Key="PresetBtnStyle" TargetType="Button">
             <Setter Property="Height" Value="44"/>
             <Setter Property="MinWidth" Value="118"/>
@@ -114,7 +119,7 @@
         <DataTemplate x:Key="AppCardTemplate">
             <!-- 這個 template 三個地方共用（入口的抽屜、控制分頁的最近調整與完整清單），
                  所以「點了會進調參」不掛在這裡，掛在控制分頁那兩個 ItemsControl 上。 -->
-            <Border Width="340" Height="140" BorderBrush="{Binding BorderColor}" BorderThickness="1" Margin="10,10,10,20" Background="#1E1E1E">
+            <Border Width="340" Height="140" BorderBrush="{Binding HasConfig, Converter={StaticResource ConfigBorder}}" BorderThickness="1" Margin="10,10,10,20" Background="#1E1E1E">
                 <Grid Margin="15,15">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="80"/>
@@ -122,11 +127,11 @@
                     </Grid.ColumnDefinitions>
                     <Border Grid.Column="0" Background="#333333" Margin="0,0,15,0" CornerRadius="5">
                         <Grid>
-                            <Image Source="{Binding Icon}" Stretch="Uniform" Width="50" Height="50" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <Image Source="{Binding IconPath, Converter={StaticResource AppIcon}}" Stretch="Uniform" Width="50" Height="50" VerticalAlignment="Center" HorizontalAlignment="Center">
                                 <Image.Style>
                                     <Style TargetType="Image">
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Icon}" Value="{x:Null}">
+                                            <DataTrigger Binding="{Binding IconPath, Converter={StaticResource AppIcon}}" Value="{x:Null}">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
                                             </DataTrigger>
                                         </Style.Triggers>
@@ -138,7 +143,7 @@
                                     <Style TargetType="icon:PackIconMaterial">
                                         <Setter Property="Visibility" Value="Collapsed"/>
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Icon}" Value="{x:Null}">
+                                            <DataTrigger Binding="{Binding IconPath, Converter={StaticResource AppIcon}}" Value="{x:Null}">
                                                 <Setter Property="Visibility" Value="Visible"/>
                                             </DataTrigger>
                                         </Style.Triggers>

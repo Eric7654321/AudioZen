@@ -6,15 +6,6 @@ using System.Text.RegularExpressions;
 
 namespace AudioUI
 {
-    // 定義設定檔的資料結構
-    public class AppConfigData
-    {
-        public string ProcessName { get; set; } = "";
-        public string TargetDevice { get; set; } = "";
-        public double VolumeScale { get; set; } = 1.0;
-        public string Effect { get; set; } = "無"; // 顯示文字，如 "EQ + Reverb"
-    }
-
     public class ConfigService
     {
         private readonly string _configDir;
