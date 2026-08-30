@@ -59,6 +59,49 @@ namespace AudioUI
                 _AudioService.GetRenderDeviceIdentities(),
                 AppConfig.Routes);
 
+        private string _routingStatus = "";
+
+        /// <summary>自動接線的結果。空字串代表還沒接過。</summary>
+        public string RoutingStatus
+        {
+            get => _routingStatus;
+            private set { _routingStatus = value; Raise(); }
+        }
+
+        /// <summary>
+        /// 把目前在播音訊、而且路由表認得的程式，各自指到該走的虛擬裝置。
+        ///
+        /// 這是「使用者只開一個 app」的第一步：原本要人去 Voicemeeter 與系統音量設定裡逐個點。
+        /// 用到的是沒有文件的系統介面，所以每一條都把結果留下來——安靜地成功與安靜地失敗
+        /// 看起來一模一樣。
+        /// </summary>
+        public void WireRouting()
+        {
+            var router = AppConfig.AppRouter;
+            if (!router.IsSupported)
+            {
+                RoutingStatus = router.Route(0, null).Message;
+                return;
+            }
+
+            var lines = new List<string>();
+            int done = 0;
+
+            foreach (var app in _AudioService.GetAppsWithConfig())
+            {
+                var route = AppConfig.Routes.ByProcess(app.Name);
+                if (route == null || app.ProcessId <= 0) continue;
+
+                var result = router.Route(app.ProcessId, route.Id);
+                if (result.Ok) done++;
+                else lines.Add($"{app.Name}：{result.Message}");
+            }
+
+            RoutingStatus = lines.Count == 0
+                ? (done == 0 ? "沒有找到路由表認得、而且正在播放的程式。" : $"已接好 {done} 個程式。")
+                : $"接好 {done} 個，其餘：{string.Join("　", lines)}";
+        }
+
         /// <summary>目前這把 key 的樣子，只露尾四碼。</summary>
         public string ApiKeyMasked => AppConfig.Settings.Gemini.Masked;
 

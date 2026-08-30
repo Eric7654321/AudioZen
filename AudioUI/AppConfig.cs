@@ -56,6 +56,12 @@ namespace AudioUI
             return store;
         });
 
+        /// <summary>把個別程式的音訊輸出指到指定裝置。取不到系統介面時 IsSupported 是 false。</summary>
+        public static IAppAudioRouter AppRouter => _router.Value;
+
+        private static readonly Lazy<IAppAudioRouter> _router =
+            new Lazy<IAppAudioRouter>(() => new AudioPolicyConfigRouter(Routes));
+
         /// <summary>加密後的 API key 儲存。設定頁寫、載入時讀。</summary>
         public static IApiKeyStore ApiKeys => _apiKeys.Value;
 
