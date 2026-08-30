@@ -197,14 +197,7 @@ CI 在 `windows-latest` 上建置並跑測試，結果寫回 `ci-status` 分支�
 - 剩下的宣告層 nullable 警告。逐一修需要判斷每個欄位「真的可以是 null 嗎」，
   改錯會把 null 悄悄變成空字串
 
-## 由來與授權
-
-本專案原本是交大「多媒體與人機互動總整與實作」的課程專題，六人團隊，
-2025-11 ~ 12 開發。程式碼從當時的 repo 用 `git subtree split` 抽出，
-**保留完整 commit 歷史**；Equalizer APO 的 C++ 原始碼不在本 repo 內
-（它是安裝並註冊到裝置上的系統元件，與本程式沒有建置期相依）。
-
-commit 歷史裡的作者：`Eric7654321`、`james-0520`、`Katrina Hung`、`111550156sakuya`。
+## 授權
 
 本 repo 的程式碼以 [MIT](LICENSE) 授權。所有 NuGet 相依同為 MIT。
 
