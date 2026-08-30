@@ -80,6 +80,15 @@ namespace AudioUI
         /// <summary>手動調參面板的狀態，繫結路徑是 Tuning.*。</summary>
         public TuningViewModel Tuning => _vm.Tuning;
 
+        /// <summary>設定頁的偏好。物件本身會發通知，所以直接轉發就夠。</summary>
+        public UserPreferences Preferences => _vm.Preferences;
+
+        /// <summary>
+        /// ViewModel 本體。會變動的純量（例如 API key 的狀態）要透過它繫結——
+        /// 在視窗上再包一層屬性的話，ViewModel 發的通知傳不到畫面。
+        /// </summary>
+        public MainWindowViewModel Vm => _vm;
+
         private string _selectedDeviceName = "";
 
         public string SelectedDeviceName
@@ -274,6 +283,58 @@ namespace AudioUI
 
         private void ApplyTuning_Click(object sender, RoutedEventArgs e) => _vm.ApplyTuning();
 
+        private void PickDeviceImage_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(SelectedDeviceName)) return;
+
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = $"選一張圖給「{SelectedDeviceName}」",
+                Filter = "圖片|*.png;*.jpg;*.jpeg;*.bmp;*.gif|所有檔案|*.*",
+            };
+
+            // 存的是絕對路徑而不是複製檔案：使用者換掉原圖時卡片跟著變，也不用管清理。
+            if (dialog.ShowDialog() == true) _vm.SetDeviceImage(SelectedDeviceName, dialog.FileName);
+        }
+
+        private void ResetDeviceImage_Click(object sender, RoutedEventArgs e)
+        {
+            if (!string.IsNullOrWhiteSpace(SelectedDeviceName)) _vm.SetDeviceImage(SelectedDeviceName, null);
+        }
+
+        // --- 設定 ---
+
+        private void SettingsNav_Click(object sender, RoutedEventArgs e)
+        {
+            string tag = (sender as FrameworkElement)?.Tag?.ToString() ?? "General";
+
+            SettingsPageGeneral.Visibility = tag == "General" ? Visibility.Visible : Visibility.Collapsed;
+            SettingsPageMemory.Visibility = tag == "Memory" ? Visibility.Visible : Visibility.Collapsed;
+            SettingsPagePersonal.Visibility = tag == "Personal" ? Visibility.Visible : Visibility.Collapsed;
+            SettingsPageProfile.Visibility = tag == "Profile" ? Visibility.Visible : Visibility.Collapsed;
+            SettingsPageAbout.Visibility = tag == "About" ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void RemoveMemory_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement fe) _vm.RemoveAiMemory(fe.Tag?.ToString());
+        }
+
+        private void SaveApiKey_Click(object sender, RoutedEventArgs e)
+        {
+            _vm.SaveApiKey(ApiKeyBox.Password);
+            // 輸入框立刻清掉：畫面上不留第二份，狀態列顯示遮罩過的樣子就夠了。
+            ApiKeyBox.Clear();
+        }
+
+        private void ClearApiKey_Click(object sender, RoutedEventArgs e)
+        {
+            _vm.SaveApiKey("");
+            ApiKeyBox.Clear();
+        }
+
+        private async void TestApiKey_Click(object sender, RoutedEventArgs e) => await _vm.TestApiKeyAsync();
+
         private void InitSystemTray()
         {
             _notifyIcon = new WinForms.NotifyIcon();
@@ -391,6 +452,7 @@ namespace AudioUI
             if (tag == "Entrance") { SidebarBorder.Visibility = Visibility.Visible; HighlightTab(TabEntrance, LineEntrance); EntranceView.Visibility = Visibility.Visible; }
             else if (tag == "Control") { SidebarBorder.Visibility = Visibility.Collapsed; HighlightTab(TabControl, LineControl); ControlView.Visibility = Visibility.Visible; _vm.RefreshAudioApps(); BackToAppList_Click(null, null); }
             else if (tag == "Device") { SidebarBorder.Visibility = Visibility.Collapsed; HighlightTab(TabDevice, LineDevice); if (this.FindName("DeviceView") is Grid v) v.Visibility = Visibility.Visible; BackToDeviceList_Click(null, null); }
+            else if (tag == "Settings") { SidebarBorder.Visibility = Visibility.Collapsed; HighlightTab(TabSettings, LineSettings); SettingsView.Visibility = Visibility.Visible; }
         }
         private void ResetTabs()
         {
@@ -399,7 +461,9 @@ namespace AudioUI
             TabControl.Foreground = gray; TabControl.FontWeight = FontWeights.Normal; LineControl.Visibility = Visibility.Hidden;
             if (this.FindName("TabDevice") is System.Windows.Controls.Button t) { t.Foreground = gray; t.FontWeight = FontWeights.Normal; }
             if (this.FindName("LineDevice") is Border l) { l.Visibility = Visibility.Hidden; }
+            TabSettings.Foreground = gray; TabSettings.FontWeight = FontWeights.Normal; LineSettings.Visibility = Visibility.Hidden;
             EntranceView.Visibility = Visibility.Collapsed; ControlView.Visibility = Visibility.Collapsed;
+            SettingsView.Visibility = Visibility.Collapsed;
             if (this.FindName("DeviceView") is Grid v) v.Visibility = Visibility.Collapsed;
         }
         private void HighlightTab(System.Windows.Controls.Button btn, Border line) { btn.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(51, 153, 255)); btn.FontWeight = FontWeights.Bold; if (line != null) line.Visibility = Visibility.Visible; }

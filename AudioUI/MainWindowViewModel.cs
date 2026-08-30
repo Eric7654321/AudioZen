@@ -1,5 +1,7 @@
 ﻿using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
+using System.Runtime.CompilerServices;
 
 namespace AudioUI
 {
@@ -9,7 +11,7 @@ namespace AudioUI
     ///
     /// 視窗仍然以自己當 DataContext，集合由 MainWindow 轉發過去，所以 XAML 的繫結路徑不變。
     /// </summary>
-    public sealed class MainWindowViewModel
+    public sealed class MainWindowViewModel : INotifyPropertyChanged
     {
         private readonly AudioSessionService _AudioService = new AudioSessionService();
         private readonly SituationManager _situations = new SituationManager();
@@ -26,6 +28,77 @@ namespace AudioUI
 
         /// <summary>手動調參面板的狀態。</summary>
         public TuningViewModel Tuning { get; } = new TuningViewModel();
+
+        /// <summary>設定頁直接綁這一份；改完自動存，使用者不必再按一次儲存。</summary>
+        public UserPreferences Preferences => AppConfig.Preferences.Current;
+
+        private string _apiKeyStatus = "";
+
+        /// <summary>測試連線的結果。空字串代表還沒測過。</summary>
+        public string ApiKeyStatus
+        {
+            get => _apiKeyStatus;
+            private set { _apiKeyStatus = value; Raise(); }
+        }
+
+        /// <summary>目前這把 key 的樣子，只露尾四碼。</summary>
+        public string ApiKeyMasked => AppConfig.Settings.Gemini.Masked;
+
+        public MainWindowViewModel()
+        {
+            // 撥一個開關就存一次。TextBox 預設是失焦才寫回來源，所以不會每打一個字存一次。
+            Preferences.PropertyChanged += (_, _) => AppConfig.Preferences.Save();
+            Preferences.AiMemories.CollectionChanged += (_, _) => AppConfig.Preferences.Save();
+        }
+
+        /// <summary>存下設定頁輸入的 key。</summary>
+        public void SaveApiKey(string? apiKey)
+        {
+            try
+            {
+                AppConfig.SaveApiKey(apiKey);
+                Raise(nameof(ApiKeyMasked));
+                ApiKeyStatus = string.IsNullOrWhiteSpace(apiKey) ? "已清除" : "已儲存，建議按一次測試連線";
+            }
+            catch (Exception ex)
+            {
+                ApiKeyStatus = $"儲存失敗：{ex.Message}";
+            }
+        }
+
+        /// <summary>
+        /// 實際打一次 API。key 對不對只有 Google 說了算——存得起來不代表能用，
+        /// 而「存好了」卻在下一次語音指令才炸掉是最難查的那種。
+        /// </summary>
+        public async Task TestApiKeyAsync()
+        {
+            if (!AppConfig.IsConfigured)
+            {
+                ApiKeyStatus = "還沒有 key";
+                return;
+            }
+
+            ApiKeyStatus = "測試中…";
+            try
+            {
+                var intent = await AppConfig.LlmClient.InterpretAsync("測試連線");
+                ApiKeyStatus = intent != null ? "連線正常" : "連得上，但回應看不懂";
+            }
+            catch (Exception ex)
+            {
+                ApiKeyStatus = $"連線失敗：{GeminiSettings.Redact(ex.Message)}";
+            }
+        }
+
+        public void RemoveAiMemory(string? memory)
+        {
+            if (Preferences.RemoveAiMemory(memory)) AppConfig.Preferences.Save();
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        private void Raise([CallerMemberName] string? name = null) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
         /// <summary>目前選中的情境；-1 代表語音指令用的暫存情境。</summary>
         public int CurrentSituationId { get; set; } = -1;

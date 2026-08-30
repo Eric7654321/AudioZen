@@ -247,6 +247,10 @@
                 <Button x:Name="TabDevice" Content="裝 置" Click="Tab_Click" Tag="Device" Style="{StaticResource NavBtnStyle}"/>
                 <Border x:Name="LineDevice" VerticalAlignment="Bottom" Height="4" Background="#3399FF" Margin="20,0,20,-4" CornerRadius="2" Visibility="Hidden"/>
             </Grid>
+            <Grid>
+                <Button x:Name="TabSettings" Content="設 定" Click="Tab_Click" Tag="Settings" Style="{StaticResource NavBtnStyle}"/>
+                <Border x:Name="LineSettings" VerticalAlignment="Bottom" Height="4" Background="#3399FF" Margin="20,0,20,-4" CornerRadius="2" Visibility="Hidden"/>
+            </Grid>
         </StackPanel>
         <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Bottom" BorderBrush="#333333" BorderThickness="0,0,0,1"/>
         <Border x:Name="SidebarBorder" Grid.Row="2" Grid.Column="0" BorderBrush="#333333" BorderThickness="0,0,1,0">
@@ -671,6 +675,120 @@
           </Grid>
         </Grid>
 
+
+        <!-- 設定。做成第四個分頁而不是 hi-fi 的齒輪浮層：分頁切換這套機制在這個 codebase 已經在跑。 -->
+        <Grid x:Name="SettingsView" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Visibility="Hidden" Margin="20,10,20,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Margin="0,10,20,0">
+                <Button x:Name="SettingsNavGeneral" Content="一般" Tag="General" Click="SettingsNav_Click" Style="{StaticResource PresetBtnStyle}" HorizontalAlignment="Stretch"/>
+                <Button x:Name="SettingsNavMemory" Content="記憶" Tag="Memory" Click="SettingsNav_Click" Style="{StaticResource PresetBtnStyle}" HorizontalAlignment="Stretch"/>
+                <Button x:Name="SettingsNavPersonal" Content="個人化" Tag="Personal" Click="SettingsNav_Click" Style="{StaticResource PresetBtnStyle}" HorizontalAlignment="Stretch"/>
+                <Button x:Name="SettingsNavProfile" Content="設定檔" Tag="Profile" Click="SettingsNav_Click" Style="{StaticResource PresetBtnStyle}" HorizontalAlignment="Stretch"/>
+                <Button x:Name="SettingsNavAbout" Content="關於" Tag="About" Click="SettingsNav_Click" Style="{StaticResource PresetBtnStyle}" HorizontalAlignment="Stretch"/>
+            </StackPanel>
+
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Margin="10,10,0,0">
+                <Grid>
+                    <!-- 一般 -->
+                    <StackPanel x:Name="SettingsPageGeneral" Visibility="Visible">
+                        <TextBlock Text="一般設定" FontSize="24" Foreground="White" Margin="0,0,0,24"/>
+                        <CheckBox Content="在開機時自動啟用應用程式" Foreground="#DDDDDD" FontSize="17"
+                                  IsChecked="{Binding Preferences.LaunchAtStartup, Mode=TwoWay}"/>
+                        <TextBlock Text="有你的角落，我們一直都在" FontSize="14" Foreground="#777777" Margin="26,4,0,22"/>
+                        <CheckBox Content="自動更新" Foreground="#DDDDDD" FontSize="17"
+                                  IsChecked="{Binding Preferences.AutoUpdate, Mode=TwoWay}"/>
+                        <TextBlock Text="確保提供您的服務品質日日如新" FontSize="14" Foreground="#777777" Margin="26,4,0,0"/>
+                    </StackPanel>
+
+                    <!-- 記憶 -->
+                    <StackPanel x:Name="SettingsPageMemory" Visibility="Collapsed">
+                        <TextBlock Text="使用者記憶" FontSize="24" Foreground="White" Margin="0,0,0,24"/>
+                        <CheckBox Content="啟用使用者記憶" Foreground="#DDDDDD" FontSize="17"
+                                  IsChecked="{Binding Preferences.UserMemoryEnabled, Mode=TwoWay}"/>
+                        <TextBlock Text="尊敬的使用者您好，請介紹一下你自己吧" FontSize="14" Foreground="#777777" Margin="26,4,0,8"/>
+                        <Border Background="#1A1A1A" CornerRadius="8" Margin="26,0,0,26" Padding="12,10">
+                            <TextBox Text="{Binding Preferences.UserMemory, Mode=TwoWay}" Background="Transparent"
+                                     BorderThickness="0" Foreground="#E0E0E0" FontSize="15" CaretBrush="White"
+                                     AcceptsReturn="True" TextWrapping="Wrap" MinHeight="70"/>
+                        </Border>
+
+                        <TextBlock Text="AI 記憶" FontSize="24" Foreground="White" Margin="0,0,0,24"/>
+                        <CheckBox Content="啟用 AI 記憶" Foreground="#DDDDDD" FontSize="17"
+                                  IsChecked="{Binding Preferences.AiMemoryEnabled, Mode=TwoWay}"/>
+                        <TextBlock Text="您一次一次一次的調整，仍舊記憶如新" FontSize="14" Foreground="#777777" Margin="26,4,0,10"/>
+                        <ItemsControl ItemsSource="{Binding Preferences.AiMemories}" Margin="26,0,0,10">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#1A1A1A" CornerRadius="8" Margin="0,0,0,8" Padding="12,10">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding}" Foreground="#DDDDDD" FontSize="15" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                            <Button Grid.Column="1" Click="RemoveMemory_Click" Tag="{Binding}" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="10,0,0,0">
+                                                <icon:PackIconMaterial Kind="Close" Width="16" Height="16" Foreground="#888888"/>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <CheckBox Content="啟用 AI 自學功能 (experimental)" Foreground="#DDDDDD" FontSize="17" Margin="0,16,0,0"
+                                  IsChecked="{Binding Preferences.SelfLearningEnabled, Mode=TwoWay}"/>
+                        <TextBlock Text="讓 AI 根據你的歷史習慣以及記憶內容自動調整音訊輸出" FontSize="14" Foreground="#777777" Margin="26,4,0,0"/>
+                    </StackPanel>
+
+                    <!-- 個人化 -->
+                    <StackPanel x:Name="SettingsPagePersonal" Visibility="Collapsed">
+                        <TextBlock Text="喚醒詞設定" FontSize="24" Foreground="White" Margin="0,0,0,24"/>
+                        <TextBlock Text="想要叫我什麼呢？" FontSize="15" Foreground="#DDDDDD" Margin="0,0,0,8"/>
+                        <Border Background="#1A1A1A" CornerRadius="8" Width="320" HorizontalAlignment="Left" Padding="12,10" Margin="0,0,0,10">
+                            <TextBox Text="{Binding Preferences.WakeWord, Mode=TwoWay}" Background="Transparent"
+                                     BorderThickness="0" Foreground="#E0E0E0" FontSize="16" CaretBrush="White"/>
+                        </Border>
+                        <TextBlock Text="改完要重開程式，語音辨識的文法在啟動時就掛上去了。" FontSize="14" Foreground="#777777" Margin="0,0,0,20"/>
+                        <TextBlock Text="目前的喚醒詞" FontSize="15" Foreground="#777777"/>
+                        <TextBlock Text="{Binding Preferences.EffectiveWakeWord}" FontSize="20" Foreground="#3399FF" Margin="0,4,0,0"/>
+                    </StackPanel>
+
+                    <!-- 設定檔 -->
+                    <StackPanel x:Name="SettingsPageProfile" Visibility="Collapsed">
+                        <TextBlock Text="Gemini API Key" FontSize="24" Foreground="White" Margin="0,0,0,10"/>
+                        <TextBlock Text="在 Google AI Studio 申請，貼進來就好。存起來時會用 Windows 帳號加密，不會以明文留在磁碟上。"
+                                   FontSize="14" Foreground="#777777" TextWrapping="Wrap" Margin="0,0,0,16"/>
+                        <Border Background="#1A1A1A" CornerRadius="8" Width="420" HorizontalAlignment="Left" Padding="12,10" Margin="0,0,0,12">
+                            <PasswordBox x:Name="ApiKeyBox" Background="Transparent" BorderThickness="0"
+                                         Foreground="#E0E0E0" FontSize="16" CaretBrush="White"/>
+                        </Border>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="儲存" Width="110" Click="SaveApiKey_Click" Style="{StaticResource PresetBtnStyle}"/>
+                            <Button Content="測試連線" Width="130" Click="TestApiKey_Click" Style="{StaticResource PresetBtnStyle}"/>
+                            <Button Content="清除" Width="110" Click="ClearApiKey_Click" Style="{StaticResource PresetBtnStyle}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                            <TextBlock Text="目前：" FontSize="15" Foreground="#777777"/>
+                            <TextBlock Text="{Binding Vm.ApiKeyMasked}" FontSize="15" Foreground="#DDDDDD" Margin="0,0,18,0"/>
+                            <TextBlock Text="{Binding Vm.ApiKeyStatus}" FontSize="15" Foreground="#3399FF"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- 關於 -->
+                    <StackPanel x:Name="SettingsPageAbout" Visibility="Collapsed">
+                        <TextBlock Text="關於" FontSize="24" Foreground="White" Margin="0,0,0,20"/>
+                        <TextBlock Text="心頻氣和 AudioZen" FontSize="20" Foreground="#DDDDDD"/>
+                        <TextBlock Text="用自然語言控制桌面音訊。EQ 與音量走 Equalizer APO，壓縮與殘響走 MeldaProduction VST。"
+                                   FontSize="15" Foreground="#777777" TextWrapping="Wrap" Margin="0,10,0,0" MaxWidth="520" HorizontalAlignment="Left"/>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+        </Grid>
+
         <Grid x:Name="DeviceView" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Visibility="Hidden" Margin="20,10,20,0">
             <!-- 略過 DeviceView 內容，已完成 -->
             <Grid.RowDefinitions>
@@ -710,6 +828,10 @@
                             <StackPanel Grid.Row="0" Margin="10,0,0,10">
                                 <Button Content="← 返回列表" Click="BackToDeviceList_Click" HorizontalAlignment="Left" Foreground="#3399FF" Background="Transparent" BorderThickness="0" Cursor="Hand" FontSize="16"/>
                                 <TextBlock Text="{Binding SelectedDeviceName}" FontSize="28" Foreground="White" FontWeight="Bold" Margin="0,10,0,10"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <Button Content="更換圖片" Width="110" Height="34" MinWidth="0" Click="PickDeviceImage_Click" Style="{StaticResource PresetBtnStyle}"/>
+                                    <Button Content="還原預設" Width="110" Height="34" MinWidth="0" Click="ResetDeviceImage_Click" Style="{StaticResource PresetBtnStyle}"/>
+                                </StackPanel>
                             </StackPanel>
                             <ListBox Grid.Row="1" ItemsSource="{Binding ConfigOptions}" SelectionChanged="ConfigList_SelectionChanged" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Padding="0">
                                 <ListBox.ItemContainerStyle>
