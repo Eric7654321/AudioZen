@@ -111,9 +111,15 @@ AudioUI.sln
 
 | 檔案 | 負責 |
 |---|---|
-| `IAudioBackend` / `ILlmClient` / `IConfigStore` / `ISpeechInput` / `INotifier` / `ITextToSpeech` | 五個接縫。換實作不必動呼叫端 |
-| `IApiKeyStore` / `IPreferencesStore` / `IAppAudioRouter` | key 儲存、使用者偏好、把 app 指到裝置 |
+| `SituationManager` | 錄音 → 轉文字 → 解析 → 寫檔 → 套用 → 詢問回退的主線 |
+| `MainWindowViewModel` | 主視窗的狀態與流程。相依全部由建構式傳入，沒有預設值 |
+| `IAudioBackend` / `ILlmClient` / `IConfigStore` / `ISpeechInput` / `INotifier` / `ITextToSpeech` | 主要接縫。換實作不必動呼叫端 |
+| `IApiKeyStore` / `IApiKeyManager` / `IPreferencesStore` / `IAppAudioRouter` | key 儲存與現況、使用者偏好、把 app 指到裝置 |
+| `IAudioSessions` / `Models/AudioAppInfo` | 誰在出聲。只有純資料，圖示與框線由 UI 層從中算出來 |
+| `IAppStateNotifier` / `ISampleRecorder` / `IAudioPreview` | 列出正在出聲的程式、錄樣本、產生試聽音檔 |
 | `RouteTable` / `Models/AudioRoute` | app ↔ 虛擬裝置的對應，唯一的一份 |
+| `ApoConfigSummary` | 從 APO 設定檔讀出某個裝置目前被套了什麼 |
+| `BindingErrorLog` | 收集畫面繫結失效的訊息 |
 | `EqBands` | 七段手調頻段 ↔ `graphic_eq_string` 雙向轉換 |
 | `TonePreset` | 一般模式的音色預設，以及音量百分比 ↔ preamp dB 換算 |
 | `DspPresets` | 壓縮器與殘響的具名 preset |
@@ -138,14 +144,14 @@ AudioUI.sln
 
 | 檔案 | 負責 |
 |---|---|
-| `MainWindow.xaml{,.cs}` | 介面與視窗層互動。視窗以自己當 `DataContext` |
-| `MainWindowViewModel` | 狀態與流程 |
-| `AppConfig` | 組裝根。所有實作在這裡被接起來 |
-| `SituationManager` | 錄音 → 轉文字 → 解析 → 寫檔 → 套用 → 詢問回退的主線 |
+| `MainWindow.xaml{,.cs}` | 介面與視窗層互動。視窗以自己當 `DataContext`，集合轉發給 ViewModel |
+| `AppConfig` | 組裝根。所有實作在這裡被接起來，是唯一知道「用哪個實作」的地方 |
 | `AudioSessionService` | 列舉音訊工作階段與裝置 |
 | `AppAudioRecorder` | WASAPI per-process 錄音 |
 | `AudioProcessor` | 用 NAudio 的 biquad 濾波產生試聽用的預覽音檔 |
-| `ConfigService` | 讀回 APO 設定檔，還原成介面上的摘要 |
+| `AppIcons` / `AppCardConverters` | 從執行檔路徑抽圖示、決定卡片框線。WPF 型別只出現在這裡 |
+| `BindingErrorListener` | 把 WPF 的繫結診斷接到 `BindingErrorLog` |
+| `ConfigService` | APO 設定檔的路徑 |
 | `WakeWordTrigger` / `KeyMappingService` / `HotkeyService` | 喚醒詞、按鍵綁定、全域熱鍵 |
 
 ## 測試與 CI
@@ -160,18 +166,17 @@ CI 在 `windows-latest` 上建置並跑測試，結果寫回 `ci-status` 分支�
 警告分兩層看：`CS8618` / `CS8625` 是**宣告層**通病（欄位沒初始化、null 當預設值），
 其餘一律列出全文——**新冒出來的警告代碼才是訊號**。判準寫在 `.github/workflows/build.yml`。
 
-⚠️ **XAML 繫結錯誤不會讓編譯失敗，執行時也不會丟例外，只會靜靜顯示空白。**
-測試涵蓋不到這一層，改繫結後要實際開視窗確認。
+**XAML 繫結錯誤不會讓編譯失敗，執行時也不會丟例外，只會靜靜顯示空白**，
+測試涵蓋不到這一層。程式因此在啟動時裝一個 listener 收 WPF 的繫結診斷，
+把結果寫到執行輸出目錄的 `config/binding-errors.log`——**沒有錯誤也會寫**，
+因為「檔案不在」代表這個檢查沒跑，跟「跑過而且乾淨」是兩回事。
+
+改過 XAML 之後開一次視窗、讀那個檔就知道有沒有壞。要注意 collapsed 的分頁
+不會被 measure，樣板繫結不會跑到，所以要切過每個分頁才算驗過。
 
 ## 待處理
 
 按建議順序，前面的不做後面的做了也難驗。
-
-**先做**
-
-- [ ] `SituationManager` 搬進 `AudioUI.Core`。它一個 WPF 型別都沒用到，只剩殘留的 `using`；
-      搬過去之後才測得到。**目前它是唯一沒有測試保護的主線。**
-      建構子的六個介面都已可注入，`AudioUI.Tests/Fakes.cs` 也已備妥
 
 **方案 A 剩下的**（讓使用者只需要開這一個 app）
 
@@ -183,12 +188,11 @@ CI 在 `windows-latest` 上建置並跑測試，結果寫回 `ci-status` 分支�
 
 **已知缺口**
 
-- [ ] 手動調參面板讀不回壓縮／殘響是哪個 preset（設定檔裡只剩 base64）。
-      那個目標本來有壓縮器的話，從面板按套用會**靜靜拿掉它**
+- [ ] 卡片上的「音色調整」永遠顯示「無」。設定檔的回讀解析（`ConfigService.LoadConfig`）
+      沒有任何地方呼叫，所以 `AudioAppInfo.Config` 對真實的 app 一律是 null。
+      通知列走的是另一條路（`ApoConfigSummary`），那條是對的
 - [ ] 「控制」分頁的「調整錄音檔」按鈕沒有接任何動作
 - [ ] `DspPresets` 的數值是照參數範圍推的起點，**沒有實際試聽調過**
-- [ ] `MainWindowViewModel` 仍不能單元測試，卡在 `AudioAppModel` 帶著 `ImageSource` 與 `Brush`。
-      拆成 Core 的 DTO ＋ UI 的包裝要動 XAML
 
 **刻意不做**
 
