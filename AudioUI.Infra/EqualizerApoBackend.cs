@@ -67,13 +67,13 @@
 
                         if (config.CompJson != null && config.CompJson.Count > 0)
                         {
-                            string base64String = MeldaEncoder.EncodeMeldaChunk("MBXXMCompressorsettings", config.CompJson);
+                            string base64String = MeldaEncoder.EncodeMeldaChunk(CompressorPresets.ChunkHeader, config.CompJson);
                             sw.WriteLine(VstPluginLine(Path.Combine("Dynamics", "MCompressor.dll"), base64String));
                         }
 
                         if (config.ReverbJson != null && config.ReverbJson.Count > 0)
                         {
-                            string base64String = MeldaEncoder.EncodeMeldaChunk("MBXXMCharmVerbsettings", config.ReverbJson);
+                            string base64String = MeldaEncoder.EncodeMeldaChunk(ReverbPresets.ChunkHeader, config.ReverbJson);
                             sw.WriteLine(VstPluginLine(Path.Combine("Reverb", "MCharmVerb.dll"), base64String));
                         }
 
