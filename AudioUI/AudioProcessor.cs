@@ -76,9 +76,9 @@ namespace AudioUI
         }
 
         // 解析 GraphicEQ: 25 2.2; 40 1.6; ...
-        private static List<EqBand> ParseGraphicEqFromConfig(string configPath)
+        private static List<EqPoint> ParseGraphicEqFromConfig(string configPath)
         {
-            var bands = new List<EqBand>();
+            var bands = new List<EqPoint>();
             try
             {
                 var lines = File.ReadAllLines(configPath);
@@ -96,7 +96,7 @@ namespace AudioUI
                                 float.TryParse(parts[0], NumberStyles.Any, CultureInfo.InvariantCulture, out float freq) &&
                                 float.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out float gain))
                             {
-                                bands.Add(new EqBand { Frequency = freq, Gain = gain });
+                                bands.Add(new EqPoint { Frequency = freq, Gain = gain });
                             }
                         }
                     }
@@ -107,8 +107,9 @@ namespace AudioUI
         }
     }
 
-    // 簡單的 EQ 頻段結構
-    public class EqBand
+    // GraphicEQ 曲線上的一個點。名字不叫 EqBand 是因為它描述的是單一頻率，
+    // 而 Core 的 EqBand 指的是使用者手調的一整段頻率區間。
+    public class EqPoint
     {
         public float Frequency { get; set; }
         public float Gain { get; set; }
@@ -120,12 +121,12 @@ namespace AudioUI
     {
         private readonly ISampleProvider _source;
         private readonly BiQuadFilter[,] _filters; // [Channels, Bands]
-        private readonly List<EqBand> _bands;
+        private readonly List<EqPoint> _bands;
         private readonly int _channels;
 
         public WaveFormat WaveFormat => _source.WaveFormat;
 
-        public EqualizerSampleProvider(ISampleProvider source, List<EqBand> bands)
+        public EqualizerSampleProvider(ISampleProvider source, List<EqPoint> bands)
         {
             _source = source;
             _bands = bands;
