@@ -212,7 +212,8 @@ namespace AudioUI
 
             try
             {
-                AudioIntent? intent = await AppConfig.LlmClient.InterpretAsync(userText);
+                AudioIntent? intent = await AppConfig.LlmClient.InterpretAsync(
+                    userText, AppConfig.Preferences.Current.MemoriesForPrompt());
 
                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                 string configFileName = $"config_{timestamp}.txt";

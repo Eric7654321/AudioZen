@@ -24,9 +24,9 @@ namespace AudioUI
         // 每次取用時才組，因為 key 可能來自環境變數，而設定是延遲載入的。
         private string GeminiUrl => _settings.BuildGenerateContentUrl();
 
-        public async Task<AudioIntent?> InterpretAsync(string userText)
+        public async Task<AudioIntent?> InterpretAsync(string userText, IReadOnlyList<string>? memories = null)
         {
-            string raw = await CallGeminiApiAsync(userText, GeminiUrl);
+            string raw = await CallGeminiApiAsync(userText, GeminiUrl, memories);
             return ParseIntent(raw);
         }
 
@@ -166,7 +166,27 @@ namespace AudioUI
         "  ] " +
         "}";
 
-        private async Task<string> CallGeminiApiAsync(string userSpeech, string url)
+        /// <summary>
+        /// 組出送給模型的完整 prompt。抽成獨立方法是為了讓記憶有沒有真的進去這件事測得到——
+        /// 走 HTTP 才驗得到的話，這條路上就沒有任何測試。
+        /// </summary>
+        public string BuildPrompt(string userSpeech, IReadOnlyList<string>? memories = null)
+        {
+            var sb = new StringBuilder(optimizeText);
+
+            // 沒有記憶時一個字都不加：記憶功能關掉的 prompt 要跟沒有這個功能時完全相同。
+            var usable = memories?.Where(m => !string.IsNullOrWhiteSpace(m)).ToList();
+            if (usable is { Count: > 0 })
+            {
+                sb.Append("\n\nKnown user preferences (context only, the User Command still wins):");
+                foreach (string m in usable) sb.Append("\n- ").Append(m.Trim());
+            }
+
+            sb.Append($"\n\nUser Command: \"{userSpeech}\"");
+            return sb.ToString();
+        }
+
+        private async Task<string> CallGeminiApiAsync(string userSpeech, string url, IReadOnlyList<string>? memories = null)
         {
             // 將語音轉換成文字
             if (string.IsNullOrWhiteSpace(userSpeech))
@@ -175,8 +195,7 @@ namespace AudioUI
             }
 
 
-            // 組合最終的 Prompt
-            string fullPrompt = optimizeText + $"\n\nUser Command: \"{userSpeech}\"";
+            string fullPrompt = BuildPrompt(userSpeech, memories);
 
             // 建構 JSON Payload
             var payload = new
@@ -194,10 +213,6 @@ namespace AudioUI
                 }
             };
 
-            string jsonContent = JsonSerializer.Serialize(payload);
-            var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-
-            // 呼叫 Gemini API request並回傳結果
             return await SendGeminiRequestAsync(url, payload);
         }
 
