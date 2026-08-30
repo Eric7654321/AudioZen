@@ -271,18 +271,20 @@ namespace AudioUI
 
         private void AppCard_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            if (sender is FrameworkElement fe && fe.DataContext is AudioAppModel app)
-            {
-                // 不標 Handled 的話事件會冒到視窗的 DragMove，卡片就變成拖曳視窗的把手。
-                e.Handled = true;
+            // 掛在清單上而不是卡片上，因為卡片的 template 三個地方共用，
+            // 而只有控制分頁的卡片該點得進調參。真正被點到的元素從 OriginalSource 回推——
+            // template 裡每一層子元素都繼承同一個 DataContext，撿到哪一層都是同一筆。
+            if ((e.OriginalSource as FrameworkElement)?.DataContext is not AudioAppModel app) return;
 
-                // 對不到路由的 app 就調全域：能調總比按下去沒反應好。
-                string targetId = AppConfig.Routes.ByProcess(app.Name)?.Id ?? RouteTable.GlobalTargetId;
-                _vm.BeginTuning(targetId, app.Name);
+            // 不標 Handled 的話事件會冒到視窗的 DragMove，滑鼠被 capture 走，這一下就變成拖視窗。
+            e.Handled = true;
 
-                ControlListContainer.Visibility = Visibility.Collapsed;
-                TuningPanel.Visibility = Visibility.Visible;
-            }
+            // 對不到路由的 app 就調全域：能調總比按下去沒反應好。
+            string targetId = AppConfig.Routes.ByProcess(app.Name)?.Id ?? RouteTable.GlobalTargetId;
+            _vm.BeginTuning(targetId, app.Name);
+
+            ControlListContainer.Visibility = Visibility.Collapsed;
+            TuningPanel.Visibility = Visibility.Visible;
         }
 
         private void BackToAppList_Click(object? sender, RoutedEventArgs? e)
