@@ -24,8 +24,12 @@ namespace AudioUI.Tests
             // 記憶是背景脈絡，指令才是這次要做的事；順序反過來會讓模型照著舊偏好改。
             string prompt = Client().BuildPrompt("把低音調低", new[] { "偏好紮實的打擊感" });
 
-            Assert.EndsWith("User Command: \"把低音調低\"", prompt);
-            Assert.True(prompt.IndexOf("偏好紮實的打擊感") < prompt.IndexOf("User Command"));
+            // 找的是結尾那個實際的指令段，不是任何提到 "User Command" 的字——
+            // 記憶區段的標頭自己就寫著這幾個字。
+            const string marker = "\n\nUser Command: \"";
+
+            Assert.EndsWith(marker + "把低音調低\"", prompt);
+            Assert.True(prompt.IndexOf("偏好紮實的打擊感") < prompt.IndexOf(marker));
         }
 
         [Fact]
