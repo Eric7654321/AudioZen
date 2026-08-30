@@ -26,11 +26,13 @@ namespace AudioUI
         [JsonPropertyName("graphic_eq_string")]
         public string GraphicEqString { get; set; }
 
-        [JsonPropertyName("comp_json")] 
-        public List<MeldaEntry> CompJson { get; set; } 
+        // 可以是 null，而且 null 有意義：這個目標不要壓縮器 / 殘響。
+        // 後端本來就在檢查，宣告成不可為 null 只是讓型別跟事實對不上。
+        [JsonPropertyName("comp_json")]
+        public List<MeldaEntry>? CompJson { get; set; }
 
         [JsonPropertyName("reverb_json")]
-        public List<MeldaEntry> ReverbJson { get; set; }
+        public List<MeldaEntry>? ReverbJson { get; set; }
     }
 
     public class MeldaEntry{
