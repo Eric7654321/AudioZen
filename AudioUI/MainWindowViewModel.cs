@@ -14,7 +14,7 @@ namespace AudioUI
     public sealed class MainWindowViewModel : INotifyPropertyChanged
     {
         private readonly AudioSessionService _AudioService = new AudioSessionService();
-        private readonly SituationManager _situations = new SituationManager();
+        private readonly SituationManager _situations = AppConfig.CreateSituationManager();
         private readonly IConfigStore _store = AppConfig.ConfigStore;
         private readonly ITextToSpeech _TtsService = new TtsService();
 

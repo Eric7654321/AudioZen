@@ -10,8 +10,13 @@ namespace AudioUI
     /// 列出各 app 目前音量與效果的 toast。留在 UI 層而不是 Infra，因為它讀的是 WPF 的
     /// <see cref="ImageSource"/>——把 WPF 型別帶進 Infra 就等於把那層的平台無關性讓掉了。
     /// </summary>
-    public sealed class AppListNotifier
+    public sealed class AppListNotifier : IAppStateNotifier
     {
+        private readonly AudioSessionService _sessions = new AudioSessionService();
+
+        /// <summary>流程層透過這個入口叫用，所以「要列哪些 app」的知識不必外流到 Core。</summary>
+        public void ShowCurrentApps() => ShowAppNotification(_sessions.GetAppsWithConfig());
+
 private string? SaveImageToTempFile(ImageSource? imageSource, string appName)
         {
             if (imageSource is not BitmapSource bitmapSource) return null;
