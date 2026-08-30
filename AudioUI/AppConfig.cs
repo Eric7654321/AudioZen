@@ -56,6 +56,22 @@ namespace AudioUI
             return store;
         });
 
+        /// <summary>加密後的 API key 儲存。設定頁寫、載入時讀。</summary>
+        public static IApiKeyStore ApiKeys => _apiKeys.Value;
+
+        private static readonly Lazy<IApiKeyStore> _apiKeys = new Lazy<IApiKeyStore>(() => new DpapiApiKeyStore());
+
+        /// <summary>
+        /// 存下使用者在設定頁輸入的 key，並讓這次執行立刻改用它。
+        /// <see cref="GeminiClient"/> 持有的是同一個 <see cref="GeminiSettings"/> 物件、
+        /// 而且每次呼叫才組網址，所以不必重啟。
+        /// </summary>
+        public static void SaveApiKey(string? apiKey)
+        {
+            ApiKeys.Save(apiKey);
+            Settings.Gemini.ApiKey = ResolveApiKey();
+        }
+
         /// <summary>使用者偏好。開檔時載入一次，設定頁改完自己呼叫 Save。</summary>
         public static IPreferencesStore Preferences => _prefs.Value;
 
@@ -91,12 +107,27 @@ namespace AudioUI
                 }
             }
 
-            // 環境變數優先於檔案，讓 CI / 臨時測試不必在磁碟上留 key。
-            string? fromEnv = Environment.GetEnvironmentVariable(GeminiSettings.ApiKeyEnvironmentVariable);
-            if (!string.IsNullOrWhiteSpace(fromEnv))
-                settings.Gemini.ApiKey = fromEnv;
+            _keyFromSettingsFile = settings.Gemini.ApiKey;
+            settings.Gemini.ApiKey = ResolveApiKey();
 
             return settings;
+        }
+
+        /// <summary>appsettings.json 裡寫的 key。留著當最後的後備，免得既有的設定突然失效。</summary>
+        private static string _keyFromSettingsFile = "";
+
+        /// <summary>
+        /// key 的來源優先序：環境變數 → 設定頁存的（加密） → appsettings.json。
+        ///
+        /// 環境變數最優先，讓 CI 與臨時測試不必在磁碟上留東西；設定頁排第二，
+        /// 因為那是使用者最近一次明確表達的意思。
+        /// </summary>
+        private static string ResolveApiKey()
+        {
+            string? fromEnv = Environment.GetEnvironmentVariable(GeminiSettings.ApiKeyEnvironmentVariable);
+            if (!string.IsNullOrWhiteSpace(fromEnv)) return fromEnv;
+
+            return ApiKeys.Read() ?? _keyFromSettingsFile;
         }
     }
 }

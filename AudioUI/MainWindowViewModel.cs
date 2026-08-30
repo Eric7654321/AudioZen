@@ -56,7 +56,7 @@ namespace AudioUI
             }
             catch (Exception ex)
             {
-                AppConfig.Notifier.Notify("錄音處理失敗", ex.Message);
+                AppConfig.Notifier.Notify("錄音處理失敗", GeminiSettings.Redact(ex.Message));
             }
         }
 
@@ -305,7 +305,8 @@ namespace AudioUI
             catch (Exception ex)
             {
                 ChatMessages.Remove(thinkingMsg);
-                ChatMessages.Add(new ChatMessageModel { IsUser = false, Message = $"發生錯誤: {ex.Message}" });
+                // 例外訊息可能夾著帶 key 的網址，而這一行會留在聊天紀錄裡。
+                ChatMessages.Add(new ChatMessageModel { IsUser = false, Message = $"發生錯誤: {GeminiSettings.Redact(ex.Message)}" });
             }
         }
     }
