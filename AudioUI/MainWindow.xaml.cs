@@ -51,16 +51,13 @@ using WinForms = System.Windows.Forms;
 
 namespace AudioUI
 {
-    // --- 資料模型 ---
-    public enum SortMode { NameAsc, NameDesc, VolumeDesc }
-
     // --- 主視窗邏輯 ---
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
         private bool isDrawerOpen = false;
 
         // 服務層
-        private readonly MainWindowViewModel _vm = new MainWindowViewModel();
+        private readonly MainWindowViewModel _vm = AppConfig.CreateMainWindowViewModel();
         private KeyMappingService _KeyMapService = new KeyMappingService();
         private WakeWordTrigger _WakeWordTrigger;
         private PerProcessAudioRecorder _PerProcessAudioRecorder = new PerProcessAudioRecorder();
@@ -139,8 +136,7 @@ namespace AudioUI
             InitSystemTray();
             this.Loaded += (s, e) => InitGlobalHotkeys();
 
-            // 繫結要等畫面真的跑過一輪才解得開，所以排在 render 之後的閒置時段，
-            // 不是 Loaded 當下。
+            // 繫結要等畫面跑過一輪才解得開，所以排在 render 之後的閒置時段。
             this.Loaded += (s, e) => Dispatcher.BeginInvoke(
                 DispatcherPriority.ApplicationIdle, new Action(ReportBindingErrors));
         }
@@ -409,18 +405,14 @@ namespace AudioUI
         private async void TestApiKey_Click(object sender, RoutedEventArgs e) => await _vm.TestApiKeyAsync();
 
         /// <summary>
-        /// 開檔時解不開的繫結，當場講出來。
-        ///
-        /// 這是這個專案唯一驗不到的失效模式：編譯過、測試綠，執行時那一格就是空的，
-        /// 跟「本來就沒東西」長得一模一樣。留一份檔案是因為通知會消失，而這種問題
-        /// 通常要對著 XAML 慢慢看。
+        /// 開檔時解不開的繫結，當場講出來。留一份檔案是因為通知會消失，
+        /// 而這種問題通常要對著 XAML 慢慢看。
         /// </summary>
         private void ReportBindingErrors()
         {
             var log = App.BindingErrors;
 
-            // 沒有錯誤也寫。檔案不在代表這個檢查根本沒跑，而那跟「跑過而且乾淨」
-            // 是兩件不同的事——少了這個檔就分不出來。
+            // 沒有錯誤也寫：檔案不在代表這個檢查沒跑，跟「跑過而且乾淨」是兩回事。
             string path = BindingErrorListener.Flush(log);
             if (log.IsEmpty) return;
 

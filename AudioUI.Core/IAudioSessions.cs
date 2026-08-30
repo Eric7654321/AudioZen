@@ -2,9 +2,7 @@ namespace AudioUI
 {
     /// <summary>
     /// 「現在有誰在出聲」以及「系統上有哪些輸出裝置」。
-    ///
-    /// 抽成介面是為了讓上面的流程能在沒有音效卡的地方被測——實作要列舉 WASAPI session、
-    /// 開 process、抽圖示，這些在測試機上要嘛不存在、要嘛每次跑都不一樣。
+    /// 實作要列舉 WASAPI session 並開 process，那在測試機上要嘛不存在、要嘛每次跑都不一樣。
     /// </summary>
     public interface IAudioSessions
     {

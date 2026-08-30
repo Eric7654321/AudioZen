@@ -9,10 +9,8 @@ using SolidColorBrush = System.Windows.Media.SolidColorBrush;
 namespace AudioUI
 {
     /// <summary>
-    /// 執行檔路徑 → 圖示。
-    ///
-    /// 這一步刻意留在 UI 層：<see cref="AudioAppInfo"/> 帶著 ImageSource 的話，
-    /// 產生它的服務與拿著它的 ViewModel 就都只能住在 WPF 裡。
+    /// 執行檔路徑 → 圖示。這一步留在 UI 層，<see cref="AudioAppInfo"/> 才不必認識
+    /// WPF 的型別。
     /// </summary>
     public sealed class AppIconConverter : IValueConverter
     {

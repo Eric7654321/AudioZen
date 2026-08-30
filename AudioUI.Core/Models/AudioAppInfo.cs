@@ -1,12 +1,11 @@
-namespace AudioUI
+﻿namespace AudioUI
 {
     /// <summary>
     /// 一個正在出聲的程式。卡片、通知、錄音挑目標，讀的都是這一份。
     ///
-    /// 刻意不帶 <c>ImageSource</c> 與 <c>Brush</c>：那兩個是 WPF 型別，帶著它們，
-    /// 這個型別就只能住在 UI 層——連帶回傳它的 <see cref="IAudioSessions"/> 與再上面的
-    /// ViewModel 都一起被釘在那裡，整條相依鏈都測不了。圖示與框線是「怎麼畫」，
-    /// 交給 UI 層從 <see cref="IconPath"/> 與 <see cref="HasConfig"/> 自己算。
+    /// 只有純資料，沒有 <c>ImageSource</c> 與 <c>Brush</c>：帶著 WPF 型別的話，
+    /// 這個型別跟拿到它的每一層都只能住在 UI 裡。圖示與框線是「怎麼畫」，
+    /// 由 UI 層從 <see cref="IconPath"/> 與 <see cref="HasConfig"/> 算出來。
     /// </summary>
     public sealed class AudioAppInfo
     {

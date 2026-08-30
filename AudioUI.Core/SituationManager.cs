@@ -60,7 +60,11 @@ namespace AudioUI
         }
 
         /// <summary>把某個情境退回上一份設定。已經沒有更早的紀錄時只出聲，不動後端。</summary>
-        public async Task ConfigRollback(string IdString)
+        /// <summary>
+        /// 回傳有沒有真的還原。沒有更早的設定時是 false——呼叫端不能把「沒有丟例外」
+        /// 當成成功，那會讓畫面說已還原、而實際上什麼都沒動。
+        /// </summary>
+        public async Task<bool> ConfigRollback(string IdString)
         {
             _store.PopFront(IdString);
 
@@ -68,10 +72,11 @@ namespace AudioUI
             if (previous == null)
             {
                 await _tts.SpeakAsync("已經沒有更早的設定可以還原");
-                return;
+                return false;
             }
 
             _backend.Apply(previous.FileName);
+            return true;
         }
 
         /// <summary>

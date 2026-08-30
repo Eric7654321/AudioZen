@@ -1,9 +1,6 @@
 namespace AudioUI
 {
-    /// <summary>
-    /// 一個裝置區塊在設定檔裡的樣子。純資料，所以住在 Core——
-    /// 解析它的 <c>ConfigService</c> 要碰磁碟，那個留在上層。
-    /// </summary>
+    /// <summary>一個裝置區塊在設定檔裡的樣子。</summary>
     public class AppConfigData
     {
         public string ProcessName { get; set; } = "";

@@ -4,9 +4,7 @@ namespace AudioUI
 {
     /// <summary>
     /// 從 APO 設定檔的文字讀出「這個裝置現在被套了什麼」。
-    ///
-    /// 純字串處理，沒有磁碟也沒有音效卡，所以搬進 Core 就測得到——它餵的是通知列上
-    /// 每個程式後面那句效果摘要，之前從來沒有任何測試碰過它。
+    /// 通知列上每個程式後面那句效果摘要就是這裡產生的。
     /// </summary>
     public static class ApoConfigSummary
     {

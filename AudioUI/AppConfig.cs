@@ -108,6 +108,42 @@ namespace AudioUI
             new SituationManager(AudioBackend, Notifier, SpeechInput, LlmClient, ConfigStore,
                                  TextToSpeech, Preferences, SampleRecorder, AppStateNotifier);
 
+        /// <summary>key 管理。</summary>
+        public static IApiKeyManager ApiKeyManager => _keyManager.Value;
+
+        private static readonly Lazy<IApiKeyManager> _keyManager =
+            new Lazy<IApiKeyManager>(() => new AppConfigApiKeyManager());
+
+        /// <summary>試聽音檔的產生。</summary>
+        public static IAudioPreview AudioPreview => _preview.Value;
+
+        private static readonly Lazy<IAudioPreview> _preview =
+            new Lazy<IAudioPreview>(() => new AudioProcessorPreview());
+
+        /// <summary>設定檔與錄音的落腳處。</summary>
+        public static string ConfigDirectory =>
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config");
+
+        /// <summary>
+        /// 主視窗狀態的唯一接線處。<see cref="MainWindowViewModel"/> 的相依沒有預設值，
+        /// 所以「用哪個實作」這個決定只在這裡出現一次。
+        /// </summary>
+        public static MainWindowViewModel CreateMainWindowViewModel() =>
+            new MainWindowViewModel(
+                new AudioSessionService(),
+                CreateSituationManager(),
+                ConfigStore,
+                TextToSpeech,
+                Notifier,
+                AudioBackend,
+                LlmClient,
+                Preferences,
+                ApiKeyManager,
+                AudioPreview,
+                AppRouter,
+                Routes,
+                ConfigDirectory);
+
         /// <summary>把人話翻成音訊意圖的模型。</summary>
         public static ILlmClient LlmClient => _llm.Value;
 
