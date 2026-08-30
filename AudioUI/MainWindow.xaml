@@ -112,10 +112,9 @@
             </Setter>
         </Style>
         <DataTemplate x:Key="AppCardTemplate">
-            <!-- 點卡片進手動調參。必須在 MouseLeftButtonDown 就處理掉並標成 Handled：
-                 否則事件會冒泡到視窗的 DragMove，滑鼠被 capture 走，MouseLeftButtonUp 永遠不會回到這裡。 -->
-            <Border Width="340" Height="140" BorderBrush="{Binding BorderColor}" BorderThickness="1" Margin="10,10,10,20" Background="#1E1E1E"
-                    Cursor="Hand" MouseLeftButtonDown="AppCard_Click">
+            <!-- 這個 template 三個地方共用（入口的抽屜、控制分頁的最近調整與完整清單），
+                 所以「點了會進調參」不掛在這裡，掛在控制分頁那兩個 ItemsControl 上。 -->
+            <Border Width="340" Height="140" BorderBrush="{Binding BorderColor}" BorderThickness="1" Margin="10,10,10,20" Background="#1E1E1E">
                 <Grid Margin="15,15">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="80"/>
@@ -519,7 +518,8 @@
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <TextBlock Text="最近調整" FontSize="18" Foreground="#DDDDDD" Margin="5,10,0,10"/>
-                    <ItemsControl ItemsSource="{Binding RecentAppList}" ItemTemplate="{StaticResource AppCardTemplate}">
+                    <ItemsControl ItemsSource="{Binding RecentAppList}" ItemTemplate="{StaticResource AppCardTemplate}"
+                                  Cursor="Hand" MouseLeftButtonDown="AppCard_Click">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <StackPanel Orientation="Horizontal"/>
@@ -543,7 +543,8 @@
                             </Button.ContextMenu>
                         </Button>
                     </Grid>
-                    <ItemsControl ItemsSource="{Binding AppList}" ItemTemplate="{StaticResource AppCardTemplate}">
+                    <ItemsControl ItemsSource="{Binding AppList}" ItemTemplate="{StaticResource AppCardTemplate}"
+                                  Cursor="Hand" MouseLeftButtonDown="AppCard_Click">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <WrapPanel Orientation="Horizontal"/>
