@@ -96,25 +96,20 @@ jobs:
           if ($failedTests.Count -gt 0) { $lines += '--- failed tests ---'; $lines += $failedTests }
           if ($warnByCode) { $lines += '--- warnings by code ---'; $lines += ($warnByCode -join ', ') }
 
-          # 分兩種看。宣告層的警告（欄位沒初始化、null 當預設值）是「整份 codebase 沒為
-          # nullable 寫過」的通病，逐條讀沒有意義。流程層的警告代表真的有 null 在程式裡流動，
-          # 每一條都可能是執行期崩潰——CS8604 那次就是這樣抓到的。
+          # 宣告層的警告（欄位沒初始化、null 當預設值）是「整份 codebase 沒為 nullable 寫過」
+          # 的通病，逐條讀沒有意義；其餘一律列出全文。
+          #
+          # 判準刻意是「列舉哪些可以不看」而不是「列舉哪些值得看」。上一版反過來寫，用
+          # 「出現次數 ≤2」與「代碼是 CS8 開頭」兩張網撈訊號，於是 CS0436 兩張都漏掉——
+          # 它出現 10 次、又不是 CS8，最後只在計數那行留下一個數字。要列舉值得看的東西，
+          # 就得先知道它長什麼樣，而新冒出來的警告正好是還不知道的那些。
           $declarationNoise = @('CS8618', 'CS8625')
 
-          $rareCodes = $warnLines |
-            ForEach-Object { if ($_ -match 'warning (CS\d+|[A-Z]+\d+)') { $Matches[1] } } |
-            Group-Object | Where-Object { $_.Count -le 2 } | ForEach-Object { $_.Name }
-          if ($rareCodes) {
-            $lines += '--- rare warnings ---'
-            $lines += ($warnLines | Where-Object { $l = $_; $rareCodes | Where-Object { $l -match "warning $_" } } |
-                       Select-Object -First 20)
-          }
-
-          $flow = $warnLines | Where-Object {
+          $signal = $warnLines | Where-Object {
             $l = $_
-            ($l -match 'warning CS8\d+') -and -not ($declarationNoise | Where-Object { $l -match "warning $_" })
-          } | Select-Object -Unique -First 30
-          if ($flow) { $lines += '--- nullable flow warnings ---'; $lines += $flow }
+            -not ($declarationNoise | Where-Object { $l -match "warning $_\b" })
+          } | Select-Object -Unique -First 40
+          if ($signal) { $lines += '--- warnings worth reading ---'; $lines += $signal }
           New-Item -ItemType Directory -Force -Path out | Out-Null
           $lines -join "`n" | Set-Content -Path out/status.md -Encoding utf8
 
