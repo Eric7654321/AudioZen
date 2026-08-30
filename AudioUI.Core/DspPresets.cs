@@ -20,6 +20,9 @@ namespace AudioUI
             Entries = entries;
         }
 
+        /// <summary>「不要動現在那個」的代號。見 <see cref="IsKeep"/>。</summary>
+        public const string KeepId = "keep";
+
         public string Id { get; }
 
         public string Name { get; }
@@ -27,7 +30,16 @@ namespace AudioUI
         /// <summary>要寫進設定檔的參數；<c>null</c> 表示這個 preset 就是「不要這個效果」。</summary>
         public IReadOnlyList<MeldaEntry>? Entries { get; }
 
-        public bool IsOff => Entries == null;
+        public bool IsOff => Entries == null && !IsKeep;
+
+        /// <summary>
+        /// 「維持目前」：不是一組參數，而是「把設定檔裡本來就有的那份原樣留著」。
+        ///
+        /// 需要它是因為設定檔裡的效果是 Melda 編碼過的 base64，認得出有沒有卻認不回是哪一個。
+        /// 沒有這個選項，面板就只能在「無」與某個具體 preset 之間二選一，
+        /// 而選「無」會把模型剛調出來的壓縮器清掉，畫面上還完全看不出來。
+        /// </summary>
+        public bool IsKeep => Id == KeepId;
 
         /// <summary>給後端用的可變清單。<see cref="AudioTargetConfig"/> 收的是 List。</summary>
         public List<MeldaEntry>? ToList() => Entries?.ToList();
@@ -59,7 +71,10 @@ namespace AudioUI
         public static readonly DspPreset Shout =
             new DspPreset("shout", "防爆麥", Build(threshold: 0.15, ratio: 8.0, attack: 0.02, release: 0.15, kneeSize: 0.2, kneeMode: "Hard"));
 
-        public static readonly IReadOnlyList<DspPreset> All = new[] { Off, Light, Medium, Shout };
+        /// <summary>設定檔裡已經有一份、但認不回是哪個 preset 時選這個。</summary>
+        public static readonly DspPreset Keep = new DspPreset(DspPreset.KeepId, "維持目前", null);
+
+        public static readonly IReadOnlyList<DspPreset> All = new[] { Off, Light, Medium, Shout, Keep };
 
         public static DspPreset ById(string? id) =>
             All.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase)) ?? Off;
@@ -140,7 +155,10 @@ namespace AudioUI
         public static readonly DspPreset Hall =
             new DspPreset("hall", "Hall", Build(dryWet: 0.28, length: 2.2, size: 0.70, predelay: 0.04, widening: 0.45, complexity: 24, modulation: 0.15));
 
-        public static readonly IReadOnlyList<DspPreset> All = new[] { Off, Chamber, Studio, Cave, Hall };
+        /// <summary>設定檔裡已經有一份、但認不回是哪個 preset 時選這個。</summary>
+        public static readonly DspPreset Keep = new DspPreset(DspPreset.KeepId, "維持目前", null);
+
+        public static readonly IReadOnlyList<DspPreset> All = new[] { Off, Chamber, Studio, Cave, Hall, Keep };
 
         public static DspPreset ById(string? id) =>
             All.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase)) ?? Off;

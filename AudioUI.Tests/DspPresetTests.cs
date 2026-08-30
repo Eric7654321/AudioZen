@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 
 namespace AudioUI.Tests
 {
@@ -58,7 +58,8 @@ namespace AudioUI.Tests
         [MemberData(nameof(AllPresets))]
         public void 有內容的_preset_編得出_base64(DspPreset preset)
         {
-            if (preset.IsOff) return;
+            // 「無」與「維持目前」都沒有參數可編：前者是不要效果，後者是別動設定檔裡那份。
+            if (preset.Entries == null) return;
 
             string header = CompressorPresets.All.Contains(preset)
                 ? CompressorPresets.ChunkHeader

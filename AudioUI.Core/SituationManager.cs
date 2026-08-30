@@ -19,6 +19,9 @@ namespace AudioUI
         private readonly IAppStateNotifier _appState;
         private readonly string _recordFolder;
 
+        /// <summary>收尾通知前的緩衝，讓它不會疊在剛才那則上面。測試設 0，否則每個案子都白睡一秒。</summary>
+        private readonly int _settleDelayMs;
+
         /// <summary>
         /// 相依全部由外面給、沒有預設值：預設值會讓「忘了接線」在測試裡看起來一切正常，
         /// 而真正接線的地方只該有一處（<c>AppConfig.CreateSituationManager</c>）。
@@ -26,7 +29,8 @@ namespace AudioUI
         public SituationManager(IAudioBackend backend, INotifier notifier, ISpeechInput speech,
                                 ILlmClient llm, IConfigStore store, ITextToSpeech tts,
                                 IPreferencesStore prefs, ISampleRecorder recorder,
-                                IAppStateNotifier appState, string? recordFolder = null)
+                                IAppStateNotifier appState, string? recordFolder = null,
+                                int settleDelayMs = 1000)
         {
             _backend = backend;
             _notifier = notifier;
@@ -39,6 +43,7 @@ namespace AudioUI
             _appState = appState;
             _recordFolder = recordFolder
                 ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "record");
+            _settleDelayMs = settleDelayMs;
         }
 
         /// <summary>
@@ -153,8 +158,8 @@ namespace AudioUI
                 }
             }
 
-            // Inserted wait for one second as requested (非阻塞)
-            await Task.Delay(1000);
+            // 收尾的通知緊接著上一則會被系統疊掉，所以隔一下再說。
+            if (_settleDelayMs > 0) await Task.Delay(_settleDelayMs);
 
             _notifier.Notify("設定結束", "調整已結束，請享受更好的聲音");
             // 儲存 Chat

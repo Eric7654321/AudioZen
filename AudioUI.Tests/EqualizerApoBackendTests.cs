@@ -256,5 +256,115 @@ namespace AudioUI.Tests
             Assert.Equal(-1.5, panel.Bands[0].Gain, 3);
             Assert.Contains(panel.Bands, b => Math.Abs(b.Gain) > 0.001);
         }
+
+        // --- 壓縮器與殘響的往返 ---
+
+        private static AudioIntent WithCompressor(DspPreset preset)
+        {
+            var intent = Intent("game");
+            intent.Configs[0].CompJson = preset.ToList();
+            intent.Configs[0].CompPresetId = preset.Id;
+            return intent;
+        }
+
+        [Fact]
+        public void 面板選的_preset_寫得下也讀得回來()
+        {
+            using var dir = new TempDir();
+            var backend = Backend(dir);
+            string path = dir.File("out.txt");
+
+            backend.Write(WithCompressor(CompressorPresets.Medium), path);
+            backend.Apply(path);
+
+            var read = backend.ReadCurrent("game");
+            Assert.Equal("medium", read!.CompPresetId);
+            Assert.False(string.IsNullOrWhiteSpace(read.CompChunk));
+        }
+
+        [Fact]
+        public void preset_標記寫成註解_APO_不會把它當指令()
+        {
+            using var dir = new TempDir();
+            string path = dir.File("out.txt");
+            Backend(dir).Write(WithCompressor(CompressorPresets.Light), path);
+
+            string marker = File.ReadAllLines(path).Single(l => l.Contains("comp="));
+            Assert.StartsWith("#", marker.Trim());
+        }
+
+        [Fact]
+        public void 沒有標記時_仍然讀得回那份參數本身()
+        {
+            // 模型自由生成的壓縮器沒有 preset 代號。認不回是哪一個，但認得出「有一個」——
+            // 而那正是不把它清掉所需要的全部。
+            using var dir = new TempDir();
+            var backend = Backend(dir);
+            string path = dir.File("out.txt");
+
+            var intent = Intent("game");
+            intent.Configs[0].CompJson = CompressorPresets.Shout.ToList();
+            backend.Write(intent, path);
+            backend.Apply(path);
+
+            var read = backend.ReadCurrent("game");
+            Assert.Null(read!.CompPresetId);
+            Assert.False(string.IsNullOrWhiteSpace(read.CompChunk));
+        }
+
+        [Fact]
+        public void 只帶_chunk_沒帶參數時_原樣寫回去()
+        {
+            using var dir = new TempDir();
+            var backend = Backend(dir);
+            string path = dir.File("out.txt");
+
+            var intent = Intent("game");
+            intent.Configs[0].CompChunk = "QUJD";
+            backend.Write(intent, path);
+
+            Assert.Contains(File.ReadAllLines(path),
+                            l => l.Contains("MCompressor.dll") && l.Contains("ChunkData \"QUJD\""));
+        }
+
+        [Fact]
+        public void 同時有參數與_chunk_時_以參數為準()
+        {
+            // 使用者在面板上明確選了一個 preset，就是要蓋掉原本那份。
+            using var dir = new TempDir();
+            var backend = Backend(dir);
+            string path = dir.File("out.txt");
+
+            var intent = WithCompressor(CompressorPresets.Medium);
+            intent.Configs[0].CompChunk = "QUJD";
+            backend.Write(intent, path);
+
+            Assert.DoesNotContain(File.ReadAllLines(path), l => l.Contains("ChunkData \"QUJD\""));
+        }
+
+        [Fact]
+        public void 面板動了_EQ_之後套用_不會把壓縮器清掉()
+        {
+            // 這是這一輪要修的那個 bug：設定檔裡的效果是編碼過的 base64，面板讀不回是哪一個，
+            // 於是顯示「無」，按一次套用就靜靜把它拿掉——畫面上完全看不出來。
+            using var dir = new TempDir();
+            var backend = Backend(dir);
+            string path = dir.File("out.txt");
+
+            var fromModel = Intent("game");
+            fromModel.Configs[0].CompJson = CompressorPresets.Shout.ToList();
+            backend.Write(fromModel, path);
+            backend.Apply(path);
+            string original = File.ReadAllLines(path).Single(l => l.Contains("MCompressor.dll"));
+
+            var panel = new TuningViewModel { TargetId = "game" };
+            panel.LoadFrom(backend.ReadCurrent("game"));
+            Assert.Equal(DspPreset.KeepId, panel.CompressorPresetId);
+
+            panel.Bands[0].Gain = 4;
+            backend.Write(panel.BuildIntent(), path);
+
+            Assert.Equal(original, File.ReadAllLines(path).Single(l => l.Contains("MCompressor.dll")));
+        }
     }
 }
