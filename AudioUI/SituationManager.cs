@@ -32,11 +32,13 @@ namespace AudioUI
         private readonly ISpeechInput _speech;
         private readonly ILlmClient _llm;
         private readonly IConfigStore _store;
+        private readonly IPreferencesStore _prefs;
 
         /// <summary>全部可注入，測試才有辦法在不碰使用者設定、不寫進 APO、不跳通知、不講話也不打 API 的情況下跑。</summary>
         public SituationManager(IAudioBackend? backend = null, INotifier? notifier = null,
                                ISpeechInput? speech = null, ILlmClient? llm = null,
-                               IConfigStore? store = null, ITextToSpeech? tts = null)
+                               IConfigStore? store = null, ITextToSpeech? tts = null,
+                               IPreferencesStore? prefs = null)
         {
             _TtsService = tts ?? AppConfig.TextToSpeech;
             _store = store ?? AppConfig.ConfigStore;
@@ -44,6 +46,7 @@ namespace AudioUI
             _notifier = notifier ?? AppConfig.Notifier;
             _speech = speech ?? AppConfig.SpeechInput;
             _llm = llm ?? AppConfig.LlmClient;
+            _prefs = prefs ?? AppConfig.Preferences;
         }
 
 
@@ -97,7 +100,7 @@ namespace AudioUI
 
             // 3. 呼叫 Gemini API
             string transcribedText = await _llm.TranscribeAsync(audioBase64); // STT
-            AudioIntent? intent = await _llm.InterpretAsync(transcribedText);
+            AudioIntent? intent = await _llm.InterpretAsync(transcribedText, _prefs.Current.MemoriesForPrompt());
 
             if (intent != null)
             {
@@ -108,7 +111,7 @@ namespace AudioUI
                 // 模型偶爾會回出不成形的內容，重試幾次通常就過了
                 while (ttsMessage == null && retryCount < 3)
                 {
-                    intent = await _llm.InterpretAsync(transcribedText);
+                    intent = await _llm.InterpretAsync(transcribedText, _prefs.Current.MemoriesForPrompt());
                     ttsMessage = _backend.Write(intent, eqConfigPath);
                     retryCount++;
                 }

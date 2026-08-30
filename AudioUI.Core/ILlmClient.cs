@@ -6,7 +6,11 @@ namespace AudioUI
     /// </summary>
     public interface ILlmClient
     {
-        Task<AudioIntent?> InterpretAsync(string userText);
+        /// <summary>
+        /// <paramref name="memories"/> 是使用者偏好與模型記下的習慣，會當成背景脈絡附在指令前面。
+        /// 兩個記憶開關都關掉時傳空的進來，此時 prompt 與沒有記憶功能時一模一樣。
+        /// </summary>
+        Task<AudioIntent?> InterpretAsync(string userText, IReadOnlyList<string>? memories = null);
 
         /// <summary>把一段 base64 的 wav 轉成文字。認不出內容時回空字串。</summary>
         Task<string> TranscribeAsync(string base64Wav);
