@@ -369,6 +369,8 @@ namespace AudioUI
 
         private void RefreshDependencies_Click(object sender, RoutedEventArgs e) => _vm.RefreshDependencies();
 
+        private void WireRouting_Click(object sender, RoutedEventArgs e) => _vm.WireRouting();
+
         private void SettingsNav_Click(object sender, RoutedEventArgs e)
         {
             string tag = (sender as FrameworkElement)?.Tag?.ToString() ?? "General";

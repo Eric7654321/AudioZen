@@ -708,6 +708,16 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+
+                                <Separator Background="#2A2A2A" Margin="0,14,0,10"/>
+                                <TextBlock Text="把正在播放的程式各自指到該走的虛擬裝置，取代手動去 Voicemeeter 與系統音量設定裡逐個點。"
+                                           FontSize="14" Foreground="#777777" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="自動接線" Width="120" Height="34" MinWidth="0" Margin="0,0,12,0"
+                                            Click="WireRouting_Click" Style="{StaticResource PresetBtnStyle}"/>
+                                    <TextBlock Text="{Binding Vm.RoutingStatus}" FontSize="14" Foreground="#3399FF"
+                                               TextWrapping="Wrap" VerticalAlignment="Center" MaxWidth="420"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 
