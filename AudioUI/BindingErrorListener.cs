@@ -8,8 +8,7 @@ namespace AudioUI
     /// <summary>
     /// 把 WPF 的繫結診斷接到 <see cref="BindingErrorLog"/>。
     ///
-    /// WPF 只有在真的有人在聽的時候才產生這些訊息，所以這個 listener 不裝，
-    /// 繫結錯誤就一個字都不會出現——而它平常只寫進偵錯輸出，沒有偵錯器的時候等於不存在。
+    /// WPF 只有在有 listener 在聽的時候才產生這些訊息，不裝就一個字都不會出現。
     /// </summary>
     internal sealed class BindingErrorListener : TraceListener
     {
@@ -26,14 +25,14 @@ namespace AudioUI
             var source = PresentationTraceSources.DataBindingSource;
             source.Listeners.Add(new BindingErrorListener(log));
 
-            // 只收 Error：Warning 裡大量是「這個屬性沒有實作 INotifyPropertyChanged」之類的
-            // 常態雜訊，混進來就會重演計畫裡那次「通病蓋掉孤例」。
+            // 只收 Error。Warning 大量是「這個屬性沒有實作 INotifyPropertyChanged」
+            // 之類的常態雜訊，混進來會把真正的錯誤蓋掉。
             source.Switch.Level = SourceLevels.Error;
         }
 
         /// <summary>
-        /// 把結果寫成檔案。**沒有錯誤也要寫**——檔案不在代表這個檢查根本沒跑，
-        /// 那跟「跑過而且乾淨」是兩件事，但少了這個檔就分不出來。
+        /// 把結果寫成檔案。沒有錯誤也要寫：檔案不在代表這個檢查沒跑，
+        /// 那跟「跑過而且乾淨」是兩回事，少了這個檔就分不出來。
         /// </summary>
         public static string Flush(BindingErrorLog log)
         {
@@ -63,13 +62,10 @@ namespace AudioUI
         }
 
         /// <summary>
-        /// 看到沒見過的錯誤就把報告重寫一次。
+        /// 看到沒見過的錯誤就把報告重寫一次。切到沒去過的分頁才長出來的元素要到那時候
+        /// 才會報錯，只在結束時寫的話，當機或被強制結束就什麼都不會留下。
         ///
-        /// 啟動時那一次寫檔只涵蓋開檔就解得開的繫結——切到沒去過的分頁才長出來的元素，
-        /// 要等到那時候才會報錯。不在這裡寫的話，只有正常關閉程式才留得下來，
-        /// 而當機或被強制結束正是最需要這份檔案的時候。
-        ///
-        /// 只在「第一次看到」時寫，所以次數有上限，不會變成每畫一幀就寫一次檔。
+        /// 只在「第一次看到」時寫，所以次數有上限，不會變成每畫一幀寫一次檔。
         /// </summary>
         private void Take(string? message)
         {

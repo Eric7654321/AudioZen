@@ -28,8 +28,7 @@ namespace AudioUI.Tests
         [Fact]
         public void ByKeyword_關鍵字不必是整個裝置名()
         {
-            // APO 自己就是子字串比對，這裡的語意要跟它一致，
-            // 否則會出現「摘要說沒設定、實際上有」的分歧。
+            // APO 自己就是子字串比對，語意不一致會出現「摘要說沒設定、實際上有」。
             var map = ApoConfigSummary.ByKeyword(TwoDevices, new[] { "CABLE" });
 
             Assert.Single(map);

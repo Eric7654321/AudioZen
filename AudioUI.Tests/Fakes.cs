@@ -61,9 +61,13 @@ namespace AudioUI.Tests
 
         public List<string> Transcriptions { get; } = new();
 
+        /// <summary>叫它失敗。網路錯誤的訊息常常夾著帶 key 的網址，那條路徑要驗得到。</summary>
+        public Exception? Throws { get; set; }
+
         public Task<AudioIntent?> InterpretAsync(string userText, IReadOnlyList<string>? memories = null)
         {
             Interpretations.Add((userText, memories));
+            if (Throws != null) return Task.FromException<AudioIntent?>(Throws);
             return Task.FromResult(Intent);
         }
 

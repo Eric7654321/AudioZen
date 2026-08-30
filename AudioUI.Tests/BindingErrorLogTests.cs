@@ -17,8 +17,8 @@ namespace AudioUI.Tests
         [Fact]
         public void 同一條錯誤只留一份但次數照算()
         {
-            // 壞掉的繫結寫在 DataTemplate 裡，畫面上有幾筆就報幾次。
-            // 不去重的話，一個錯誤會把清單洗掉，第二個錯誤就看不見了。
+            // 壞掉的繫結寫在 DataTemplate 裡，畫面上有幾筆就報幾次；
+            // 不去重的話一個錯誤會洗掉整張清單。
             var log = new BindingErrorLog();
             for (int i = 0; i < 50; i++) log.Record("BindingExpression path error: 'Foo'");
 

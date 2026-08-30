@@ -9,10 +9,8 @@ using System.Linq;
 namespace AudioUI
 {
     /// <summary>
-    /// 列舉 WASAPI 上正在出聲的程式，回傳 Core 的 <see cref="AudioAppInfo"/>。
-    ///
-    /// 回傳型別刻意不帶 WPF 的圖示與筆刷：那會讓所有拿到這份清單的人一起被釘在 UI 層。
-    /// 這裡只負責「誰在出聲、路徑是什麼」，長相交給畫面決定。
+    /// 列舉 WASAPI 上正在出聲的程式。
+    /// 只負責「誰在出聲、執行檔在哪」，長相由畫面決定。
     /// </summary>
     public class AudioSessionService : IAudioSessions
     {
@@ -122,7 +120,7 @@ namespace AudioUI
 
         /// <summary>
         /// 讀執行檔路徑。跨權限的 process（例如系統服務）讀 MainModule 會丟例外，
-        /// 而那不是錯誤——那個程式只是沒有圖示可以給。
+        /// 那不是錯誤，只代表沒有圖示可以給，那個程式仍然在出聲。
         /// </summary>
         private static string? SafeMainModulePath(Process process)
         {

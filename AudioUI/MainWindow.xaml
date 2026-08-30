@@ -18,8 +18,7 @@
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
-        <!-- 卡片的圖示與框線從 AudioAppInfo 的純資料算出來；那個型別住在 Core，
-             不認得 ImageSource 與 Brush。 -->
+        <!-- 卡片的圖示與框線從 AudioAppInfo 的純資料算出來。 -->
         <local:AppIconConverter x:Key="AppIcon"/>
         <local:ConfigBorderConverter x:Key="ConfigBorder"/>
         <Style x:Key="PresetBtnStyle" TargetType="Button">

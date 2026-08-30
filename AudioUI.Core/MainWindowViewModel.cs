@@ -1,22 +1,70 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.IO;
 using System.Runtime.CompilerServices;
 
 namespace AudioUI
 {
     /// <summary>
-    /// 主視窗背後的狀態與流程。放這裡而不是 code-behind，是為了讓「按下去會發生什麼」
-    /// 跟「按鈕長什麼樣」分開——前者會被改很多次，後者幾乎不動。
+    /// 主視窗背後的狀態與流程。跟 code-behind 分開，是為了讓「按下去會發生什麼」
+    /// 跟「按鈕長什麼樣」各自獨立——前者會被改很多次，後者幾乎不動。
     ///
-    /// 視窗仍然以自己當 DataContext，集合由 MainWindow 轉發過去，所以 XAML 的繫結路徑不變。
+    /// 相依全部由建構式傳進來、沒有預設值：有預設值的話，忘了接線在測試裡看起來
+    /// 會一切正常。
+    ///
+    /// 視窗以自己當 DataContext，集合由 MainWindow 轉發過去，所以 XAML 的繫結路徑
+    /// 對應的是視窗上的屬性，不是這裡。
     /// </summary>
     public sealed class MainWindowViewModel : INotifyPropertyChanged
     {
-        private readonly IAudioSessions _AudioService = new AudioSessionService();
-        private readonly SituationManager _situations = AppConfig.CreateSituationManager();
-        private readonly IConfigStore _store = AppConfig.ConfigStore;
-        private readonly ITextToSpeech _TtsService = new TtsService();
+        private readonly IAudioSessions _sessions;
+        private readonly SituationManager _situations;
+        private readonly IConfigStore _store;
+        private readonly ITextToSpeech _tts;
+        private readonly INotifier _notifier;
+        private readonly IAudioBackend _backend;
+        private readonly ILlmClient _llm;
+        private readonly IPreferencesStore _preferences;
+        private readonly IApiKeyManager _apiKeys;
+        private readonly IAudioPreview _preview;
+        private readonly IAppAudioRouter _router;
+        private readonly RouteTable _routes;
+
+        /// <summary>設定檔與錄音的落腳處。由外面給，測試才不必碰程式的安裝目錄。</summary>
+        private readonly string _configDirectory;
+
+        public MainWindowViewModel(
+            IAudioSessions sessions,
+            SituationManager situations,
+            IConfigStore store,
+            ITextToSpeech tts,
+            INotifier notifier,
+            IAudioBackend backend,
+            ILlmClient llm,
+            IPreferencesStore preferences,
+            IApiKeyManager apiKeys,
+            IAudioPreview preview,
+            IAppAudioRouter router,
+            RouteTable routes,
+            string configDirectory)
+        {
+            _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
+            _situations = situations ?? throw new ArgumentNullException(nameof(situations));
+            _store = store ?? throw new ArgumentNullException(nameof(store));
+            _tts = tts ?? throw new ArgumentNullException(nameof(tts));
+            _notifier = notifier ?? throw new ArgumentNullException(nameof(notifier));
+            _backend = backend ?? throw new ArgumentNullException(nameof(backend));
+            _llm = llm ?? throw new ArgumentNullException(nameof(llm));
+            _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
+            _apiKeys = apiKeys ?? throw new ArgumentNullException(nameof(apiKeys));
+            _preview = preview ?? throw new ArgumentNullException(nameof(preview));
+            _router = router ?? throw new ArgumentNullException(nameof(router));
+            _routes = routes ?? throw new ArgumentNullException(nameof(routes));
+            _configDirectory = configDirectory ?? throw new ArgumentNullException(nameof(configDirectory));
+
+            // 撥一個開關就存一次。TextBox 預設是失焦才寫回來源，所以不會每打一個字存一次。
+            Preferences.PropertyChanged += (_, _) => _preferences.Save();
+            Preferences.AiMemories.CollectionChanged += (_, _) => _preferences.Save();
+        }
 
         public ObservableCollection<AudioAppInfo> AppList { get; } = new ObservableCollection<AudioAppInfo>();
         public ObservableCollection<AudioAppInfo> RecentAppList { get; } = new ObservableCollection<AudioAppInfo>();
@@ -30,7 +78,7 @@ namespace AudioUI
         public TuningViewModel Tuning { get; } = new TuningViewModel();
 
         /// <summary>設定頁直接綁這一份；改完自動存，使用者不必再按一次儲存。</summary>
-        public UserPreferences Preferences => AppConfig.Preferences.Current;
+        public UserPreferences Preferences => _preferences.Current;
 
         private string _apiKeyStatus = "";
 
@@ -55,9 +103,9 @@ namespace AudioUI
         /// <summary>重新體檢。裝置會被插拔，所以這是隨時可以再跑一次的東西，不是啟動時算一次。</summary>
         public void RefreshDependencies() =>
             Dependencies = DependencyChecker.Check(
-                AppConfig.AudioBackend.IsAvailable,
-                _AudioService.RenderDeviceIdentities(),
-                AppConfig.Routes);
+                _backend.IsAvailable,
+                _sessions.RenderDeviceIdentities(),
+                _routes);
 
         private string _routingStatus = "";
 
@@ -77,22 +125,21 @@ namespace AudioUI
         /// </summary>
         public void WireRouting()
         {
-            var router = AppConfig.AppRouter;
-            if (!router.IsSupported)
+            if (!_router.IsSupported)
             {
-                RoutingStatus = router.Route(0, null).Message;
+                RoutingStatus = _router.Route(0, null).Message;
                 return;
             }
 
             var lines = new List<string>();
             int done = 0;
 
-            foreach (var app in _AudioService.List())
+            foreach (var app in _sessions.List())
             {
-                var route = AppConfig.Routes.ByProcess(app.Name);
+                var route = _routes.ByProcess(app.Name);
                 if (route == null || app.ProcessId <= 0) continue;
 
-                var result = router.Route(app.ProcessId, route.Id);
+                var result = _router.Route(app.ProcessId, route.Id);
                 if (result.Ok) done++;
                 else lines.Add($"{app.Name}：{result.Message}");
             }
@@ -103,21 +150,14 @@ namespace AudioUI
         }
 
         /// <summary>目前這把 key 的樣子，只露尾四碼。</summary>
-        public string ApiKeyMasked => AppConfig.Settings.Gemini.Masked;
-
-        public MainWindowViewModel()
-        {
-            // 撥一個開關就存一次。TextBox 預設是失焦才寫回來源，所以不會每打一個字存一次。
-            Preferences.PropertyChanged += (_, _) => AppConfig.Preferences.Save();
-            Preferences.AiMemories.CollectionChanged += (_, _) => AppConfig.Preferences.Save();
-        }
+        public string ApiKeyMasked => _apiKeys.Masked;
 
         /// <summary>存下設定頁輸入的 key。</summary>
         public void SaveApiKey(string? apiKey)
         {
             try
             {
-                AppConfig.SaveApiKey(apiKey);
+                _apiKeys.Save(apiKey);
                 Raise(nameof(ApiKeyMasked));
                 ApiKeyStatus = string.IsNullOrWhiteSpace(apiKey) ? "已清除" : "已儲存，建議按一次測試連線";
             }
@@ -133,7 +173,7 @@ namespace AudioUI
         /// </summary>
         public async Task TestApiKeyAsync()
         {
-            if (!AppConfig.IsConfigured)
+            if (!_apiKeys.IsConfigured)
             {
                 ApiKeyStatus = "還沒有 key";
                 return;
@@ -142,7 +182,7 @@ namespace AudioUI
             ApiKeyStatus = "測試中…";
             try
             {
-                var intent = await AppConfig.LlmClient.InterpretAsync("測試連線");
+                var intent = await _llm.InterpretAsync("測試連線");
                 ApiKeyStatus = intent != null ? "連線正常" : "連得上，但回應看不懂";
             }
             catch (Exception ex)
@@ -153,7 +193,7 @@ namespace AudioUI
 
         public void RemoveAiMemory(string? memory)
         {
-            if (Preferences.RemoveAiMemory(memory)) AppConfig.Preferences.Save();
+            if (Preferences.RemoveAiMemory(memory)) _preferences.Save();
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -171,15 +211,14 @@ namespace AudioUI
         /// <summary>錄一段語音指令、解析、套用，然後把畫面刷新到新狀態。</summary>
         public async Task RecordAndProcessCurrentAsync()
         {
-            string configDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config");
-            string audioPath = Path.Combine(configDir, "command.wav");
-            string configPath = Path.Combine(configDir, $"config_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
+            string audioPath = Path.Combine(_configDirectory, "command.wav");
+            string configPath = Path.Combine(_configDirectory, $"config_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
 
             try
             {
-                if (!Directory.Exists(configDir)) Directory.CreateDirectory(configDir);
+                EnsureConfigDirectory();
 
-                _TtsService.Stop();
+                _tts.Stop();
                 await _situations.RecordAndProcessAsync(CurrentSituationId, audioPath, configPath, 5000);
 
                 RefreshConfigOptions();
@@ -190,7 +229,7 @@ namespace AudioUI
             }
             catch (Exception ex)
             {
-                AppConfig.Notifier.Notify("錄音處理失敗", GeminiSettings.Redact(ex.Message));
+                _notifier.Notify("錄音處理失敗", GeminiSettings.Redact(ex.Message));
             }
         }
 
@@ -212,7 +251,7 @@ namespace AudioUI
 
             if (mapItem == null)
             {
-                AppConfig.Notifier.Notify("找不到情境", $"沒有 ID 為 {id} 的資料");
+                _notifier.Notify("找不到情境", $"沒有 ID 為 {id} 的資料");
                 return;
             }
 
@@ -256,15 +295,23 @@ namespace AudioUI
         {
             if (configId == "cmd_rollback")
             {
-                try { await _situations.ConfigRollback(SituationIds.Transient); AppConfig.Notifier.Notify("快捷鍵觸發", "↩️ 已回復上一個設定"); RefreshConfigOptions(); }
-                catch { AppConfig.Notifier.Notify("無法回復", "沒有歷史紀錄可供還原。"); }
+                try
+                {
+                    if (await _situations.ConfigRollback(SituationIds.Transient))
+                    {
+                        _notifier.Notify("快捷鍵觸發", "↩️ 已回復上一個設定");
+                        RefreshConfigOptions();
+                    }
+                    else _notifier.Notify("無法回復", "沒有更早的設定可以還原。");
+                }
+                catch (Exception ex) { _notifier.Notify("無法回復", ex.Message); }
                 return;
             }
             else if (configId == "cmd_mute" || configId == SituationIds.Mute)
             {
                 var muteItem = _store.ById(SituationIds.Mute);
-                if (muteItem != null && muteItem.FileDatas.Count > 0) { ApplyConfigToAPO(muteItem.FileDatas[0].FileName); AppConfig.Notifier.Notify("快捷鍵觸發", "🔇 已全域靜音"); }
-                else AppConfig.Notifier.Notify("錯誤", "找不到靜音設定檔");
+                if (muteItem != null && muteItem.FileDatas.Count > 0) { ApplyConfigToAPO(muteItem.FileDatas[0].FileName); _notifier.Notify("快捷鍵觸發", "🔇 已全域靜音"); }
+                else _notifier.Notify("錯誤", "找不到靜音設定檔");
                 return;
             }
             else
@@ -276,9 +323,9 @@ namespace AudioUI
                 {
                     ApplyConfigToAPO(mapItem.FileDatas[0].FileName);
                     string name = string.IsNullOrEmpty(mapItem.ChatName) ? $"情境 {configId}" : mapItem.ChatName;
-                    AppConfig.Notifier.Notify("設定已套用", $"⚡ 已切換至：{name}");
+                    _notifier.Notify("設定已套用", $"⚡ 已切換至：{name}");
                 }
-                else AppConfig.Notifier.Notify("設定失敗", $"找不到情境 ID: {configId}");
+                else _notifier.Notify("設定失敗", $"找不到情境 ID: {configId}");
             }
         }
 
@@ -288,27 +335,26 @@ namespace AudioUI
         /// </summary>
         public void ApplyTuning()
         {
-            string configDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config");
-            string configPath = Path.Combine(configDir, $"tuning_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
+            string configPath = Path.Combine(_configDirectory, $"tuning_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
 
             try
             {
-                if (!Directory.Exists(configDir)) Directory.CreateDirectory(configDir);
+                EnsureConfigDirectory();
 
-                string? message = AppConfig.AudioBackend.Write(Tuning.BuildIntent(), configPath);
+                string? message = _backend.Write(Tuning.BuildIntent(), configPath);
                 if (message == null)
                 {
-                    AppConfig.Notifier.Notify("套用失敗", "產生設定檔失敗");
+                    _notifier.Notify("套用失敗", "產生設定檔失敗");
                     return;
                 }
 
                 ApplyConfigToAPO(configPath);
                 RefreshAudioApps();
-                AppConfig.Notifier.Notify("已套用", $"{Tuning.TargetName}：{Tuning.ToneText}");
+                _notifier.Notify("已套用", $"{Tuning.TargetName}：{Tuning.ToneText}");
             }
             catch (Exception ex)
             {
-                AppConfig.Notifier.Notify("套用失敗", ex.Message);
+                _notifier.Notify("套用失敗", ex.Message);
             }
         }
 
@@ -320,13 +366,13 @@ namespace AudioUI
         {
             Tuning.TargetId = targetId;
             Tuning.TargetName = targetName;
-            Tuning.LoadFrom(AppConfig.AudioBackend.ReadCurrent(targetId));
+            Tuning.LoadFrom(_backend.ReadCurrent(targetId));
         }
 
         public void ApplyConfigToAPO(string sourcePath)
         {
-            try { AppConfig.AudioBackend.Apply(sourcePath); }
-            catch (Exception ex) { AppConfig.Notifier.Notify("套用失敗", ex.Message); }
+            try { _backend.Apply(sourcePath); }
+            catch (Exception ex) { _notifier.Notify("套用失敗", ex.Message); }
         }
 
         // --- 4. UI 互動與初始化 ---
@@ -337,24 +383,22 @@ namespace AudioUI
             DeviceList.Add(new DeviceInfoModel { Name = "g304", Description = "Logitech G304 Lightspeed", ImagePath = "mouse.png" });
             DeviceList.Add(new DeviceInfoModel { Name = "Mouse", Description = "Standard Pointing Device", ImagePath = "hamster.png" });
 
-            AppConfig.Preferences.Current.ApplyDeviceImages(DeviceList);
+            _preferences.Current.ApplyDeviceImages(DeviceList);
         }
 
         /// <summary>換掉某台裝置的卡片圖。傳空路徑還原成內建的圖。</summary>
         public void SetDeviceImage(string deviceName, string? imagePath)
         {
-            AppConfig.Preferences.Current.SetDeviceImage(deviceName, imagePath);
-            AppConfig.Preferences.Save();
+            _preferences.Current.SetDeviceImage(deviceName, imagePath);
+            _preferences.Save();
             InitDevices();
         }
 
         public void InitMuteConfig()
         {
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string configDir = Path.Combine(baseDir, "config");
-            if (!Directory.Exists(configDir)) Directory.CreateDirectory(configDir);
+            EnsureConfigDirectory();
 
-            string muteFilePath = Path.Combine(configDir, "mute.txt");
+            string muteFilePath = Path.Combine(_configDirectory, "mute.txt");
             if (!File.Exists(muteFilePath)) File.WriteAllText(muteFilePath, "Device: all\r\nPreamp: -100 dB\r\n# System Mute Config");
 
             var existing = _store.ById(SituationIds.Mute);
@@ -384,7 +428,7 @@ namespace AudioUI
             AppList.Clear(); RecentAppList.Clear();
             var globalApp = new AudioAppInfo { Name = "整體調整", SystemVolume = 100, Config = new AppConfigData { TargetDevice = "System" } };
             RecentAppList.Add(globalApp); AppList.Add(globalApp);
-            try { var sessions = _AudioService.List(); var sessionList = new List<AudioAppInfo>(sessions); foreach (var app in sessionList.Take(3)) RecentAppList.Add(app); var sorted = CurrentSortMode switch { SortMode.NameDesc => sessionList.OrderByDescending(x => x.Name), SortMode.VolumeDesc => sessionList.OrderByDescending(x => x.SystemVolume), _ => sessionList.OrderBy(x => x.Name) }; foreach (var app in sorted) AppList.Add(app); } catch { }
+            try { var sessions = _sessions.List(); var sessionList = new List<AudioAppInfo>(sessions); foreach (var app in sessionList.Take(3)) RecentAppList.Add(app); var sorted = CurrentSortMode switch { SortMode.NameDesc => sessionList.OrderByDescending(x => x.Name), SortMode.VolumeDesc => sessionList.OrderByDescending(x => x.SystemVolume), _ => sessionList.OrderBy(x => x.Name) }; foreach (var app in sorted) AppList.Add(app); } catch { }
         }
 
         /// <summary>
@@ -400,14 +444,13 @@ namespace AudioUI
 
             try
             {
-                AudioIntent? intent = await AppConfig.LlmClient.InterpretAsync(
-                    userText, AppConfig.Preferences.Current.MemoriesForPrompt());
+                AudioIntent? intent = await _llm.InterpretAsync(
+                    userText, _preferences.Current.MemoriesForPrompt());
 
                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                string configFileName = $"config_{timestamp}.txt";
-                string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", configFileName);
+                string configPath = Path.Combine(_configDirectory, $"config_{timestamp}.txt");
 
-                string aiMessage = AppConfig.AudioBackend.Write(intent, configPath) ?? "抱歉，我無法理解您的調整需求。";
+                string aiMessage = _backend.Write(intent, configPath) ?? "抱歉，我無法理解您的調整需求。";
 
                 var currentChat = _store.ById(CurrentSituationId.ToString());
                 string recordFolder = currentChat?.RecordPath ?? "";
@@ -417,7 +460,7 @@ namespace AudioUI
                     ? Directory.GetFiles(recordFolder, "*.wav").FirstOrDefault() ?? ""
                     : "";
                 string previewWavPath = (!string.IsNullOrEmpty(originalWav)
-                    ? AudioProcessor.GeneratePreview(originalWav, configPath)
+                    ? _preview.Generate(originalWav, configPath)
                     : "") ?? "";
 
                 var newData = new SituationEntry
@@ -446,6 +489,11 @@ namespace AudioUI
                 // 例外訊息可能夾著帶 key 的網址，而這一行會留在聊天紀錄裡。
                 ChatMessages.Add(new ChatMessageModel { IsUser = false, Message = $"發生錯誤: {GeminiSettings.Redact(ex.Message)}" });
             }
+        }
+
+        private void EnsureConfigDirectory()
+        {
+            if (!Directory.Exists(_configDirectory)) Directory.CreateDirectory(_configDirectory);
         }
     }
 }

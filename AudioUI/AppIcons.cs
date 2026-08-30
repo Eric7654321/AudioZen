@@ -9,8 +9,8 @@ using System.Windows.Media.Imaging;
 namespace AudioUI
 {
     /// <summary>
-    /// 從執行檔路徑抽出圖示。抽圖示是 shell 的 P/Invoke，而清單每次重整都會把每個程式
-    /// 重走一遍，所以照路徑快取。
+    /// 從執行檔路徑抽出圖示。抽圖示是 shell 的 P/Invoke，而清單每次重整都會把每個
+    /// 程式重走一遍，所以照路徑快取。
     ///
     /// 抽完就 Freeze：通知列不在 UI 執行緒上跑，沒凍住的 BitmapSource 換執行緒用會炸。
     /// </summary>
