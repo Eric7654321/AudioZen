@@ -158,6 +158,16 @@ namespace AudioUI
             DeviceList.Add(new DeviceInfoModel { Name = "自定義宏鍵盤", Description = "交大創客特供版", ImagePath = "keyboard.png" });
             DeviceList.Add(new DeviceInfoModel { Name = "g304", Description = "Logitech G304 Lightspeed", ImagePath = "mouse.png" });
             DeviceList.Add(new DeviceInfoModel { Name = "Mouse", Description = "Standard Pointing Device", ImagePath = "hamster.png" });
+
+            AppConfig.Preferences.Current.ApplyDeviceImages(DeviceList);
+        }
+
+        /// <summary>換掉某台裝置的卡片圖。傳空路徑還原成內建的圖。</summary>
+        public void SetDeviceImage(string deviceName, string? imagePath)
+        {
+            AppConfig.Preferences.Current.SetDeviceImage(deviceName, imagePath);
+            AppConfig.Preferences.Save();
+            InitDevices();
         }
 
         public void InitMuteConfig()

@@ -47,6 +47,13 @@ namespace AudioUI
 
         // --- 個人化 ---
 
+        /// <summary>
+        /// 每台裝置的自訂圖，鍵是裝置名稱。用名稱而不是另發一組 id，
+        /// 是因為名稱已經是現成的身分——按鍵綁定就是用 <c>device.Name</c> 去查的。
+        /// </summary>
+        [JsonPropertyName("deviceImages")]
+        public Dictionary<string, string> DeviceImages { get; set; } = new Dictionary<string, string>();
+
         [JsonPropertyName("wakeWord")]
         public string WakeWord { get; set; } = DefaultWakeWord;
 
@@ -73,6 +80,40 @@ namespace AudioUI
 
             AiMemories.Add(trimmed);
             return true;
+        }
+
+        // --- 裝置 ---
+
+        /// <summary>某台裝置的自訂圖；沒設定過回 null，呼叫端據此沿用內建的圖。</summary>
+        public string? DeviceImage(string? deviceName)
+        {
+            if (string.IsNullOrWhiteSpace(deviceName)) return null;
+            return DeviceImages.TryGetValue(deviceName.Trim(), out string? path) && !string.IsNullOrWhiteSpace(path)
+                ? path
+                : null;
+        }
+
+        /// <summary>設定或清除自訂圖。傳空路徑等於清除，讓「還原成預設」不必另開一個方法。</summary>
+        public bool SetDeviceImage(string? deviceName, string? imagePath)
+        {
+            if (string.IsNullOrWhiteSpace(deviceName)) return false;
+            string key = deviceName.Trim();
+
+            if (string.IsNullOrWhiteSpace(imagePath)) return DeviceImages.Remove(key);
+
+            DeviceImages[key] = imagePath.Trim();
+            return true;
+        }
+
+        /// <summary>把自訂圖蓋到一份裝置清單上。沒設定過的維持原樣。</summary>
+        public void ApplyDeviceImages(IEnumerable<DeviceInfoModel>? devices)
+        {
+            if (devices == null) return;
+            foreach (var d in devices)
+            {
+                string? custom = DeviceImage(d.Name);
+                if (custom != null) d.ImagePath = custom;
+            }
         }
 
         public bool RemoveAiMemory(string? text)
