@@ -141,5 +141,120 @@ namespace AudioUI.Tests
             var ex = Assert.Throws<DirectoryNotFoundException>(() => backend.Apply(source));
             Assert.Contains("apo.configDirectory", ex.Message);
         }
+
+        // --- ReadCurrent：面板打開時要看到現況 ---
+
+        [Fact]
+        public void ReadCurrent_套用過的設定讀得回來()
+        {
+            using var dir = new TempDir();
+            var backend = Backend(dir);
+            string path = dir.File("out.txt");
+            backend.Write(Intent("game"), path);
+            backend.Apply(path);
+
+            var current = backend.ReadCurrent("game");
+
+            Assert.NotNull(current);
+            Assert.Equal("game", current!.Target);
+            Assert.Equal(-6, current.PreampDb, 3);
+            Assert.Equal("25 0; 40 -3", current.GraphicEqString);
+        }
+
+        [Fact]
+        public void ReadCurrent_沒套用過回_null_而不是一份空設定()
+        {
+            // 這個差別就是這次的 bug：拿到一份全零的設定，按套用就把現況洗掉了。
+            using var dir = new TempDir();
+            Assert.Null(Backend(dir).ReadCurrent("game"));
+        }
+
+        [Fact]
+        public void ReadCurrent_認不得的目標回_null()
+        {
+            using var dir = new TempDir();
+            var backend = Backend(dir);
+            string path = dir.File("out.txt");
+            backend.Write(Intent("game"), path);
+            backend.Apply(path);
+
+            Assert.Null(backend.ReadCurrent("不存在的目標"));
+        }
+
+        [Fact]
+        public void ReadCurrent_只拿自己那一段_不會撈到別的裝置()
+        {
+            using var dir = new TempDir();
+            var backend = new EqualizerApoBackend(
+                new ApoSettings { ConfigDirectory = dir.Path, FragmentFileName = "audiozen.txt" },
+                new RouteTable(new[]
+                {
+                    new AudioRoute { Id = "game", DevicePattern = "CABLE Input", Processes = { "eldenring.exe" } },
+                    new AudioRoute { Id = "voice", DevicePattern = "Voicemeeter AUX Input", Processes = { "discord.exe" } },
+                }));
+
+            string path = dir.File("out.txt");
+            backend.Write(new AudioIntent
+            {
+                MessageForUser = "好了",
+                Configs = new List<AudioTargetConfig>
+                {
+                    new AudioTargetConfig { Target = "game", PreampDb = -6, GraphicEqString = "25 4" },
+                    new AudioTargetConfig { Target = "voice", PreampDb = -2, GraphicEqString = "25 -1" },
+                },
+            }, path);
+            backend.Apply(path);
+
+            Assert.Equal(-6, backend.ReadCurrent("game")!.PreampDb, 3);
+            Assert.Equal("25 -1", backend.ReadCurrent("voice")!.GraphicEqString);
+        }
+
+        [Fact]
+        public void ReadCurrent_讀得回自己寫出去的小數_不受地區設定影響()
+        {
+            var previous = System.Globalization.CultureInfo.CurrentCulture;
+            try
+            {
+                // 小數點是逗號的地區，寫出去的 "-3,74" 讀回來會變成 -3。
+                System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("de-DE");
+
+                using var dir = new TempDir();
+                var backend = Backend(dir);
+                string path = dir.File("out.txt");
+                backend.Write(new AudioIntent
+                {
+                    MessageForUser = "好了",
+                    Configs = new List<AudioTargetConfig>
+                    {
+                        new AudioTargetConfig { Target = "game", PreampDb = -3.74, GraphicEqString = "25 1.5" },
+                    },
+                }, path);
+                backend.Apply(path);
+
+                Assert.Equal(-3.74, backend.ReadCurrent("game")!.PreampDb, 2);
+            }
+            finally
+            {
+                System.Globalization.CultureInfo.CurrentCulture = previous;
+            }
+        }
+
+        [Fact]
+        public void ReadCurrent_接得上面板_打開時不是一排零()
+        {
+            using var dir = new TempDir();
+            var backend = Backend(dir);
+            string path = dir.File("out.txt");
+            backend.Write(Intent("game"), path);
+            backend.Apply(path);
+
+            var panel = new TuningViewModel();
+            panel.LoadFrom(backend.ReadCurrent("game"));
+
+            // 25 與 40 都落在 0~200 這一段，所以滑桿拿到的是兩者的平均。
+            // 十五個點壓成七根滑桿本來就會這樣，重點是「不是零」。
+            Assert.Equal(-1.5, panel.Bands[0].Gain, 3);
+            Assert.Contains(panel.Bands, b => Math.Abs(b.Gain) > 0.001);
+        }
     }
 }

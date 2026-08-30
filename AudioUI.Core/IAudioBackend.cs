@@ -19,5 +19,13 @@
 
         /// <summary>套用一份已生成的設定檔。失敗時丟例外，訊息要能讓使用者知道下一步做什麼。</summary>
         void Apply(string configFilePath);
+
+        /// <summary>
+        /// 讀出某個目標目前生效的設定；沒套用過或讀不到時回 <c>null</c>。
+        ///
+        /// 手調面板打開時要顯示現況而不是一排零，而「現況」的唯一事實來源是後端真正在套的東西——
+        /// 語音改的與手調改的都在那裡，程式重開也還在。
+        /// </summary>
+        AudioTargetConfig? ReadCurrent(string? targetId);
     }
 }
