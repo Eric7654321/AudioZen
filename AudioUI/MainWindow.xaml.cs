@@ -421,7 +421,19 @@ namespace AudioUI
                 { "btn07", 97 },  { "btn08", 98 },  { "btn09", 99 },
                 { "btn10", 96 },  { "btn11", 110 }, { "btn12", 13 }
             };
-            foreach (var kvp in keyMap) { _HotkeyService.Register(kvp.Value, 1, (uint)kvp.Value); }
+            // 註冊失敗要講出來。這些是 Alt + 數字鍵盤，被別的程式佔走是常態，
+            // 而失敗時的表現跟「按了但沒綁設定」一模一樣，不講的話沒人分得出是哪一種。
+            var failed = new List<string>();
+            foreach (var kvp in keyMap)
+            {
+                if (!_HotkeyService.Register(kvp.Value, 1, (uint)kvp.Value)) failed.Add(kvp.Key);
+            }
+
+            if (failed.Count == keyMap.Count)
+                SendNotification("快捷鍵沒有註冊成功", "全部都被其他程式佔用了，或視窗還沒準備好。");
+            else if (failed.Count > 0)
+                SendNotification("部分快捷鍵無法使用", $"被佔用：{string.Join("、", failed)}");
+
             _HotkeyService.OnHotkeyPressed += HandleGlobalHotkey;
         }
 

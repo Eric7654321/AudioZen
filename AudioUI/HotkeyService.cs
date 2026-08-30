@@ -30,9 +30,13 @@ namespace AudioUI
         // 註冊快捷鍵
         // modifier: Alt=1, Ctrl=2, Shift=4, None=0
         // vk: 虛擬鍵碼 (例如 Numpad1 = 97)
-        public void Register(int id, uint modifier, uint vk)
+        //
+        // 回傳註冊成功與否。Windows 會在別的程式已經佔走同一組鍵時直接拒絕，
+        // 而原本這裡把回傳值丟掉——熱鍵按下去沒反應時，連「有沒有註冊成功」都無從得知。
+        public bool Register(int id, uint modifier, uint vk)
         {
-            RegisterHotKey(_windowHandle, id, modifier, vk);
+            if (_windowHandle == IntPtr.Zero) return false;
+            return RegisterHotKey(_windowHandle, id, modifier, vk);
         }
 
         public void Unregister(int id)
