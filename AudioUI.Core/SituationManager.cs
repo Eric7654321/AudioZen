@@ -41,6 +41,19 @@ namespace AudioUI
                 ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "record");
         }
 
+        /// <summary>
+        /// 樣本錄音失敗不算整輪失敗。它只被拿來當 preset 的附件，而 process loopback 要
+        /// Windows 10 build 20348 以上——在舊機器上它每次都會丟，讓它把後面的回退詢問與
+        /// 存檔一起帶走，等於設定套出去了卻收不了尾。
+        ///
+        /// 不通知使用者：這件事在不支援的機器上是每次都發生，講了就是每次都吵。
+        /// </summary>
+        private async Task<string> RecordSampleAsync()
+        {
+            try { return await _recorder.RecordActiveAppsAsync(_recordFolder, TimeSpan.FromSeconds(6)); }
+            catch { return ""; }
+        }
+
         /// <summary>把某個情境退回上一份設定。已經沒有更早的紀錄時只出聲，不動後端。</summary>
         public async Task ConfigRollback(string IdString)
         {
@@ -61,7 +74,7 @@ namespace AudioUI
         /// </summary>
         public async Task RecordAndProcessAsync(int situationId, string audioFilePath, string eqConfigPath, int recordMs = 5000)
         {
-            Task<string> recordPathTask = _recorder.RecordActiveAppsAsync(_recordFolder, TimeSpan.FromSeconds(6));
+            Task<string> recordPathTask = RecordSampleAsync();
 
             // 0. 第一次回應
             _appState.ShowCurrentApps();
