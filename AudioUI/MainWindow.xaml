@@ -16,6 +16,29 @@
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <Style x:Key="PresetBtnStyle" TargetType="Button">
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="MinWidth" Value="118"/>
+            <Setter Property="Margin" Value="0,0,12,12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="pb" Background="#252525" CornerRadius="22" BorderBrush="#3A3A3A" BorderThickness="1">
+                            <TextBlock Text="{TemplateBinding Content}" Foreground="#DDDDDD" FontSize="16"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" Margin="18,0"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="pb" Property="Background" Value="#333333"/>
+                                <Setter TargetName="pb" Property="BorderBrush" Value="#3399FF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style TargetType="TextBlock">
             <Setter Property="Foreground" Value="#DDFFFFFF"/>
             <Setter Property="FontFamily" Value="Microsoft JhengHei UI"/>
@@ -89,7 +112,9 @@
             </Setter>
         </Style>
         <DataTemplate x:Key="AppCardTemplate">
-            <Border Width="340" Height="140" BorderBrush="{Binding BorderColor}" BorderThickness="1" Margin="10,10,10,20" Background="#1E1E1E">
+            <!-- 點卡片進手動調參。用 MouseLeftButtonUp 而不是包一層 Button，卡片的外觀才不用重畫。 -->
+            <Border Width="340" Height="140" BorderBrush="{Binding BorderColor}" BorderThickness="1" Margin="10,10,10,20" Background="#1E1E1E"
+                    Cursor="Hand" MouseLeftButtonUp="AppCard_Click">
                 <Grid Margin="15,15">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="80"/>
@@ -452,7 +477,7 @@
         </Grid>
 
         <Grid x:Name="ControlView" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Visibility="Hidden" Margin="20,10,20,0">
-            <!-- 略過 ControlView 內容，已完成 -->
+          <Grid x:Name="ControlListContainer">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -527,6 +552,123 @@
                     <Border Height="50"/>
                 </StackPanel>
             </ScrollViewer>
+          </Grid>
+
+          <!-- 手動調參。跟 DeviceView 用同一種切換方式：清單與細節在同一格裡互換。 -->
+          <Grid x:Name="TuningPanel" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,18">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Click="BackToAppList_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,0,12,0">
+                        <icon:PackIconMaterial Kind="ChevronLeft" Width="26" Height="26" Foreground="#DDDDDD"/>
+                    </Button>
+                    <TextBlock Text="{Binding Tuning.TargetName}" FontSize="26" Foreground="White" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Tuning.ModeName}" FontSize="16" Foreground="#777777" VerticalAlignment="Center" Margin="14,4,0,0"/>
+                </StackPanel>
+                <Button HorizontalAlignment="Right" VerticalAlignment="Center" Width="152" Margin="0"
+                        Content="{Binding Tuning.ModeToggleText}" Click="ToggleTuningMode_Click" Style="{StaticResource PresetBtnStyle}"/>
+            </Grid>
+
+            <!-- 一般模式 -->
+            <StackPanel Grid.Row="1" Visibility="{Binding Tuning.IsSimpleMode, Converter={StaticResource BoolToVis}}">
+                <TextBlock Text="音量縮放" FontSize="18" Foreground="#DDDDDD" Margin="0,0,0,8"/>
+                <Grid Margin="0,0,0,28">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="70"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider Grid.Column="0" Minimum="0" Maximum="100" VerticalAlignment="Center"
+                            Value="{Binding Tuning.VolumePercent, Mode=TwoWay}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Tuning.VolumeText}" FontSize="18" Foreground="White"
+                               HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                </Grid>
+
+                <TextBlock Text="音色調整" FontSize="18" Foreground="#DDDDDD" Margin="0,0,0,10"/>
+                <ItemsControl ItemsSource="{Binding Tuning.ToneOptions}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Content="{Binding Name}" Tag="{Binding Id}" Click="TonePreset_Click" Style="{StaticResource PresetBtnStyle}"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+
+            <!-- 專業模式 -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                          Visibility="{Binding Tuning.IsProMode, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <TextBlock Text="EQ" FontSize="20" Foreground="#DDDDDD" Margin="0,0,0,10"/>
+                    <Border Background="#151515" CornerRadius="12" Padding="20,18" Margin="0,0,0,24">
+                        <ItemsControl ItemsSource="{Binding Tuning.Bands}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><UniformGrid Rows="1"/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding GainText}" FontSize="14" Foreground="#3399FF"
+                                                   HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                        <Slider Orientation="Vertical" Height="170" HorizontalAlignment="Center"
+                                                Minimum="{Binding Min}" Maximum="{Binding Max}"
+                                                Value="{Binding Gain, Mode=TwoWay}"/>
+                                        <TextBlock Text="{Binding Label}" FontSize="13" Foreground="#999999"
+                                                   HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
+
+                    <TextBlock Text="Compressor" FontSize="20" Foreground="#DDDDDD" Margin="0,0,0,10"/>
+                    <ItemsControl ItemsSource="{Binding Tuning.CompressorOptions}" Margin="0,0,0,20">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding Name}" Tag="{Binding Id}" Click="CompressorPreset_Click" Style="{StaticResource PresetBtnStyle}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Text="Reverb" FontSize="20" Foreground="#DDDDDD" Margin="0,0,0,10"/>
+                    <ItemsControl ItemsSource="{Binding Tuning.ReverbOptions}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding Name}" Tag="{Binding Id}" Click="ReverbPreset_Click" Style="{StaticResource PresetBtnStyle}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Border Height="30"/>
+                </StackPanel>
+            </ScrollViewer>
+
+            <Grid Grid.Row="2" Margin="0,14,0,14">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="音色：" FontSize="15" Foreground="#777777"/>
+                    <TextBlock Text="{Binding Tuning.ToneText}" FontSize="15" Foreground="#DDDDDD" Margin="0,0,18,0"/>
+                    <TextBlock Text="壓縮：" FontSize="15" Foreground="#777777"/>
+                    <TextBlock Text="{Binding Tuning.CompressorName}" FontSize="15" Foreground="#DDDDDD" Margin="0,0,18,0"/>
+                    <TextBlock Text="殘響：" FontSize="15" Foreground="#777777"/>
+                    <TextBlock Text="{Binding Tuning.ReverbName}" FontSize="15" Foreground="#DDDDDD"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="重設" Width="110" Click="ResetTuning_Click" Style="{StaticResource PresetBtnStyle}"/>
+                    <Button Content="套用" Width="130" Click="ApplyTuning_Click" Style="{StaticResource PresetBtnStyle}"/>
+                </StackPanel>
+            </Grid>
+          </Grid>
         </Grid>
 
         <Grid x:Name="DeviceView" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Visibility="Hidden" Margin="20,10,20,0">

@@ -77,6 +77,9 @@ namespace AudioUI
         public ObservableCollection<SituationSummary> ChatList => _vm.ChatList;
         public ObservableCollection<ChatMessageModel> ChatMessages => _vm.ChatMessages;
 
+        /// <summary>手動調參面板的狀態，繫結路徑是 Tuning.*。</summary>
+        public TuningViewModel Tuning => _vm.Tuning;
+
         private string _selectedDeviceName = "";
 
         public string SelectedDeviceName
@@ -228,6 +231,49 @@ namespace AudioUI
 
         // --- 2. 系統列 & 快捷鍵 & Config ---
 
+        // --- 手動調參 ---
+
+        private void AppCard_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is AudioAppModel app)
+            {
+                // 對不到路由的 app 就調全域：能調總比按下去沒反應好。
+                string targetId = AppConfig.Routes.ByProcess(app.Name)?.Id ?? RouteTable.GlobalTargetId;
+                _vm.BeginTuning(targetId, app.Name);
+
+                ControlListContainer.Visibility = Visibility.Collapsed;
+                TuningPanel.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void BackToAppList_Click(object? sender, RoutedEventArgs? e)
+        {
+            TuningPanel.Visibility = Visibility.Collapsed;
+            ControlListContainer.Visibility = Visibility.Visible;
+        }
+
+        private void ToggleTuningMode_Click(object sender, RoutedEventArgs e) =>
+            _vm.Tuning.IsProMode = !_vm.Tuning.IsProMode;
+
+        private void TonePreset_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement fe) _vm.Tuning.ApplyTonePreset(fe.Tag?.ToString());
+        }
+
+        private void CompressorPreset_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement fe) _vm.Tuning.CompressorPresetId = fe.Tag?.ToString() ?? "";
+        }
+
+        private void ReverbPreset_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement fe) _vm.Tuning.ReverbPresetId = fe.Tag?.ToString() ?? "";
+        }
+
+        private void ResetTuning_Click(object sender, RoutedEventArgs e) => _vm.Tuning.Reset();
+
+        private void ApplyTuning_Click(object sender, RoutedEventArgs e) => _vm.ApplyTuning();
+
         private void InitSystemTray()
         {
             _notifyIcon = new WinForms.NotifyIcon();
@@ -343,7 +389,7 @@ namespace AudioUI
         {
             var btn = sender as System.Windows.Controls.Button; if (btn == null) return; string tag = btn.Tag?.ToString() ?? ""; ResetTabs();
             if (tag == "Entrance") { SidebarBorder.Visibility = Visibility.Visible; HighlightTab(TabEntrance, LineEntrance); EntranceView.Visibility = Visibility.Visible; }
-            else if (tag == "Control") { SidebarBorder.Visibility = Visibility.Collapsed; HighlightTab(TabControl, LineControl); ControlView.Visibility = Visibility.Visible; _vm.RefreshAudioApps(); }
+            else if (tag == "Control") { SidebarBorder.Visibility = Visibility.Collapsed; HighlightTab(TabControl, LineControl); ControlView.Visibility = Visibility.Visible; _vm.RefreshAudioApps(); BackToAppList_Click(null, null); }
             else if (tag == "Device") { SidebarBorder.Visibility = Visibility.Collapsed; HighlightTab(TabDevice, LineDevice); if (this.FindName("DeviceView") is Grid v) v.Visibility = Visibility.Visible; BackToDeviceList_Click(null, null); }
         }
         private void ResetTabs()
