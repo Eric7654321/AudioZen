@@ -67,6 +67,9 @@ namespace AudioUI
         {
             foreach (var band in EqBands.All)
                 Bands.Add(new EqBandSlider(band, OnBandChanged));
+
+            // 全平也是一個預設（"無"）。不算一次的話，面板一打開就顯示「自訂」。
+            RefreshActiveTonePreset();
         }
 
         public ObservableCollection<EqBandSlider> Bands { get; } = new ObservableCollection<EqBandSlider>();
