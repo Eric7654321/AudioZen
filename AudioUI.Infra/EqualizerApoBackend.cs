@@ -1,4 +1,6 @@
-﻿namespace AudioUI
+﻿using System.Globalization;
+
+namespace AudioUI
 {
     /// <summary>
     /// 把設定交給 Equalizer APO。
@@ -57,7 +59,7 @@
                         }
 
                         // 2. 寫入 Preamp
-                        sw.WriteLine($"Preamp: {config.PreampDb} dB");
+                        sw.WriteLine($"Preamp: {config.PreampDb.ToString(CultureInfo.InvariantCulture)} dB");
 
                         // 3. 寫入 GraphicEQ
                         if (!string.IsNullOrEmpty(config.GraphicEqString))
@@ -102,6 +104,51 @@
 
             File.Copy(configFilePath, FragmentPath, overwrite: true);
             EnsureIncluded();
+        }
+
+        /// <summary>
+        /// 從已套用的 fragment 裡讀回某個目標的設定。
+        ///
+        /// 只還原得了 <c>Preamp</c> 與 <c>GraphicEQ</c>：壓縮與殘響在檔案裡是 Melda 的 base64 chunk，
+        /// 認得出「有沒有」卻認不回是哪一個 preset，所以那兩欄留 null 而不是亂猜一個。
+        /// </summary>
+        public AudioTargetConfig? ReadCurrent(string? targetId)
+        {
+            string? wanted = _routes.ResolveDevicePattern(targetId);
+            if (wanted == null || !File.Exists(FragmentPath)) return null;
+
+            AudioTargetConfig? found = null;
+            bool inSection = false;
+
+            foreach (string raw in File.ReadAllLines(FragmentPath))
+            {
+                string line = raw.Trim();
+
+                if (line.StartsWith("Device:", StringComparison.OrdinalIgnoreCase))
+                {
+                    // 換到下一個 Device 區段就停：同一個目標只會被寫一次。
+                    if (inSection) break;
+
+                    inSection = string.Equals(line[7..].Trim(), wanted, StringComparison.OrdinalIgnoreCase);
+                    if (inSection) found = new AudioTargetConfig { Target = targetId ?? RouteTable.GlobalTargetId };
+                    continue;
+                }
+
+                if (!inSection || found == null) continue;
+
+                if (line.StartsWith("Preamp:", StringComparison.OrdinalIgnoreCase))
+                {
+                    string value = line[7..].Replace("dB", "", StringComparison.OrdinalIgnoreCase).Trim();
+                    if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double db))
+                        found.PreampDb = db;
+                }
+                else if (line.StartsWith("GraphicEQ:", StringComparison.OrdinalIgnoreCase))
+                {
+                    found.GraphicEqString = line[10..].Trim();
+                }
+            }
+
+            return found;
         }
 
         /// <summary>

@@ -251,11 +251,15 @@ namespace AudioUI
             }
         }
 
-        /// <summary>打開面板前把目標填好，標題才不會停在上一個 app。</summary>
+        /// <summary>
+        /// 打開面板前把現況填進去。不讀的話面板是一排零，而按下套用就會把
+        /// 目前生效的設定整個洗掉——使用者不會知道自己剛剛清掉了什麼。
+        /// </summary>
         public void BeginTuning(string targetId, string targetName)
         {
             Tuning.TargetId = targetId;
             Tuning.TargetName = targetName;
+            Tuning.LoadFrom(AppConfig.AudioBackend.ReadCurrent(targetId));
         }
 
         public void ApplyConfigToAPO(string sourcePath)
