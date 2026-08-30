@@ -41,6 +41,24 @@ namespace AudioUI
             private set { _apiKeyStatus = value; Raise(); }
         }
 
+        private DependencyReport _dependencies = DependencyChecker.Check(false, null, null);
+
+        /// <summary>執行環境的體檢結果：APO 與虛擬裝置在不在。</summary>
+        public DependencyReport Dependencies
+        {
+            get => _dependencies;
+            private set { _dependencies = value; Raise(); Raise(nameof(DependencySummary)); }
+        }
+
+        public string DependencySummary => _dependencies.Summary;
+
+        /// <summary>重新體檢。裝置會被插拔，所以這是隨時可以再跑一次的東西，不是啟動時算一次。</summary>
+        public void RefreshDependencies() =>
+            Dependencies = DependencyChecker.Check(
+                AppConfig.AudioBackend.IsAvailable,
+                _AudioService.GetRenderDeviceIdentities(),
+                AppConfig.Routes);
+
         /// <summary>目前這把 key 的樣子，只露尾四碼。</summary>
         public string ApiKeyMasked => AppConfig.Settings.Gemini.Masked;
 

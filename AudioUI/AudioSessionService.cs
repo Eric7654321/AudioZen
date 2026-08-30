@@ -40,6 +40,30 @@ namespace AudioUI
     {
         private ConfigService _configService = new ConfigService();
 
+        /// <summary>
+        /// 目前系統上的音訊輸出裝置識別字串，格式對齊 APO 比對用的
+        /// <c>裝置名稱 連線名稱 GUID</c>——名稱與 GUID 都在裡面，所以路由表的樣式可以直接比。
+        /// </summary>
+        public IReadOnlyList<string> GetRenderDeviceIdentities()
+        {
+            var list = new List<string>();
+            try
+            {
+                var enumerator = new MMDeviceEnumerator();
+                foreach (var device in enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active))
+                {
+                    try { list.Add($"{device.FriendlyName} {device.ID}"); }
+                    catch { }
+                }
+            }
+            catch
+            {
+                // 列舉不到就回空的：呼叫端會把它報成「每條路由都找不到裝置」，
+                // 那正好是使用者當下的實際處境。
+            }
+            return list;
+        }
+
         public ObservableCollection<AudioAppModel> GetAppsWithConfig()
         {
             var apps = new ObservableCollection<AudioAppModel>();

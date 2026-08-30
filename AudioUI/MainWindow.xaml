@@ -693,6 +693,24 @@
                 <Grid>
                     <!-- 一般 -->
                     <StackPanel x:Name="SettingsPageGeneral" Visibility="Visible">
+                        <TextBlock Text="執行環境" FontSize="24" Foreground="White" Margin="0,0,0,12"/>
+                        <Border Background="#1A1A1A" CornerRadius="8" Padding="14,12" Margin="0,0,0,28">
+                            <StackPanel>
+                                <Grid>
+                                    <TextBlock Text="{Binding Vm.DependencySummary}" FontSize="16" Foreground="#DDDDDD" VerticalAlignment="Center"/>
+                                    <Button Content="重新檢查" Width="110" Height="34" MinWidth="0" Margin="0"
+                                            HorizontalAlignment="Right" Click="RefreshDependencies_Click" Style="{StaticResource PresetBtnStyle}"/>
+                                </Grid>
+                                <ItemsControl ItemsSource="{Binding Vm.Dependencies.Problems}" Margin="0,8,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}" FontSize="14" Foreground="#E0A030" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
                         <TextBlock Text="一般設定" FontSize="24" Foreground="White" Margin="0,0,0,24"/>
                         <CheckBox Content="在開機時自動啟用應用程式" Foreground="#DDDDDD" FontSize="17"
                                   IsChecked="{Binding Preferences.LaunchAtStartup, Mode=TwoWay}"/>

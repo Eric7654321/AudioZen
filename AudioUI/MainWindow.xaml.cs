@@ -362,7 +362,12 @@ namespace AudioUI
 
             SidebarBorder.Visibility = Visibility.Collapsed;
             SettingsView.Visibility = Visibility.Visible;
+
+            // 每次打開都重新體檢：裝置會被插拔，啟動時算一次的結果撐不了多久。
+            _vm.RefreshDependencies();
         }
+
+        private void RefreshDependencies_Click(object sender, RoutedEventArgs e) => _vm.RefreshDependencies();
 
         private void SettingsNav_Click(object sender, RoutedEventArgs e)
         {
