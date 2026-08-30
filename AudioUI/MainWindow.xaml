@@ -112,9 +112,10 @@
             </Setter>
         </Style>
         <DataTemplate x:Key="AppCardTemplate">
-            <!-- 點卡片進手動調參。用 MouseLeftButtonUp 而不是包一層 Button，卡片的外觀才不用重畫。 -->
+            <!-- 點卡片進手動調參。必須在 MouseLeftButtonDown 就處理掉並標成 Handled：
+                 否則事件會冒泡到視窗的 DragMove，滑鼠被 capture 走，MouseLeftButtonUp 永遠不會回到這裡。 -->
             <Border Width="340" Height="140" BorderBrush="{Binding BorderColor}" BorderThickness="1" Margin="10,10,10,20" Background="#1E1E1E"
-                    Cursor="Hand" MouseLeftButtonUp="AppCard_Click">
+                    Cursor="Hand" MouseLeftButtonDown="AppCard_Click">
                 <Grid Margin="15,15">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="80"/>
@@ -224,7 +225,7 @@
             <Image Source="icon.png" Width="80" Height="80" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Grid>
         <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" WindowChrome.IsHitTestVisibleInChrome="True">
-            <Button Style="{StaticResource WindowControlBtnStyle}" Padding="5">
+            <Button x:Name="SettingsGearButton" Style="{StaticResource WindowControlBtnStyle}" Padding="5" Click="SettingsGear_Click" ToolTip="設定">
                 <icon:PackIconMaterial Kind="Cog" Width="16" Height="16"/>
             </Button>
             <Button Style="{StaticResource WindowControlBtnStyle}" Padding="5" Margin="5,0,20,0">
@@ -246,10 +247,6 @@
             <Grid>
                 <Button x:Name="TabDevice" Content="裝 置" Click="Tab_Click" Tag="Device" Style="{StaticResource NavBtnStyle}"/>
                 <Border x:Name="LineDevice" VerticalAlignment="Bottom" Height="4" Background="#3399FF" Margin="20,0,20,-4" CornerRadius="2" Visibility="Hidden"/>
-            </Grid>
-            <Grid>
-                <Button x:Name="TabSettings" Content="設 定" Click="Tab_Click" Tag="Settings" Style="{StaticResource NavBtnStyle}"/>
-                <Border x:Name="LineSettings" VerticalAlignment="Bottom" Height="4" Background="#3399FF" Margin="20,0,20,-4" CornerRadius="2" Visibility="Hidden"/>
             </Grid>
         </StackPanel>
         <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Bottom" BorderBrush="#333333" BorderThickness="0,0,0,1"/>
@@ -303,7 +300,7 @@
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
-                                <TextBox x:Name="ChatInputBox" Background="Transparent" BorderThickness="0" Foreground="#E0E0E0" FontSize="18" CaretBrush="White" VerticalContentAlignment="Center" Padding="0">
+                                <TextBox x:Name="ChatInputBox" KeyDown="ChatInputBox_KeyDown" Background="Transparent" BorderThickness="0" Foreground="#E0E0E0" FontSize="18" CaretBrush="White" VerticalContentAlignment="Center" Padding="0">
                                     <TextBox.Style>
                                         <Style TargetType="TextBox">
                                             <Setter Property="Template">
@@ -885,7 +882,7 @@
                         </Grid>
                     </Border>
                     <Grid Grid.Column="1" Background="#050505">
-                        <Image Source="keyboard.png" Stretch="Uniform" Opacity="1.0" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        <Image Source="{Binding SelectedDeviceImagePath}" Stretch="Uniform" Opacity="1.0" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                         <Viewbox Stretch="Uniform">
                             <Grid Width="600" Height="600">
                                 <Border Margin="110,70,110,90" BorderBrush="White" BorderThickness="2" CornerRadius="30" IsHitTestVisible="False"/>
