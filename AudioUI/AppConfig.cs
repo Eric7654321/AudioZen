@@ -56,6 +56,16 @@ namespace AudioUI
             return store;
         });
 
+        /// <summary>使用者偏好。開檔時載入一次，設定頁改完自己呼叫 Save。</summary>
+        public static IPreferencesStore Preferences => _prefs.Value;
+
+        private static readonly Lazy<IPreferencesStore> _prefs = new Lazy<IPreferencesStore>(() =>
+        {
+            var store = new JsonPreferencesStore(Notifier);
+            store.Load();
+            return store;
+        });
+
         /// <summary>把人話翻成音訊意圖的模型。</summary>
         public static ILlmClient LlmClient => _llm.Value;
 

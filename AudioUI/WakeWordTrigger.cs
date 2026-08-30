@@ -27,8 +27,9 @@ namespace AudioUI
             {
                 _recognizer = new SpeechRecognitionEngine(new CultureInfo("zh-TW"));
 
+                // 喚醒詞是偏好，不是常數：hi-fi 的個人化頁要讓使用者自己錄一個。
                 Choices commands = new Choices();
-                commands.Add(new string[] { "心平氣和" });
+                commands.Add(new string[] { AppConfig.Preferences.Current.EffectiveWakeWord });
 
                 GrammarBuilder gb = new GrammarBuilder();
                 gb.Culture = new CultureInfo("zh-TW");
