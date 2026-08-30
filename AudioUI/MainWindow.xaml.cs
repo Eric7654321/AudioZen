@@ -90,6 +90,14 @@ namespace AudioUI
         public MainWindowViewModel Vm => _vm;
 
         private string _selectedDeviceName = "";
+        private string? _selectedDeviceImagePath;
+
+        /// <summary>裝置內頁的大圖。跟卡片同一個來源，換過圖之後兩邊要一致。</summary>
+        public string? SelectedDeviceImagePath
+        {
+            get => _selectedDeviceImagePath;
+            set { _selectedDeviceImagePath = value; OnPropertyChanged(); }
+        }
 
         public string SelectedDeviceName
         {
@@ -139,6 +147,25 @@ namespace AudioUI
             _vm.CurrentSituationId = -1;
             if (this.FindName("DefaultEntrancePanel") is Grid home) home.Visibility = Visibility.Visible;
             if (this.FindName("ChatSessionPanel") is Grid chat) chat.Visibility = Visibility.Collapsed;
+        }
+
+        /// <summary>
+        /// 入口那個輸入框按 Enter 就送出。它原本只有麥克風按鈕，打了字沒有任何地方接，
+        /// 所以整個文字路徑在畫面上是進不去的。
+        /// </summary>
+        private async void ChatInputBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key != System.Windows.Input.Key.Enter) return;
+            if (string.IsNullOrWhiteSpace(ChatInputBox.Text)) return;
+
+            e.Handled = true;
+            string text = ChatInputBox.Text;
+            ChatInputBox.Text = "";
+
+            if (this.FindName("DefaultEntrancePanel") is Grid home) home.Visibility = Visibility.Collapsed;
+            if (this.FindName("ChatSessionPanel") is Grid chat) chat.Visibility = Visibility.Visible;
+
+            await _vm.SendAdjustmentAsync(text);
         }
 
         private void ChatSession_Click(object sender, RoutedEventArgs e)
@@ -246,6 +273,9 @@ namespace AudioUI
         {
             if (sender is FrameworkElement fe && fe.DataContext is AudioAppModel app)
             {
+                // 不標 Handled 的話事件會冒到視窗的 DragMove，卡片就變成拖曳視窗的把手。
+                e.Handled = true;
+
                 // 對不到路由的 app 就調全域：能調總比按下去沒反應好。
                 string targetId = AppConfig.Routes.ByProcess(app.Name)?.Id ?? RouteTable.GlobalTargetId;
                 _vm.BeginTuning(targetId, app.Name);
@@ -294,15 +324,43 @@ namespace AudioUI
             };
 
             // 存的是絕對路徑而不是複製檔案：使用者換掉原圖時卡片跟著變，也不用管清理。
-            if (dialog.ShowDialog() == true) _vm.SetDeviceImage(SelectedDeviceName, dialog.FileName);
+            if (dialog.ShowDialog() != true) return;
+
+            _vm.SetDeviceImage(SelectedDeviceName, dialog.FileName);
+            // InitDevices 會重建整個清單，內頁那張大圖抓的是舊物件，要自己跟上。
+            SelectedDeviceImagePath = dialog.FileName;
         }
 
         private void ResetDeviceImage_Click(object sender, RoutedEventArgs e)
         {
-            if (!string.IsNullOrWhiteSpace(SelectedDeviceName)) _vm.SetDeviceImage(SelectedDeviceName, null);
+            if (string.IsNullOrWhiteSpace(SelectedDeviceName)) return;
+
+            _vm.SetDeviceImage(SelectedDeviceName, null);
+            SelectedDeviceImagePath = _vm.DeviceList.FirstOrDefault(d => d.Name == SelectedDeviceName)?.ImagePath;
         }
 
         // --- 設定 ---
+
+        /// <summary>
+        /// 齒輪是開關：設定已經開著時再按一次就回入口。設定不佔一個分頁，
+        /// 所以沒有分頁指示器可以告訴使用者要怎麼離開。
+        /// </summary>
+        private void SettingsGear_Click(object sender, RoutedEventArgs e)
+        {
+            bool alreadyOpen = SettingsView.Visibility == Visibility.Visible;
+
+            ResetTabs();
+            if (alreadyOpen)
+            {
+                HighlightTab(TabEntrance, LineEntrance);
+                SidebarBorder.Visibility = Visibility.Visible;
+                EntranceView.Visibility = Visibility.Visible;
+                return;
+            }
+
+            SidebarBorder.Visibility = Visibility.Collapsed;
+            SettingsView.Visibility = Visibility.Visible;
+        }
 
         private void SettingsNav_Click(object sender, RoutedEventArgs e)
         {
@@ -386,7 +444,9 @@ namespace AudioUI
         {
             if (sender is FrameworkElement fe && fe.DataContext is DeviceInfoModel device)
             {
-                SelectedDeviceName = device.Name; _vm.RefreshConfigOptions(); LoadKeyButtons(device.Name);
+                SelectedDeviceName = device.Name;
+                SelectedDeviceImagePath = device.ImagePath;
+                _vm.RefreshConfigOptions(); LoadKeyButtons(device.Name);
                 if (this.FindName("DeviceListContainer") is FrameworkElement list) list.Visibility = Visibility.Collapsed;
                 if (this.FindName("DeviceDetailPanel") is FrameworkElement detail) detail.Visibility = Visibility.Visible;
             }
@@ -452,7 +512,7 @@ namespace AudioUI
             if (tag == "Entrance") { SidebarBorder.Visibility = Visibility.Visible; HighlightTab(TabEntrance, LineEntrance); EntranceView.Visibility = Visibility.Visible; }
             else if (tag == "Control") { SidebarBorder.Visibility = Visibility.Collapsed; HighlightTab(TabControl, LineControl); ControlView.Visibility = Visibility.Visible; _vm.RefreshAudioApps(); BackToAppList_Click(null, null); }
             else if (tag == "Device") { SidebarBorder.Visibility = Visibility.Collapsed; HighlightTab(TabDevice, LineDevice); if (this.FindName("DeviceView") is Grid v) v.Visibility = Visibility.Visible; BackToDeviceList_Click(null, null); }
-            else if (tag == "Settings") { SidebarBorder.Visibility = Visibility.Collapsed; HighlightTab(TabSettings, LineSettings); SettingsView.Visibility = Visibility.Visible; }
+
         }
         private void ResetTabs()
         {
@@ -461,7 +521,6 @@ namespace AudioUI
             TabControl.Foreground = gray; TabControl.FontWeight = FontWeights.Normal; LineControl.Visibility = Visibility.Hidden;
             if (this.FindName("TabDevice") is System.Windows.Controls.Button t) { t.Foreground = gray; t.FontWeight = FontWeights.Normal; }
             if (this.FindName("LineDevice") is Border l) { l.Visibility = Visibility.Hidden; }
-            TabSettings.Foreground = gray; TabSettings.FontWeight = FontWeights.Normal; LineSettings.Visibility = Visibility.Hidden;
             EntranceView.Visibility = Visibility.Collapsed; ControlView.Visibility = Visibility.Collapsed;
             SettingsView.Visibility = Visibility.Collapsed;
             if (this.FindName("DeviceView") is Grid v) v.Visibility = Visibility.Collapsed;
