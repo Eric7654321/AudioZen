@@ -11,7 +11,7 @@ namespace AudioUI
     public class WakeWordTrigger
     {
         private SpeechRecognitionEngine _recognizer;
-        private SituationManager _situations = new SituationManager();
+        private SituationManager _situations = AppConfig.CreateSituationManager();
 
         // 這是主視窗的參考 (Pointer)，不要在裡面 new 新的！
         private MainWindow _currentMainWindow;

@@ -88,6 +88,26 @@ namespace AudioUI
             return store;
         });
 
+        /// <summary>列出目前在出聲的程式。</summary>
+        public static IAppStateNotifier AppStateNotifier => _appState.Value;
+
+        private static readonly Lazy<IAppStateNotifier> _appState =
+            new Lazy<IAppStateNotifier>(() => new AppListNotifier());
+
+        /// <summary>錄下各程式的輸出當樣本。</summary>
+        public static ISampleRecorder SampleRecorder => _recorder.Value;
+
+        private static readonly Lazy<ISampleRecorder> _recorder =
+            new Lazy<ISampleRecorder>(() => new ProcessLoopbackSampleRecorder());
+
+        /// <summary>
+        /// 語音調整主流程的唯一接線處。<see cref="SituationManager"/> 住在 Core、相依沒有預設值，
+        /// 所以「用哪個實作」這個決定只在這裡出現一次。
+        /// </summary>
+        public static SituationManager CreateSituationManager() =>
+            new SituationManager(AudioBackend, Notifier, SpeechInput, LlmClient, ConfigStore,
+                                 TextToSpeech, Preferences, SampleRecorder, AppStateNotifier);
+
         /// <summary>把人話翻成音訊意圖的模型。</summary>
         public static ILlmClient LlmClient => _llm.Value;
 
