@@ -33,6 +33,27 @@ namespace AudioUI
 
         [JsonPropertyName("reverb_json")]
         public List<MeldaEntry>? ReverbJson { get; set; }
+
+        // --- 以下不進 JSON：模型不會回這些，它們是設定檔與面板之間的往返資訊。 ---
+
+        /// <summary>產生 <see cref="CompJson"/> 的那個 preset 代號。模型自由生成的沒有代號，所以是 null。</summary>
+        [JsonIgnore]
+        public string? CompPresetId { get; set; }
+
+        [JsonIgnore]
+        public string? ReverbPresetId { get; set; }
+
+        /// <summary>
+        /// 從既有設定檔讀回來的壓縮器參數，原封不動的 base64。
+        ///
+        /// 認不回是哪個 preset 時，這是唯一能把它原樣寫回去的東西——沒有它，面板按一次套用
+        /// 就會把模型調出來的壓縮器靜靜清掉。
+        /// </summary>
+        [JsonIgnore]
+        public string? CompChunk { get; set; }
+
+        [JsonIgnore]
+        public string? ReverbChunk { get; set; }
     }
 
     public class MeldaEntry{

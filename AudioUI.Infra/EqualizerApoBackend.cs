@@ -67,16 +67,26 @@ namespace AudioUI
                             sw.WriteLine($"GraphicEQ: {config.GraphicEqString}");
                         }
 
-                        if (config.CompJson != null && config.CompJson.Count > 0)
+                        // 3.5 記下這兩個效果是哪個 preset 產生的。APO 會忽略 # 開頭的行，
+                        //     而少了這一行，下次讀回來只看得到一串 base64——認不回是哪一個，
+                        //     面板就只能顯示「無」，然後按一次套用把它清掉。
+                        string? marker = PresetMarker(config);
+                        if (marker != null) sw.WriteLine(marker);
+
+                        string? compChunk = config.CompJson is { Count: > 0 }
+                            ? MeldaEncoder.EncodeMeldaChunk(CompressorPresets.ChunkHeader, config.CompJson)
+                            : config.CompChunk;
+                        if (!string.IsNullOrWhiteSpace(compChunk))
                         {
-                            string base64String = MeldaEncoder.EncodeMeldaChunk(CompressorPresets.ChunkHeader, config.CompJson);
-                            sw.WriteLine(VstPluginLine(Path.Combine("Dynamics", "MCompressor.dll"), base64String));
+                            sw.WriteLine(VstPluginLine(Path.Combine("Dynamics", "MCompressor.dll"), compChunk));
                         }
 
-                        if (config.ReverbJson != null && config.ReverbJson.Count > 0)
+                        string? reverbChunk = config.ReverbJson is { Count: > 0 }
+                            ? MeldaEncoder.EncodeMeldaChunk(ReverbPresets.ChunkHeader, config.ReverbJson)
+                            : config.ReverbChunk;
+                        if (!string.IsNullOrWhiteSpace(reverbChunk))
                         {
-                            string base64String = MeldaEncoder.EncodeMeldaChunk(ReverbPresets.ChunkHeader, config.ReverbJson);
-                            sw.WriteLine(VstPluginLine(Path.Combine("Reverb", "MCharmVerb.dll"), base64String));
+                            sw.WriteLine(VstPluginLine(Path.Combine("Reverb", "MCharmVerb.dll"), reverbChunk));
                         }
 
                         // 4. 加入一個空行分隔不同裝置的設定 (可選)
@@ -86,6 +96,18 @@ namespace AudioUI
             }
 
             return eqResponse.MessageForUser;
+        }
+
+        /// <summary>本程式自己看的註解行，格式 <c># AudioZen: comp=medium; reverb=off</c>。</summary>
+        internal const string MarkerPrefix = "# AudioZen:";
+
+        /// <summary>兩個效果都不知道是哪個 preset（模型自由生成的那條路）時回 null，不寫沒有內容的行。</summary>
+        private static string? PresetMarker(AudioTargetConfig config)
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(config.CompPresetId)) parts.Add($"comp={config.CompPresetId}");
+            if (!string.IsNullOrWhiteSpace(config.ReverbPresetId)) parts.Add($"reverb={config.ReverbPresetId}");
+            return parts.Count == 0 ? null : $"{MarkerPrefix} {string.Join("; ", parts)}";
         }
 
         /// <summary>APO 的 VSTPlugin 指令要絕對路徑，DLL 位置則隨 Melda 的安裝目錄走。</summary>
@@ -146,9 +168,52 @@ namespace AudioUI
                 {
                     found.GraphicEqString = line[10..].Trim();
                 }
+                else if (line.StartsWith(MarkerPrefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    ReadMarker(line[MarkerPrefix.Length..], found);
+                }
+                else if (line.StartsWith("VSTPlugin:", StringComparison.OrdinalIgnoreCase))
+                {
+                    string? chunk = ChunkDataOf(line);
+                    if (chunk == null) continue;
+
+                    // 認的是 DLL 檔名而不是路徑：Melda 裝在哪由設定決定，可能跟寫的時候不一樣。
+                    if (line.Contains("MCompressor.dll", StringComparison.OrdinalIgnoreCase)) found.CompChunk = chunk;
+                    else if (line.Contains("MCharmVerb.dll", StringComparison.OrdinalIgnoreCase)) found.ReverbChunk = chunk;
+                }
             }
 
             return found;
+        }
+
+        /// <summary>解析 <c>comp=medium; reverb=hall</c>。認不得的欄位跳過，不讓一個錯字毀掉整行。</summary>
+        private static void ReadMarker(string body, AudioTargetConfig config)
+        {
+            foreach (string part in body.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                int eq = part.IndexOf('=');
+                if (eq <= 0) continue;
+
+                string key = part[..eq].Trim();
+                string value = part[(eq + 1)..].Trim();
+                if (value.Length == 0) continue;
+
+                if (string.Equals(key, "comp", StringComparison.OrdinalIgnoreCase)) config.CompPresetId = value;
+                else if (string.Equals(key, "reverb", StringComparison.OrdinalIgnoreCase)) config.ReverbPresetId = value;
+            }
+        }
+
+        /// <summary>抓 VSTPlugin 行裡 <c>ChunkData "..."</c> 的內容。</summary>
+        private static string? ChunkDataOf(string line)
+        {
+            int at = line.IndexOf("ChunkData", StringComparison.OrdinalIgnoreCase);
+            if (at < 0) return null;
+
+            int open = line.IndexOf('"', at);
+            if (open < 0) return null;
+
+            int close = line.IndexOf('"', open + 1);
+            return close < 0 ? null : line[(open + 1)..close];
         }
 
         /// <summary>

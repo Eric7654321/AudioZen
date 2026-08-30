@@ -62,6 +62,8 @@ namespace AudioUI
         private string _targetName = "整體調整";
         private string _compressorPresetId = CompressorPresets.Off.Id;
         private string _reverbPresetId = ReverbPresets.Off.Id;
+        private string? _compChunk;
+        private string? _reverbChunk;
 
         public TuningViewModel()
         {
@@ -174,19 +176,45 @@ namespace AudioUI
 
             if (!string.IsNullOrWhiteSpace(config.Target)) TargetId = config.Target;
 
-            // 設定檔裡只剩編碼過的參數，認不回是哪個 preset；能確定的只有「沒有這個效果」。
-            // 所以有內容時維持現在選的，不去猜。
-            if (config.CompJson == null) CompressorPresetId = CompressorPresets.Off.Id;
-            if (config.ReverbJson == null) ReverbPresetId = ReverbPresets.Off.Id;
+            // 設定檔裡的效果是 Melda 編碼過的 base64。寫的時候留了註解記下是哪個 preset，
+            // 有那行就認得回來；沒有（模型自由生成的那條路）就選「維持目前」並把原本那份留著，
+            // 按下套用時原樣寫回去——不然這個面板會靜靜把它清掉。
+            _compChunk = config.CompChunk;
+            _reverbChunk = config.ReverbChunk;
+            CompressorPresetId = ResolvePreset(config.CompPresetId, config.CompChunk, CompressorPresets.All, CompressorPresets.Keep);
+            ReverbPresetId = ResolvePreset(config.ReverbPresetId, config.ReverbChunk, ReverbPresets.All, ReverbPresets.Keep);
 
             RefreshActiveTonePreset();
         }
 
+        /// <summary>
+        /// 讀回來的東西要對到哪個選項：認得的 preset 就選它；認不得但確實有一份，
+        /// 就選「維持目前」；什麼都沒有才是「無」。
+        /// </summary>
+        private static string ResolvePreset(string? presetId, string? chunk,
+                                            IReadOnlyList<DspPreset> options, DspPreset keep)
+        {
+            var named = options.FirstOrDefault(
+                p => !p.IsKeep && !p.IsOff && string.Equals(p.Id, presetId, StringComparison.OrdinalIgnoreCase));
+            if (named != null) return named.Id;
+
+            return string.IsNullOrWhiteSpace(chunk) ? options.First(p => p.IsOff).Id : keep.Id;
+        }
+
         /// <summary>把面板上的東西變成一份可以交給後端的設定。</summary>
-        public AudioTargetConfig BuildConfig() =>
-            TonePresets.ToTargetConfig(TargetId, Bands.Select(b => b.Gain).ToList(), VolumePercent,
-                                       CompressorPresets.ById(_compressorPresetId),
-                                       ReverbPresets.ById(_reverbPresetId));
+        public AudioTargetConfig BuildConfig()
+        {
+            var compressor = CompressorPresets.ById(_compressorPresetId);
+            var reverb = ReverbPresets.ById(_reverbPresetId);
+
+            var config = TonePresets.ToTargetConfig(TargetId, Bands.Select(b => b.Gain).ToList(), VolumePercent,
+                                                    compressor, reverb);
+
+            // 「維持目前」沒有自己的參數，要留的是讀進來時那一份原封不動的 base64。
+            if (compressor.IsKeep) config.CompChunk = _compChunk;
+            if (reverb.IsKeep) config.ReverbChunk = _reverbChunk;
+            return config;
+        }
 
         public AudioIntent BuildIntent() => new AudioIntent
         {
@@ -200,6 +228,8 @@ namespace AudioUI
             ApplyTonePreset(TonePresets.Flat.Id);
             CompressorPresetId = CompressorPresets.Off.Id;
             ReverbPresetId = ReverbPresets.Off.Id;
+            _compChunk = null;
+            _reverbChunk = null;
         }
 
         private void OnBandChanged() => RefreshActiveTonePreset();

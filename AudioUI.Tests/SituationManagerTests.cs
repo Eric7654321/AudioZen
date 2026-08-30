@@ -22,7 +22,7 @@ namespace AudioUI.Tests
 
             public SituationManager Manager() =>
                 new SituationManager(Backend, Notifier, Speech, Llm, Store, Tts, Prefs, Recorder, AppState,
-                                     recordFolder: @"C:\audiozen\record");
+                                     recordFolder: @"C:\audiozen\record", settleDelayMs: 0);
 
             /// <summary>兩題都答否＝保留這次設定、不存成 preset，也就是最常見的那條路。</summary>
             public Rig KeepsSetting()

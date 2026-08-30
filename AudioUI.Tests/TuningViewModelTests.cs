@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Xunit;
 
 namespace AudioUI.Tests
@@ -194,6 +194,78 @@ namespace AudioUI.Tests
 
             Assert.Single(intent.Configs);
             Assert.Contains("Minecraft", intent.MessageForUser);
+        }
+
+        // --- 讀回效果時的三種處境 ---
+
+        [Fact]
+        public void 讀到認得的_preset_就選它()
+        {
+            var vm = new TuningViewModel();
+            vm.LoadFrom(new AudioTargetConfig { CompPresetId = "medium", CompChunk = "QUJD" });
+
+            Assert.Equal("medium", vm.CompressorPresetId);
+            Assert.Equal("中度", vm.CompressorName);
+        }
+
+        [Fact]
+        public void 讀到認不得的效果_選維持目前而不是無()
+        {
+            // 顯示「無」等於對使用者說謊，而且下一步按套用就會把它變成真的。
+            var vm = new TuningViewModel();
+            vm.LoadFrom(new AudioTargetConfig { CompChunk = "QUJD", ReverbChunk = "REVG" });
+
+            Assert.Equal(DspPreset.KeepId, vm.CompressorPresetId);
+            Assert.Equal("維持目前", vm.ReverbName);
+        }
+
+        [Fact]
+        public void 什麼效果都沒有時才是無()
+        {
+            var vm = new TuningViewModel { CompressorPresetId = "shout" };
+            vm.LoadFrom(new AudioTargetConfig());
+
+            Assert.Equal("off", vm.CompressorPresetId);
+            Assert.Equal("off", vm.ReverbPresetId);
+        }
+
+        [Fact]
+        public void 維持目前會把讀進來的那份原樣帶回去()
+        {
+            var vm = new TuningViewModel();
+            vm.LoadFrom(new AudioTargetConfig { CompChunk = "QUJD" });
+
+            var config = vm.BuildConfig();
+
+            Assert.Equal("QUJD", config.CompChunk);
+            Assert.Null(config.CompJson);
+            // 代號留空：「維持目前」的意思就是不知道這是哪一個，記成 keep 只會讓下次更糊塗。
+            Assert.Null(config.CompPresetId);
+        }
+
+        [Fact]
+        public void 改選具體的_preset_就不再帶舊的那份()
+        {
+            var vm = new TuningViewModel();
+            vm.LoadFrom(new AudioTargetConfig { CompChunk = "QUJD" });
+            vm.CompressorPresetId = "light";
+
+            var config = vm.BuildConfig();
+
+            Assert.Null(config.CompChunk);
+            Assert.Equal("light", config.CompPresetId);
+            Assert.NotNull(config.CompJson);
+        }
+
+        [Fact]
+        public void 歸零之後不會再把舊的那份帶回去()
+        {
+            var vm = new TuningViewModel();
+            vm.LoadFrom(new AudioTargetConfig { CompChunk = "QUJD" });
+            vm.Reset();
+            vm.CompressorPresetId = DspPreset.KeepId;
+
+            Assert.Null(vm.BuildConfig().CompChunk);
         }
     }
 }

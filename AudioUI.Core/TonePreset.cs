@@ -1,4 +1,4 @@
-
+﻿
 namespace AudioUI
 {
     /// <summary>
@@ -93,10 +93,18 @@ namespace AudioUI
                                                        double volumePercent, DspPreset? compressor, DspPreset? reverb)
         {
             var config = ToTargetConfig(targetId, bandGains, volumePercent);
+
+            // 「維持目前」不留代號：它的意思正是「不知道這是哪一個，別動它」，
+            // 記成 keep 只會讓下次讀回來看到一個沒有內容的代號。
             config.CompJson = compressor?.ToList();
+            config.CompPresetId = NamedId(compressor);
             config.ReverbJson = reverb?.ToList();
+            config.ReverbPresetId = NamedId(reverb);
             return config;
         }
+
+        private static string? NamedId(DspPreset? preset) =>
+            preset == null || preset.IsKeep ? null : preset.Id;
 
         /// <summary>
         /// 音量百分比換成 dB。0% 沒有對應的 dB（是負無限大），交給呼叫端當靜音處理，
