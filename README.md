@@ -1,4 +1,4 @@
-# AudioZen
+# 心頻氣和 (AudioZen)
 
 用自然語言控制 Windows 的每個 app 的音訊。說「遊戲太吵，把 Discord 講話拉清楚」，
 Gemini 把它翻成 EQ / preamp / 壓縮器參數，寫成 Equalizer APO 設定檔套用下去。
