@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Text.Json.Serialization;
 
 namespace AudioUI
@@ -46,6 +47,18 @@ namespace AudioUI
         public string Endpoint { get; set; } = "https://generativelanguage.googleapis.com/v1beta";
 
         public bool IsConfigured => !string.IsNullOrWhiteSpace(ApiKey);
+
+        /// <summary>只給畫面看的樣子。存進去之後不再回顯完整內容，否則加密等於白做。</summary>
+        public string Masked => IsConfigured
+            ? (ApiKey.Length <= 4 ? "****" : $"****{ApiKey[^4..]}")
+            : "未設定";
+
+        /// <summary>
+        /// 把文字裡的 key 遮掉。key 放在 query string，所以任何帶著網址的例外訊息都夾著它，
+        /// 而那些訊息會被 toast 直接顯示給使用者。
+        /// </summary>
+        public static string Redact(string? text) =>
+            string.IsNullOrEmpty(text) ? "" : Regex.Replace(text, @"([?&]key=)[^&\s""']+", "$1***", RegexOptions.IgnoreCase);
 
         /// <summary>
         /// 帶 key 的 generateContent URL。key 放在 query string，
