@@ -53,13 +53,27 @@ namespace AudioUI
 
         public override void TraceEvent(TraceEventCache? cache, string source, TraceEventType eventType, int id, string? message)
         {
-            if (eventType <= TraceEventType.Error) _log.Record(message);
+            if (eventType <= TraceEventType.Error) Take(message);
         }
 
         public override void TraceEvent(TraceEventCache? cache, string source, TraceEventType eventType, int id, string? format, params object?[]? args)
         {
             if (eventType > TraceEventType.Error) return;
-            _log.Record(format != null && args != null ? string.Format(format, args) : format);
+            Take(format != null && args != null ? string.Format(format, args) : format);
+        }
+
+        /// <summary>
+        /// 看到沒見過的錯誤就把報告重寫一次。
+        ///
+        /// 啟動時那一次寫檔只涵蓋開檔就解得開的繫結——切到沒去過的分頁才長出來的元素，
+        /// 要等到那時候才會報錯。不在這裡寫的話，只有正常關閉程式才留得下來，
+        /// 而當機或被強制結束正是最需要這份檔案的時候。
+        ///
+        /// 只在「第一次看到」時寫，所以次數有上限，不會變成每畫一幀就寫一次檔。
+        /// </summary>
+        private void Take(string? message)
+        {
+            if (_log.Record(message)) Flush(_log);
         }
 
         // 訊息一律從 TraceEvent 進來；這兩個是 TraceListener 的必要覆寫，留空避免重複記錄。

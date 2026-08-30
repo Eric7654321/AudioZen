@@ -70,8 +70,8 @@ namespace AudioUI
 
         // UI 綁定集合
         // XAML 綁在視窗上，實際內容由 ViewModel 持有；轉發是為了讓繫結路徑一個字都不用改。
-        public ObservableCollection<AudioAppModel> AppList => _vm.AppList;
-        public ObservableCollection<AudioAppModel> RecentAppList => _vm.RecentAppList;
+        public ObservableCollection<AudioAppInfo> AppList => _vm.AppList;
+        public ObservableCollection<AudioAppInfo> RecentAppList => _vm.RecentAppList;
         public ObservableCollection<DeviceInfoModel> DeviceList => _vm.DeviceList;
         public ObservableCollection<ConfigOptionItem> ConfigOptions => _vm.ConfigOptions;
         public ObservableCollection<MacroKeyModel> MacroKeys => _vm.MacroKeys;
@@ -280,7 +280,7 @@ namespace AudioUI
             // 掛在清單上而不是卡片上，因為卡片的 template 三個地方共用，
             // 而只有控制分頁的卡片該點得進調參。真正被點到的元素從 OriginalSource 回推——
             // template 裡每一層子元素都繼承同一個 DataContext，撿到哪一層都是同一筆。
-            if ((e.OriginalSource as FrameworkElement)?.DataContext is not AudioAppModel app) return;
+            if ((e.OriginalSource as FrameworkElement)?.DataContext is not AudioAppInfo app) return;
 
             // 不標 Handled 的話事件會冒到視窗的 DragMove，滑鼠被 capture 走，這一下就變成拖視窗。
             e.Handled = true;

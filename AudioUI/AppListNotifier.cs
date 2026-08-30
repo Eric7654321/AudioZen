@@ -15,7 +15,7 @@ namespace AudioUI
         private readonly AudioSessionService _sessions = new AudioSessionService();
 
         /// <summary>流程層透過這個入口叫用，所以「要列哪些 app」的知識不必外流到 Core。</summary>
-        public void ShowCurrentApps() => ShowAppNotification(_sessions.GetAppsWithConfig());
+        public void ShowCurrentApps() => ShowAppNotification(_sessions.List());
 
 private string? SaveImageToTempFile(ImageSource? imageSource, string appName)
         {
@@ -42,7 +42,7 @@ private string? SaveImageToTempFile(ImageSource? imageSource, string appName)
             }
         }
 
-public void ShowAppNotification(IEnumerable<AudioAppModel> apps)
+public void ShowAppNotification(IEnumerable<AudioAppInfo> apps)
         {
             if (apps == null || !apps.Any()) return;
 
@@ -52,7 +52,7 @@ public void ShowAppNotification(IEnumerable<AudioAppModel> apps)
 
             foreach (var app in apps.Take(5)) // 因為變小了，可以顯示更多個 (例如 5 個)
             {
-                string iconPath = SaveImageToTempFile(app.Icon, app.Name) ?? "";
+                string iconPath = SaveImageToTempFile(AppIcons.Load(app.IconPath), app.Name) ?? "";
 
                 // --- 策略 1: 合併資訊字串 ---
                 // 範例效果: "🔊 80%  |  ✅ 已套用設定  |  🔇 靜音"
