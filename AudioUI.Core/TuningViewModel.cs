@@ -96,11 +96,16 @@ namespace AudioUI
         public bool IsProMode
         {
             get => _isProMode;
-            set { _isProMode = value; Raise(); Raise(nameof(IsSimpleMode)); }
+            set { _isProMode = value; Raise(); Raise(nameof(IsSimpleMode)); Raise(nameof(ModeName)); Raise(nameof(ModeToggleText)); }
         }
 
         /// <summary>給 XAML 用的反相，省掉一個轉換器。</summary>
         public bool IsSimpleMode => !_isProMode;
+
+        public string ModeName => _isProMode ? "專業模式" : "一般模式";
+
+        /// <summary>切換鈕上的字：指向要去的地方，不是現在在哪。</summary>
+        public string ModeToggleText => _isProMode ? "< 一般模式" : "專業模式 >";
 
         public double VolumePercent
         {

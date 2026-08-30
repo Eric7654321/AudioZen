@@ -24,6 +24,9 @@ namespace AudioUI
         public ObservableCollection<SituationSummary> ChatList { get; } = new ObservableCollection<SituationSummary>();
         public ObservableCollection<ChatMessageModel> ChatMessages { get; } = new ObservableCollection<ChatMessageModel>();
 
+        /// <summary>手動調參面板的狀態。</summary>
+        public TuningViewModel Tuning { get; } = new TuningViewModel();
+
         /// <summary>目前選中的情境；-1 代表語音指令用的暫存情境。</summary>
         public int CurrentSituationId { get; set; } = -1;
 
@@ -143,6 +146,43 @@ namespace AudioUI
                 }
                 else AppConfig.Notifier.Notify("設定失敗", $"找不到情境 ID: {configId}");
             }
+        }
+
+        /// <summary>
+        /// 把面板上的設定寫成檔案並套用。走的是跟語音指令同一條路
+        /// （<see cref="IAudioBackend"/> 的 Write 再 Apply），差別只在意圖不是模型產生的。
+        /// </summary>
+        public void ApplyTuning()
+        {
+            string configDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config");
+            string configPath = Path.Combine(configDir, $"tuning_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
+
+            try
+            {
+                if (!Directory.Exists(configDir)) Directory.CreateDirectory(configDir);
+
+                string? message = AppConfig.AudioBackend.Write(Tuning.BuildIntent(), configPath);
+                if (message == null)
+                {
+                    AppConfig.Notifier.Notify("套用失敗", "產生設定檔失敗");
+                    return;
+                }
+
+                ApplyConfigToAPO(configPath);
+                RefreshAudioApps();
+                AppConfig.Notifier.Notify("已套用", $"{Tuning.TargetName}：{Tuning.ToneText}");
+            }
+            catch (Exception ex)
+            {
+                AppConfig.Notifier.Notify("套用失敗", ex.Message);
+            }
+        }
+
+        /// <summary>打開面板前把目標填好，標題才不會停在上一個 app。</summary>
+        public void BeginTuning(string targetId, string targetName)
+        {
+            Tuning.TargetId = targetId;
+            Tuning.TargetName = targetName;
         }
 
         public void ApplyConfigToAPO(string sourcePath)
