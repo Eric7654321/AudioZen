@@ -7,6 +7,9 @@ Windows 沒有 per-application 的 DSP API，Equalizer APO 只能對「音訊裝
 本專案的作法是：**把每個 app 用虛擬音效卡路由到不同裝置，再對裝置套設定**。
 理解這一句，才看得懂下面的裝置對應表為什麼存在。
 
+> 要改這個 repo（人或 agent 都一樣）先看 [CONTRIBUTING.md](CONTRIBUTING.md)：
+> **不 push 到 `main`，開 PR、等 Eric 看過、CI 綠了才合。**
+
 ## 執行需求
 
 一般使用者先執行 **`AudioZen.Setup.exe`**，安裝 AudioZen 本體與相依元件；這份發行檔內含 .NET 8 Runtime，
