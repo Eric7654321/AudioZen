@@ -64,6 +64,7 @@ namespace AudioUI
 
         private HotkeyService _HotkeyService = new HotkeyService();
         private WinForms.NotifyIcon _notifyIcon;
+        private bool _setupWizardChecked;
 
         // UI 綁定集合
         // XAML 綁在視窗上，實際內容由 ViewModel 持有；轉發是為了讓繫結路徑一個字都不用改。
@@ -139,6 +140,8 @@ namespace AudioUI
             // 繫結要等畫面跑過一輪才解得開，所以排在 render 之後的閒置時段。
             this.Loaded += (s, e) => Dispatcher.BeginInvoke(
                 DispatcherPriority.ApplicationIdle, new Action(ReportBindingErrors));
+            this.Loaded += (s, e) => Dispatcher.BeginInvoke(
+                DispatcherPriority.ContextIdle, new Action(ShowFirstRunSetupWizard));
         }
 
         // --- 1. 聊天室邏輯 ---
@@ -282,7 +285,8 @@ namespace AudioUI
             e.Handled = true;
 
             // 對不到路由的 app 就調全域：能調總比按下去沒反應好。
-            string targetId = AppConfig.Routes.ByProcess(app.Name)?.Id ?? RouteTable.GlobalTargetId;
+            string processName = string.IsNullOrWhiteSpace(app.ProcessName) ? app.Name : app.ProcessName;
+            string targetId = AppConfig.Routes.ByProcess(processName)?.Id ?? RouteTable.GlobalTargetId;
             _vm.BeginTuning(targetId, app.Name);
 
             ControlListContainer.Visibility = Visibility.Collapsed;
@@ -376,12 +380,83 @@ namespace AudioUI
         private void SettingsNav_Click(object sender, RoutedEventArgs e)
         {
             string tag = (sender as FrameworkElement)?.Tag?.ToString() ?? "General";
+            ShowSettingsPage(tag);
+        }
 
+        private void ShowSettingsPage(string tag)
+        {
             SettingsPageGeneral.Visibility = tag == "General" ? Visibility.Visible : Visibility.Collapsed;
             SettingsPageMemory.Visibility = tag == "Memory" ? Visibility.Visible : Visibility.Collapsed;
             SettingsPagePersonal.Visibility = tag == "Personal" ? Visibility.Visible : Visibility.Collapsed;
             SettingsPageProfile.Visibility = tag == "Profile" ? Visibility.Visible : Visibility.Collapsed;
             SettingsPageAbout.Visibility = tag == "About" ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void ShowFirstRunSetupWizard()
+        {
+            if (_setupWizardChecked) return;
+            _setupWizardChecked = true;
+            if (!Preferences.SetupWizardSeen) ShowSetupWizard();
+            else _vm.RefreshDependencies();
+        }
+
+        private void ShowSetupWizard()
+        {
+            _vm.RefreshDependencies();
+            SetupWizardOverlay.Visibility = Visibility.Visible;
+
+            // 「首次自動」只代表第一次主動打擾；之後仍可從設定頁隨時重開。
+            if (!Preferences.SetupWizardSeen) Preferences.SetupWizardSeen = true;
+        }
+
+        private void OpenSetupWizard_Click(object sender, RoutedEventArgs e) => ShowSetupWizard();
+
+        private void CloseSetupWizard_Click(object sender, RoutedEventArgs e) =>
+            SetupWizardOverlay.Visibility = Visibility.Collapsed;
+
+        private void RefreshSetupWizard_Click(object sender, RoutedEventArgs e) => _vm.RefreshDependencies();
+
+        private void OpenApoConfigurator_Click(object sender, RoutedEventArgs e)
+        {
+            string? root = Directory.GetParent(AppConfig.Settings.Apo.ConfigDirectory)?.FullName;
+            string selector = root == null ? "" : Path.Combine(root, "DeviceSelector.exe");
+            OpenInstalledProgram(File.Exists(selector) ? selector : root == null ? "" : Path.Combine(root, "Configurator.exe"),
+                                 "找不到 APO 裝置選擇程式，請先完成 Equalizer APO 安裝。");
+        }
+
+        private void OpenVoicemeeter_Click(object sender, RoutedEventArgs e)
+        {
+            string root = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+            string folder = Path.Combine(root, "VB", "Voicemeeter");
+            string banana = Path.Combine(folder, "voicemeeterpro.exe");
+            string standard = Path.Combine(folder, "voicemeeter.exe");
+            OpenInstalledProgram(File.Exists(banana) ? banana : standard,
+                                 "找不到 Voicemeeter，請先安裝 Banana 或 Potato 並重新啟動 Windows。");
+        }
+
+        private void OpenApiKeySettings_Click(object sender, RoutedEventArgs e)
+        {
+            SetupWizardOverlay.Visibility = Visibility.Collapsed;
+            ResetTabs();
+            SidebarBorder.Visibility = Visibility.Collapsed;
+            SettingsView.Visibility = Visibility.Visible;
+            ShowSettingsPage("Profile");
+        }
+
+        private void SetupWireRouting_Click(object sender, RoutedEventArgs e) => _vm.WireRouting();
+
+        private static void OpenInstalledProgram(string path, string missingMessage)
+        {
+            if (!File.Exists(path))
+            {
+                System.Windows.MessageBox.Show(missingMessage, "尚未安裝", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"無法開啟：{ex.Message}", "開啟失敗", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void RemoveMemory_Click(object sender, RoutedEventArgs e)

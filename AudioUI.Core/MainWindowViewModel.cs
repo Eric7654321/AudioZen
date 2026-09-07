@@ -28,6 +28,7 @@ namespace AudioUI
         private readonly IAudioPreview _preview;
         private readonly IAppAudioRouter _router;
         private readonly RouteTable _routes;
+        private readonly IDependencyProbe _dependencyProbe;
 
         /// <summary>設定檔與錄音的落腳處。由外面給，測試才不必碰程式的安裝目錄。</summary>
         private readonly string _configDirectory;
@@ -45,6 +46,7 @@ namespace AudioUI
             IAudioPreview preview,
             IAppAudioRouter router,
             RouteTable routes,
+            IDependencyProbe dependencyProbe,
             string configDirectory)
         {
             _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
@@ -59,6 +61,7 @@ namespace AudioUI
             _preview = preview ?? throw new ArgumentNullException(nameof(preview));
             _router = router ?? throw new ArgumentNullException(nameof(router));
             _routes = routes ?? throw new ArgumentNullException(nameof(routes));
+            _dependencyProbe = dependencyProbe ?? throw new ArgumentNullException(nameof(dependencyProbe));
             _configDirectory = configDirectory ?? throw new ArgumentNullException(nameof(configDirectory));
 
             // 撥一個開關就存一次。TextBox 預設是失焦才寫回來源，所以不會每打一個字存一次。
@@ -89,9 +92,9 @@ namespace AudioUI
             private set { _apiKeyStatus = value; Raise(); }
         }
 
-        private DependencyReport _dependencies = DependencyChecker.Check(false, null, null);
+        private DependencyReport _dependencies = DependencyChecker.Check(new DependencySnapshot(), null);
 
-        /// <summary>執行環境的體檢結果：APO 與虛擬裝置在不在。</summary>
+        /// <summary>執行環境的體檢結果：所有必要的系統在不在。</summary>
         public DependencyReport Dependencies
         {
             get => _dependencies;
@@ -101,11 +104,11 @@ namespace AudioUI
         public string DependencySummary => _dependencies.Summary;
 
         /// <summary>重新體檢。裝置會被插拔，所以這是隨時可以再跑一次的東西，不是啟動時算一次。</summary>
-        public void RefreshDependencies() =>
-            Dependencies = DependencyChecker.Check(
-                _backend.IsAvailable,
-                _sessions.RenderDeviceIdentities(),
-                _routes);
+        public void RefreshDependencies()
+        {
+            var snapshot = _dependencyProbe.Inspect();
+            Dependencies = DependencyChecker.Check(snapshot, _routes);
+        }
 
         private string _routingStatus = "";
 
@@ -136,7 +139,8 @@ namespace AudioUI
 
             foreach (var app in _sessions.List())
             {
-                var route = _routes.ByProcess(app.Name);
+                string processName = string.IsNullOrWhiteSpace(app.ProcessName) ? app.Name : app.ProcessName;
+                var route = _routes.ByProcess(processName);
                 if (route == null || app.ProcessId <= 0) continue;
 
                 var result = _router.Route(app.ProcessId, route.Id);

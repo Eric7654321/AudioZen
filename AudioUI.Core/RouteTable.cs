@@ -83,19 +83,19 @@ namespace AudioUI
             new AudioRoute
             {
                 Id = "browser", DisplayName = "chrome",
-                DevicePattern = "Voicemeeter Input VB-Audio Voicemeeter VAIO {7bac9b47-61e4-4f81-b81b-2ad6c8186abc}",
+                DevicePattern = "Voicemeeter Input",
                 Processes = { "chrome.exe" }
             },
             new AudioRoute
             {
                 Id = "voice_chat", DisplayName = "discord",
-                DevicePattern = "Voicemeeter AUX Input VB-Audio Voicemeeter VAIO {ba00bb3e-8c53-44ca-ab44-10c3715d3dbd}",
+                DevicePattern = "Voicemeeter AUX Input",
                 Processes = { "discord.exe" }
             },
             new AudioRoute
             {
                 Id = "game", DisplayName = "games",
-                DevicePattern = "CABLE Input VB-Audio Virtual Cable {0a4eba8e-e0ec-457a-90de-e84ce08d5844}",
+                DevicePattern = "CABLE Input",
                 Processes = { "msedge.exe", "eldenring.exe", "VALORANT-Win64-Shipping.exe" }
             },
         });

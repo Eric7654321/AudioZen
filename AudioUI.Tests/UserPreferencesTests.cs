@@ -30,6 +30,7 @@ namespace AudioUI.Tests
             Assert.False(new UserPreferences().SelfLearningEnabled);
             Assert.True(new UserPreferences().AutoUpdate);
             Assert.True(new UserPreferences().UserMemoryEnabled);
+            Assert.False(new UserPreferences().SetupWizardSeen);
         }
 
         [Fact]
@@ -40,6 +41,7 @@ namespace AudioUI.Tests
             store.Current.WakeWord = "寶貝";
             store.Current.UserMemory = "我打遊戲時討厭金屬刺耳聲";
             store.Current.LaunchAtStartup = true;
+            store.Current.SetupWizardSeen = true;
             store.Current.AddAiMemory("使用者偏好較紮實的打擊感");
             store.Save();
 
@@ -52,6 +54,7 @@ namespace AudioUI.Tests
 
             Assert.Equal("寶貝", reopened.Current.WakeWord);
             Assert.True(reopened.Current.LaunchAtStartup);
+            Assert.True(reopened.Current.SetupWizardSeen);
             Assert.Equal("我打遊戲時討厭金屬刺耳聲", reopened.Current.UserMemory);
             Assert.Single(reopened.Current.AiMemories);
         }
@@ -81,6 +84,7 @@ namespace AudioUI.Tests
 
             Assert.Equal("哈囉", store.Current.WakeWord);
             Assert.True(store.Current.AutoUpdate);
+            Assert.False(store.Current.SetupWizardSeen);
             Assert.NotNull(store.Current.AiMemories);
         }
 

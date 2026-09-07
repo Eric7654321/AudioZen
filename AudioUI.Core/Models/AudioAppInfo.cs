@@ -11,6 +11,9 @@
     {
         public string Name { get; set; } = "Unknown";
 
+        /// <summary>真正的執行檔名稱；畫面顯示可用視窗標題，但路由一定要用這個。</summary>
+        public string ProcessName { get; set; } = "";
+
         /// <summary>程式執行檔的路徑；UI 層拿它去抽圖示。取不到就是 null。</summary>
         public string? IconPath { get; set; }
 

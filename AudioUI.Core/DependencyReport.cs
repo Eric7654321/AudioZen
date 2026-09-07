@@ -1,5 +1,53 @@
 namespace AudioUI
 {
+    public enum DependencyKind
+    {
+        EqualizerApo,
+        Voicemeeter,
+        VbCable,
+        GeminiApiKey,
+        RouteConfiguration,
+        MeldaVst,
+        ZhTwSpeech,
+    }
+
+    /// <summary>相依的資訊說明、必要性與就緒狀態。</summary>
+    public sealed class DependencyItem
+    {
+        public DependencyItem(DependencyKind kind, string name, string detail, bool isRequired, bool isReady)
+        {
+            Kind = kind;
+            Name = name;
+            Detail = detail;
+            IsRequired = isRequired;
+            IsReady = isReady;
+        }
+
+        public DependencyKind Kind { get; }
+        public string Name { get; }
+        public string Detail { get; }
+        public bool IsRequired { get; }
+        public bool IsOptional => !IsRequired;
+        public bool IsReady { get; }
+
+    }
+
+    /// <summary>Windows 層收集到的資訊；不在這裡做產品判斷，讓判斷保持可測。</summary>
+    public sealed class DependencySnapshot
+    {
+        public bool ApoInstalled { get; init; }
+        public bool CompressorInstalled { get; init; }
+        public bool ReverbInstalled { get; init; }
+        public bool ZhTwSpeechInstalled { get; init; }
+        public bool ApiKeyConfigured { get; init; }
+        public IReadOnlyList<string> RenderDevices { get; init; } = Array.Empty<string>();
+    }
+
+    public interface IDependencyProbe
+    {
+        DependencySnapshot Inspect();
+    }
+
     /// <summary>一條路由的體檢結果。</summary>
     public sealed class RouteDiagnostic
     {
@@ -19,7 +67,6 @@ namespace AudioUI
 
         /// <summary>實際對上的裝置名稱；<c>null</c> 表示這條路由指向一個不存在的裝置。</summary>
         public string? MatchedDevice { get; }
-
         public bool Ok => MatchedDevice != null;
 
         /// <summary>
@@ -32,52 +79,41 @@ namespace AudioUI
             : null;
     }
 
-    /// <summary>
-    /// 執行環境的體檢報告。
-    ///
-    /// 這個程式要能運作，靠的是三樣它自己沒有的東西：Equalizer APO、以及路由表裡指到的虛擬裝置。
-    /// 少了任何一樣，套用設定會安靜地什麼都不做——使用者只會覺得「按了沒反應」。
-    /// 把缺什麼講出來，是自動安裝與自動接線的前提：不知道現況就無從決定要做什麼。
-    /// </summary>
+    /// <summary>執行環境的體檢報告，可找出缺少的安裝項目。</summary>
     public sealed class DependencyReport
     {
-        public DependencyReport(bool apoInstalled, IReadOnlyList<RouteDiagnostic> routes)
+        public DependencyReport(bool apoInstalled, IReadOnlyList<RouteDiagnostic> routes,
+                                IReadOnlyList<DependencyItem> items)
         {
             ApoInstalled = apoInstalled;
             Routes = routes;
+            Items = items;
         }
 
         public bool ApoInstalled { get; }
 
         public IReadOnlyList<RouteDiagnostic> Routes { get; }
+        public IReadOnlyList<DependencyItem> Items { get; }
 
         /// <summary>全部就位才算可用。有一條路由指向不存在的裝置，那條路由上的 app 就調不動。</summary>
-        public bool IsReady => ApoInstalled && Routes.All(r => r.Ok);
+        public bool IsReady => Items.Where(i => i.IsRequired).All(i => i.IsReady);
 
         /// <summary>可以直接顯示給使用者的問題清單，沒問題時是空的。</summary>
-        public IReadOnlyList<string> Problems
+        public IReadOnlyList<string> Problems =>
+            Items.Where(i => i.IsRequired && !i.IsReady).Select(i => i.Detail).ToList();
+
+        /// <summary>一行摘要，給設定頁的標題列用。</summary>
+        public string Summary
         {
             get
             {
-                var list = new List<string>();
-
-                if (!ApoInstalled)
-                    list.Add("找不到 Equalizer APO 的設定目錄。請確認它已安裝，或在設定裡指定實際位置。");
-
-                foreach (var r in Routes.Where(r => !r.Ok))
-                {
-                    string provider = r.LikelyProvider == null ? "" : $"，通常由 {r.LikelyProvider} 提供";
-                    list.Add($"「{r.DisplayName}」找不到對應的音訊裝置（需要符合「{r.DevicePattern}」的裝置{provider}）。");
-                }
-
-                return list;
+                int required = Items.Count(i => i.IsRequired && !i.IsReady);
+                int optional = Items.Count(i => i.IsOptional && !i.IsReady);
+                if (required == 0 && optional == 0) return "全部就緒";
+                if (required == 0) return $"必要項目已就緒，另有 {optional} 個選用項目";
+                return $"有 {required} 個必要項目尚未完成";
             }
         }
-
-        /// <summary>一行摘要，給設定頁的標題列用。</summary>
-        public string Summary => IsReady
-            ? $"就緒，{Routes.Count} 條路由都對得上裝置"
-            : $"有 {Problems.Count} 項問題";
     }
 
     public static class DependencyChecker
@@ -99,20 +135,61 @@ namespace AudioUI
         }
 
         /// <summary>
-        /// 體檢。<paramref name="deviceIdentities"/> 是目前系統上的音訊輸出裝置，
-        /// 由呼叫端列舉後傳進來——列舉要碰 COM，而這裡要保持可測。
+        /// 體檢。snapshot 的裝置由 Windows 層列舉後傳進來。
         /// </summary>
-        public static DependencyReport Check(bool apoInstalled, IEnumerable<string>? deviceIdentities, RouteTable? routes)
+        public static DependencyReport Check(DependencySnapshot snapshot, RouteTable? routes)
         {
-            var devices = (deviceIdentities ?? Enumerable.Empty<string>())
-                .Where(d => !string.IsNullOrWhiteSpace(d))
-                .ToList();
+            var devices = CleanDevices(snapshot.RenderDevices);
+            var routeDiagnostics = DiagnoseRoutes(devices, routes);
 
-            var diagnostics = (routes?.Routes ?? new List<AudioRoute>())
+            bool voicemeeter = devices.Any(IsVoicemeeterMain) && devices.Any(IsVoicemeeterAux);
+            bool cable = devices.Any(IsVbCable);
+            bool routesReady = routeDiagnostics.All(r => r.Ok);
+
+            var items = new List<DependencyItem>
+            {
+                new(DependencyKind.EqualizerApo, "Equalizer APO",
+                    "找不到 Equalizer APO 的設定目錄。請確認它已安裝，或在設定裡指定實際位置。", true, snapshot.ApoInstalled),
+                new(DependencyKind.Voicemeeter, "Voicemeeter Banana / Potato",
+                    "需要同時提供 Voicemeeter Input 與 AUX Input，才能分開處理瀏覽器和語音聊天。", true, voicemeeter),
+                new(DependencyKind.VbCable, "VB-CABLE",
+                    "提供 CABLE Input，讓遊戲走獨立的虛擬音訊路徑。", true, cable),
+                new(DependencyKind.GeminiApiKey, "Gemini API key",
+                    "自然語言與語音指令需要 API key；儲存後請再測試一次連線。", true, snapshot.ApiKeyConfigured),
+                new(DependencyKind.RouteConfiguration, "音訊路由設定",
+                    routesReady
+                        ? "appsettings.json 的每條路由都能配對目前的音訊裝置。"
+                        : string.Join(Environment.NewLine, routeDiagnostics.Where(r => !r.Ok).Select(r =>
+                            $"「{r.DisplayName}」找不到對應的音訊裝置（需要符合「{r.DevicePattern}」的裝置" +
+                            (r.LikelyProvider == null ? "" : $"，通常由 {r.LikelyProvider} 提供") + "）。")),
+                    true, routesReady),
+                new(DependencyKind.MeldaVst, "Melda MFreeFXBundle",
+                    "提供 MCompressor 與 MCharmVerb；缺少時 EQ 與 preamp 仍可使用。", false,
+                    snapshot.CompressorInstalled && snapshot.ReverbInstalled),
+                new(DependencyKind.ZhTwSpeech, "繁體中文（台灣）語音辨識",
+                    "提供「心平氣和」喚醒詞；缺少時仍可使用文字與手動控制。", false,
+                    snapshot.ZhTwSpeechInstalled),
+            };
+
+            return new DependencyReport(snapshot.ApoInstalled, routeDiagnostics, items);
+        }
+
+        private static List<string> CleanDevices(IEnumerable<string>? devices) =>
+            (devices ?? Enumerable.Empty<string>()).Where(d => !string.IsNullOrWhiteSpace(d)).ToList();
+
+        private static List<RouteDiagnostic> DiagnoseRoutes(IReadOnlyList<string> devices, RouteTable? routes) =>
+            (routes?.Routes ?? Array.Empty<AudioRoute>())
                 .Select(r => new RouteDiagnostic(r, devices.FirstOrDefault(d => DeviceMatches(r.DevicePattern, d))))
                 .ToList();
 
-            return new DependencyReport(apoInstalled, diagnostics);
-        }
+        internal static bool IsVoicemeeterMain(string device) =>
+            device.Contains("Voicemeeter Input", StringComparison.OrdinalIgnoreCase)
+            && !device.Contains("Voicemeeter AUX Input", StringComparison.OrdinalIgnoreCase);
+
+        internal static bool IsVoicemeeterAux(string device) =>
+            device.Contains("Voicemeeter AUX Input", StringComparison.OrdinalIgnoreCase);
+
+        internal static bool IsVbCable(string device) =>
+            device.Contains("CABLE Input", StringComparison.OrdinalIgnoreCase);
     }
 }

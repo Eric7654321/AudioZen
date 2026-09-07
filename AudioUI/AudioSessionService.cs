@@ -91,6 +91,7 @@ namespace AudioUI
                                 var app = new AudioAppInfo
                                 {
                                     Name = !string.IsNullOrEmpty(process.MainWindowTitle) ? process.MainWindowTitle : process.ProcessName,
+                                    ProcessName = fullProcessName,
                                     SystemVolume = (int)(session.SimpleAudioVolume.Volume * 100),
                                     SystemMute = session.SimpleAudioVolume.Mute,
                                     IconPath = SafeMainModulePath(process),

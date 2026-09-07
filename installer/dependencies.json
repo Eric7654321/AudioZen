@@ -1,0 +1,26 @@
+{
+  "Voicemeeter": {
+    "url": "https://download.vb-audio.com/Download_CABLE/VoicemeeterSetup_v2122.zip",
+    "sha256": "fda1c82522b4a8c87a89c5c50a56e7e25e3519b9e1f1a8e63475b8590ff09ee5",
+    "file": "VoicemeeterSetup_v2122.zip",
+    "entry": "voicemeeterprosetup.exe"
+  },
+  "VbCable": {
+    "url": "https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip",
+    "sha256": "b950e39f01af1d04ea623c8f6d8eb9b6ea5c477c637295fabf20631c85116bfb",
+    "file": "VBCABLE_Driver_Pack45.zip",
+    "entry": "VBCABLE_Setup_x64.exe"
+  },
+  "EqualizerApo": {
+    "url": "https://downloads.sourceforge.net/project/equalizerapo/1.4.2/EqualizerAPO-x64-1.4.2.exe",
+    "sha256": "7403be7427bbe1936a40dded082829b6e217fc4f5990fee5cba501f0ae055afa",
+    "file": "EqualizerAPO-x64-1.4.2.exe",
+    "entry": ""
+  },
+  "Melda": {
+    "url": "https://meldaproduction.b-cdn.net/download/mpluginmanager/MPluginManager_02_29_setup.exe",
+    "sha256": "d60a4c78eeb2d0b0eb8a318775a7259de8dae27026be1c722831b6a75e097378",
+    "file": "MPluginManager_02_29_setup.exe",
+    "entry": ""
+  }
+}
