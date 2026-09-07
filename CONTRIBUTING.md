@@ -5,19 +5,26 @@
 
 ## 一、不要 push 到 `main`
 
-`main` 只接受 merge 進來的 PR。任何改動——包含一行 typo、包含「反正 CI 會綠」——都走同一條路：
+`main` 有 branch protection：**直推會被拒絕，只接受 merge 進來的 PR，而且 `build` 這個 check 要綠**。
+限制對 admin 也生效，所以「我有權限」不是繞過的理由。任何改動——包含一行 typo、
+包含「反正 CI 會綠」——都走同一條路：
 
 ```bash
 git switch -c <type>/<短描述>        # 例：fix/voicemeeter-aux-collision
 # ...改東西、commit...
 git push -u origin HEAD
 gh pr create --base main --assignee Eric7654321
+gh pr merge --auto --rebase          # CI 綠了自己合，不用等人按
 ```
 
-- **reviewer 是 Eric**。GitHub 不接受把 review 指派給 PR 作者本人，而 agent 用的是 Eric 的帳號推 PR，
-  所以指令上寫 `--assignee Eric7654321`；**實際意思是「等 Eric 看過」**。
-- **agent 不自己 merge**。CI 綠 ≠ 可以合。合不合由 Eric 決定。
-- **CI 沒綠不要請人看**。先自己修到綠，或在 PR 裡寫清楚為什麼綠不了。
+- **門檻是 CI，不是人。** `build` 綠就可以合，不需要誰 approve。
+- **所以 PR 描述要寫「我哪裡不確定」**——沒有人會在合之前逐行看，你自己講的沒講到的地方，
+  就是沒有人知道的地方。
+- **不要求 approval 是有原因的**：agent 用 Eric 的帳號推 PR，而 GitHub 不讓作者 approve
+  自己的 PR（review request 指向作者會被靜靜丟掉）。要求 approval 會讓 agent 的 PR 永遠合不了。
+  jam 或其他人開的 PR 不受這個限制，該找 Eric 看就找。
+- **CI 沒綠不要掛 auto-merge，也不要請人看**。先自己修到綠，或在 PR 裡寫清楚為什麼綠不了。
+- **`--rebase`**：`main` 目前是線性的，維持它——出事時 `git log --oneline` 讀得動比什麼都重要。
 
 ## 二、CI 會跑什麼
 
