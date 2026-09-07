@@ -3,6 +3,8 @@ name: build
 on:
   push:
     branches: [main]
+  # 不限 base：疊在別的 PR 上面的分支一樣要驗得到。
+  pull_request:
   workflow_dispatch:
 
 # 結果要寫回 ci-status 分支：本機沒有 GitHub token，只有 SSH，
@@ -10,8 +12,9 @@ on:
 permissions:
   contents: write
 
+# 每個 ref 一組：PR 的執行不該把 main 的那一輪取消掉。
 concurrency:
-  group: build
+  group: build-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -113,8 +116,9 @@ jobs:
           New-Item -ItemType Directory -Force -Path out | Out-Null
           $lines -join "`n" | Set-Content -Path out/status.md -Encoding utf8
 
+      # PR 的結果看 checks 就好。ci-status 是 main 的現況，被 PR 覆蓋就不再是現況。
       - name: Publish status to ci-status branch
-        if: always()
+        if: always() && github.event_name != 'pull_request'
         shell: bash
         run: |
           git config user.name  'github-actions[bot]'
