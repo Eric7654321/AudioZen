@@ -222,5 +222,24 @@ namespace AudioUI.Tests
             Assert.True(report.Items.Single(item => item.Kind == DependencyKind.VbCable).IsReady);
             Assert.False(report.Items.Single(item => item.Kind == DependencyKind.RouteConfiguration).IsReady);
         }
+
+        [Fact]
+        public void 主匯流排與_AUX_各自對到自己那台_不看列舉順序()
+        {
+            // 「Voicemeeter Input」在 APO 眼裡也會中 AUX，所以挑法不能取決於裝置的列舉順序。
+            foreach (var devices in new[]
+            {
+                new[] { VaioDevice, AuxDevice, CableDevice },
+                new[] { AuxDevice, VaioDevice, CableDevice },
+            })
+            {
+                var report = DependencyChecker.Check(
+                    CompleteSnapshot(devices: devices),
+                    Routes(("browser", "Voicemeeter Input"), ("voice_chat", "Voicemeeter AUX Input")));
+
+                Assert.Equal(VaioDevice, report.Routes.Single(r => r.RouteId == "browser").MatchedDevice);
+                Assert.Equal(AuxDevice, report.Routes.Single(r => r.RouteId == "voice_chat").MatchedDevice);
+            }
+        }
     }
 }
