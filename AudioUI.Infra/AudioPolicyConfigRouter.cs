@@ -129,21 +129,24 @@ namespace AudioUI
             }
         }
 
-        /// <summary>用路由的樣式找出實際裝置的 id。比對語意跟體檢報告共用一份。</summary>
+        /// <summary>
+        /// 用路由的樣式找出實際裝置的 id。「Voicemeeter Input」也會中 AUX，
+        /// 所以挑哪一台由 <see cref="DevicePatterns"/> 決定，跟體檢報告共用同一份規則。
+        /// </summary>
         private static string? FindDeviceId(string pattern)
         {
             try
             {
+                var found = new Dictionary<string, string>();
                 var enumerator = new MMDeviceEnumerator();
                 foreach (var device in enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active))
                 {
-                    try
-                    {
-                        if (DependencyChecker.DeviceMatches(pattern, $"{device.FriendlyName} {device.ID}"))
-                            return device.ID;
-                    }
+                    try { found[$"{device.FriendlyName} {device.ID}"] = device.ID; }
                     catch { }
                 }
+
+                string? identity = DevicePatterns.Resolve(pattern, found.Keys);
+                return identity == null ? null : found[identity];
             }
             catch { }
             return null;

@@ -20,10 +20,15 @@ namespace AudioUI
         private readonly RouteTable _routes;
         private readonly string _vstDirectory;
 
-        public EqualizerApoBackend(ApoSettings? settings = null, RouteTable? routes = null)
+        /// <summary>目前的裝置清單。沒給就寫得出設定檔但分不開撞名的裝置，見 <see cref="DevicePatterns"/>。</summary>
+        private readonly IAudioSessions? _sessions;
+
+        public EqualizerApoBackend(ApoSettings? settings = null, RouteTable? routes = null,
+                                   IAudioSessions? sessions = null)
         {
             settings ??= new ApoSettings();
             _routes = routes ?? RouteTable.Default();
+            _sessions = sessions;
             _vstDirectory = settings.VstDirectory;
             _configDirectory = settings.ConfigDirectory;
             _fragmentFileName = string.IsNullOrWhiteSpace(settings.FragmentFileName)
@@ -35,10 +40,30 @@ namespace AudioUI
 
         public string FragmentPath => Path.Combine(_configDirectory, _fragmentFileName);
 
+        private IReadOnlyList<string> Devices()
+        {
+            if (_sessions == null) return Array.Empty<string>();
+            try { return _sessions.RenderDeviceIdentities(); }
+            catch { return Array.Empty<string>(); }
+        }
+
+        /// <summary>
+        /// 一條路由要寫成哪一行 <c>Device:</c>。
+        ///
+        /// <c>all</c> 是 APO 自己的關鍵字，不是裝置名稱，所以原樣送出；其餘的交給
+        /// <see cref="DevicePatterns.Specific"/> 判斷這台機器上分不分得開。
+        /// </summary>
+        private static string DeviceLineFor(string? targetId, string devicePattern, IEnumerable<string> devices) =>
+            string.Equals(targetId, RouteTable.GlobalTargetId, StringComparison.OrdinalIgnoreCase)
+                ? devicePattern
+                : DevicePatterns.Specific(devicePattern, devices);
+
         /// <summary>把意圖寫成 APO 設定檔。無法產出時回 null。</summary>
         public string? Write(AudioIntent? eqResponse, string outputPath)
         {
             if (eqResponse == null) return null;
+
+            var devices = Devices();
 
             using (StreamWriter sw = new StreamWriter(outputPath, false)) // false 表示覆寫檔案
             {
@@ -50,7 +75,7 @@ namespace AudioUI
                         string? devicePattern = _routes.ResolveDevicePattern(config.Target);
                         if (devicePattern != null)
                         {
-                            sw.WriteLine($"Device: {devicePattern}");
+                            sw.WriteLine($"Device: {DeviceLineFor(config.Target, devicePattern, devices)}");
                         }
                         else
                         {
@@ -139,6 +164,8 @@ namespace AudioUI
             string? wanted = _routes.ResolveDevicePattern(targetId);
             if (wanted == null || !File.Exists(FragmentPath)) return null;
 
+            // 寫進去的樣式可能補過 GUID，所以認的是「這行講的是哪一條路由」，不是字面相等。
+            var route = _routes.ById(targetId);
             AudioTargetConfig? found = null;
             bool inSection = false;
 
@@ -151,7 +178,9 @@ namespace AudioUI
                     // 換到下一個 Device 區段就停：同一個目標只會被寫一次。
                     if (inSection) break;
 
-                    inSection = string.Equals(line[7..].Trim(), wanted, StringComparison.OrdinalIgnoreCase);
+                    string deviceLine = line[7..].Trim();
+                    inSection = string.Equals(deviceLine, wanted, StringComparison.OrdinalIgnoreCase)
+                        || (route != null && ReferenceEquals(_routes.ByDeviceLine(deviceLine), route));
                     if (inSection) found = new AudioTargetConfig { Target = targetId ?? RouteTable.GlobalTargetId };
                     continue;
                 }

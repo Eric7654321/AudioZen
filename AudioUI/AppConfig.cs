@@ -20,11 +20,16 @@ namespace AudioUI
         /// <summary>app 與虛擬裝置的對應。所有需要這份知識的地方都從這裡拿，不各自持有一份。</summary>
         public static RouteTable Routes => _routes.Value;
 
+        /// <summary>誰在出聲、系統上有哪些輸出裝置。體檢與後端看的是同一份現況。</summary>
+        public static IAudioSessions Sessions => _sessions.Value;
+
+        private static readonly Lazy<IAudioSessions> _sessions = new Lazy<IAudioSessions>(() => new AudioSessionService());
+
         /// <summary>套用設定的後端。唯一知道設定該寫到哪裡的地方。</summary>
         public static IAudioBackend AudioBackend => _backend.Value;
 
         private static readonly Lazy<IAudioBackend> _backend =
-            new Lazy<IAudioBackend>(() => new EqualizerApoBackend(Settings.Apo, Routes));
+            new Lazy<IAudioBackend>(() => new EqualizerApoBackend(Settings.Apo, Routes, Sessions));
 
         /// <summary>對使用者說話的管道。</summary>
         public static INotifier Notifier => _notifier.Value;
@@ -130,7 +135,7 @@ namespace AudioUI
         /// </summary>
         public static MainWindowViewModel CreateMainWindowViewModel()
         {
-            var sessions = new AudioSessionService();
+            var sessions = Sessions;
             var dependencies = new WindowsDependencyProbe(AudioBackend, sessions, ApiKeyManager, Settings.Apo);
 
             return new MainWindowViewModel(

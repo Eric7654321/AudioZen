@@ -366,5 +366,94 @@ namespace AudioUI.Tests
 
             Assert.Equal(original, File.ReadAllLines(path).Single(l => l.Contains("MCompressor.dll")));
         }
+
+        // --- Device 行：短樣式在這台機器上分不分得開 ---
+
+        private const string VaioDevice = "Voicemeeter Input (VB-Audio Voicemeeter VAIO) {0.0.0.00000000}.{7bac9b47-61e4-4f81-b81b-2ad6c8186abc}";
+        private const string AuxDevice = "Voicemeeter AUX Input (VB-Audio Voicemeeter AUX VAIO) {0.0.0.00000000}.{e519bb69-d01f-493d-a0b3-bc0e26557e77}";
+
+        private static RouteTable VoicemeeterRoutes() => new RouteTable(new[]
+        {
+            new AudioRoute { Id = "browser", DevicePattern = "Voicemeeter Input", Processes = { "chrome.exe" } },
+            new AudioRoute { Id = "voice_chat", DevicePattern = "Voicemeeter AUX Input", Processes = { "discord.exe" } },
+        });
+
+        private static EqualizerApoBackend VoicemeeterBackend(TempDir dir, params string[] devices)
+        {
+            var sessions = new FakeAudioSessions();
+            sessions.Devices.AddRange(devices);
+            return new EqualizerApoBackend(
+                new ApoSettings { ConfigDirectory = dir.Path, FragmentFileName = "audiozen.txt" },
+                VoicemeeterRoutes(), sessions);
+        }
+
+        private static List<string> DeviceLines(string path) =>
+            File.ReadAllLines(path)
+                .Where(l => l.TrimStart().StartsWith("Device:", StringComparison.OrdinalIgnoreCase))
+                .Select(l => l.Trim()["Device:".Length..].Trim())
+                .ToList();
+
+        private static AudioIntent TwoTargets() => new AudioIntent
+        {
+            MessageForUser = "好了",
+            Configs = new List<AudioTargetConfig>
+            {
+                new AudioTargetConfig { Target = "browser", PreampDb = -6, GraphicEqString = "25 0" },
+                new AudioTargetConfig { Target = "voice_chat", PreampDb = -2, GraphicEqString = "25 -1" },
+            },
+        };
+
+        [Fact]
+        public void Write_每一行_Device_只能指到一台裝置()
+        {
+            // 「Voicemeeter Input」的每個詞也都在 AUX 的字串裡，短樣式會讓瀏覽器那段
+            // 連語音聊天的匯流排一起套上去，兩段還會在 AUX 上疊起來。
+            using var dir = new TempDir();
+            string path = dir.File("out.txt");
+
+            VoicemeeterBackend(dir, AuxDevice, VaioDevice).Write(TwoTargets(), path);
+
+            var lines = DeviceLines(path);
+            Assert.Equal(2, lines.Count);
+            foreach (string line in lines)
+                Assert.Single(new[] { VaioDevice, AuxDevice }, d => DependencyChecker.DeviceMatches(line, d));
+        }
+
+        [Fact]
+        public void Write_只有一台裝置中得到時不動樣式()
+        {
+            // 補 GUID 是為了分開撞名的裝置；沒撞到就沒有理由把使用者的設定寫成機器專屬的。
+            using var dir = new TempDir();
+            string path = dir.File("out.txt");
+
+            VoicemeeterBackend(dir, VaioDevice).Write(TwoTargets(), path);
+
+            Assert.Equal(new[] { "Voicemeeter Input", "Voicemeeter AUX Input" }, DeviceLines(path));
+        }
+
+        [Fact]
+        public void Write_列舉不到裝置時不改寫樣式()
+        {
+            using var dir = new TempDir();
+            string path = dir.File("out.txt");
+
+            VoicemeeterBackend(dir).Write(TwoTargets(), path);
+
+            Assert.Equal(new[] { "Voicemeeter Input", "Voicemeeter AUX Input" }, DeviceLines(path));
+        }
+
+        [Fact]
+        public void ReadCurrent_補過_GUID_的區段還是自己那一段()
+        {
+            using var dir = new TempDir();
+            string path = dir.File("out.txt");
+            var backend = VoicemeeterBackend(dir, AuxDevice, VaioDevice);
+
+            backend.Write(TwoTargets(), path);
+            backend.Apply(path);
+
+            Assert.Equal(-6, backend.ReadCurrent("browser")!.PreampDb, 3);
+            Assert.Equal("25 -1", backend.ReadCurrent("voice_chat")!.GraphicEqString);
+        }
     }
 }

@@ -139,7 +139,18 @@ key 的來源優先序是**環境變數 → 設定頁存的 → `appsettings.jso
 請自行修改 `appsettings.json`，改用對應短名稱或本機的裝置識別。
 
 若使用不在內建三項中的裝置，可用 Equalizer APO Configurator 取得 `devicePattern`。APO 的比對規則是
-「以空白分隔的字詞全部都要出現在 `裝置名稱 連接名稱 GUID` 裡」。
+「以空白分隔的字詞全部都要出現在 `裝置名稱 連接名稱 GUID` 裡」，只有 AND、沒有否定
+（見 EqualizerAPO 的 `DeviceFilterFactory::matchDevice`）。
+
+**短名稱可能一次中兩台裝置**：`Voicemeeter Input` 的兩個字詞在
+`Voicemeeter AUX Input (VB-Audio Voicemeeter AUX VAIO)` 裡也都找得到，反過來則不會。
+短名稱裡沒有能區分主匯流排與 AUX 的字詞，分得開的只有 GUID，所以：
+
+- 寫進 APO 設定檔時，樣式在這台機器上中兩台以上，AudioZen 會自動補上目標裝置的 endpoint GUID
+  （`AudioUI.Core/DevicePatterns.cs`）。`appsettings.json` 裡的樣式不會被改寫。
+- 只中一台就原樣送出，所以設定本身仍然可攜。
+- 自訂 `devicePattern` 時要留意這件事：新增的樣式若是既有裝置名稱的「子集合」，
+  兩條路由會互相吃到對方的裝置。設定頁的環境檢查會顯示每條路由實際對到哪一台。
 
 省略整個 `routes` 區塊時採用內建預設值（見 `AudioUI.Core/RouteTable.cs`）。
 
@@ -195,6 +206,7 @@ AudioUI.sln
 | `DspPresets` | 壓縮器與殘響的具名 preset |
 | `TuningViewModel` | 手動調參面板的狀態。只需 `INotifyPropertyChanged`，所以測得到 |
 | `DependencyReport` | 環境檢查的可測判斷：必要／選用項目與路由是否就緒 |
+| `DevicePatterns` | 路由樣式對到哪一台裝置；樣式撞名時補上 GUID，APO 才分得開 |
 | `MmDeviceIds` | 裝置 id 在列舉形式與指定形式之間的轉換 |
 | `Models/` | `AudioIntent`、`Situation`、`AppSettings`、`UserPreferences` 等資料模型 |
 

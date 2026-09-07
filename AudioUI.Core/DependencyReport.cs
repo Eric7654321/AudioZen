@@ -179,7 +179,7 @@ namespace AudioUI
 
         private static List<RouteDiagnostic> DiagnoseRoutes(IReadOnlyList<string> devices, RouteTable? routes) =>
             (routes?.Routes ?? Array.Empty<AudioRoute>())
-                .Select(r => new RouteDiagnostic(r, devices.FirstOrDefault(d => DeviceMatches(r.DevicePattern, d))))
+                .Select(r => new RouteDiagnostic(r, DevicePatterns.Resolve(r.DevicePattern, devices)))
                 .ToList();
 
         internal static bool IsVoicemeeterMain(string device) =>
