@@ -9,14 +9,25 @@ Windows 沒有 per-application 的 DSP API，Equalizer APO 只能對「音訊裝
 
 ## 執行需求
 
-除了 .NET，下面四項都是**外部安裝**，不在本 repo 內，缺任何一項功能會少一塊。
+一般使用者先執行 **`AudioZen.Setup.exe`**，安裝 AudioZen 本體與相依元件；這份發行檔內含 .NET 8 Runtime，
+不需要先安裝 .NET。安裝程式支援 Windows x64，安裝到目前帳號的 `%LOCALAPPDATA%\Programs\AudioZen`。
+
+從原始碼執行需要 **.NET 8 SDK**；若自行產生 framework-dependent 發行檔，電腦至少要有
+[.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0)。這是程式能啟動的前置條件，
+因此無法等到程式內的環境檢查才檢查。可先在 PowerShell 執行 `dotnet --list-runtimes`，確認清單中有
+`Microsoft.WindowsDesktop.App 8.x`。
+
+獨立安裝程式會檢查既有元件，從官方來源下載缺少的安裝檔、驗證固定的 SHA-256，再開啟第三方安裝畫面。
+使用者自行確認授權與裝置選項；安裝系統元件時會顯示 Windows 管理員授權提示。
+相依安裝腳本若由 32-bit PowerShell 啟動，會沿用授權轉交給 64-bit Windows PowerShell 執行。
+第三方安裝檔不包在 AudioZen 發行檔中，各元件仍遵循原廠授權。
 
 | 需求 | 用途 | 沒有它會怎樣 |
 |---|---|---|
 | Windows 10 build 17763 以上 | `net8.0-windows10.0.17763.0` | 無法建置 |
-| .NET 8 SDK | 建置 | 無法建置 |
+| .NET 8 SDK / Desktop Runtime | 從原始碼建置 / 執行發行檔 | 無法建置 / 啟動 |
 | [Equalizer APO](https://sourceforge.net/projects/equalizerapo/) | 實際套用音訊處理，安裝時要對目標裝置勾選啟用 | 設定寫得出來但沒有效果 |
-| [VB-Audio Voicemeeter](https://vb-audio.com/Voicemeeter/) + [VB-CABLE](https://vb-audio.com/Cable/) | 提供 `Voicemeeter Input` / `Voicemeeter AUX Input` / `CABLE Input` 三個虛擬裝置，讓不同 app 分流 | 只能對全域套設定，per-app 失效 |
+| [Voicemeeter Banana / Potato](https://vb-audio.com/Voicemeeter/) + [VB-CABLE](https://vb-audio.com/Cable/) | 提供 `Voicemeeter Input` / `Voicemeeter AUX Input` / `CABLE Input` 三個虛擬裝置，讓不同 app 分流 | 只能對全域套設定，per-app 失效 |
 | [MeldaProduction MFreeFXBundle](https://www.meldaproduction.com/MFreeFXBundle) | 壓縮器 `MCompressor` 與殘響 `MCharmVerb`，APO 以 VST 載入 | EQ / preamp 可用，壓縮與殘響無效 |
 | Windows 中文（台灣）語音辨識套件 | 喚醒詞辨識，`zh-TW` | 喚醒詞失效，仍可用介面手動操作 |
 | Gemini API key | 自然語言 → 音訊參數 | 核心功能失效 |
@@ -30,13 +41,66 @@ Melda VST 的安裝目錄在 `apo.vstDirectory`，壓縮器與殘響的 DLL 從�
 
 ## 建置與執行
 
+### 一般使用者：整合安裝
+
+1. 執行 `AudioZen.Setup.exe`。Equalizer APO、Voicemeeter Banana 與 VB-CABLE 為必要項目。
+   已有符合需求的元件會略過；Melda 外掛與 `zh-TW` 語音辨識預設勾選，可以取消。
+2. 確認管理員授權，在各官方安裝畫面完成操作。第三方若詢問重開機，請先選「稍後」。
+3. 虛擬音效卡安裝後，AudioZen Setup 會提示重新啟動 Windows；儲存工作後重開機，登入原帳號會繼續。
+   接著安裝 Equalizer APO，裝置掛載完成後也可能再要求重開機。尚未重開機時重跑 Setup 不會跳過這個步驟。
+4. 選用 Melda 時，依畫面提示透過 **MPluginManager** 安裝 `MCompressor` 與 `MCharmVerb` 的 **64-bit VST2**，
+   不是只有安裝 MPluginManager 或 VST3。預設目錄是 `C:\Program Files\VstPlugins\MeldaProduction`，
+   保留 `Dynamics` 與 `Reverb` 子目錄；安裝程式會檢查實際 DLL 是否存在。
+5. 必要元件及已選取的選用元件完成後才安裝 AudioZen、建立開始功能表捷徑。
+   開啟後仍需設定 Gemini API key、APO 目標裝置、Voicemeeter 的 A1 實體輸出與音訊路由。
+
+下載、授權取消或安裝驗證失敗時會停止，可重試或返回上一步取消選用項目；不會把失敗當成完成。
+若已有驅動安裝紀錄卻缺少預期 endpoint，會要求先重開機、確認裝置名稱或修復，不會反覆執行可能變成解除安裝的驅動安裝程式。
+Windows 語音功能使用 Windows Update；組織的更新政策可能阻止下載，這時可取消語音項目並使用文字控制。
+安裝元件代表軟體／驅動已存在，**不代表音訊接線或 APO 效果已驗證生效**。
+
+重開機續接副本與記錄位於 `%LOCALAPPDATA%\AudioZen\Setup`：
+`AudioZen.Setup.exe` 可手動重跑，`dependencies.log` 記錄最近一次相依安裝。
+解除安裝 AudioZen 不會移除共享的第三方驅動、外掛或 Windows 語言功能，也不刪除使用者的 `config/` 與 `appsettings.json`。
+
+### 產生安裝檔
+
+在 Windows 安裝 .NET 8 SDK（或可建置 .NET 8 的較新 SDK）與官方 [Inno Setup 6.2 以上](https://jrsoftware.org/isdl.php)，執行：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\installer\Build-Installer.ps1
+```
+
+Inno Setup 只用於建置安裝封裝；使用者電腦不需要它。若使用其他 compiler 路徑：
+
+```powershell
+.\installer\Build-Installer.ps1 -Version 1.0.0 -IsccPath 'C:\Tools\Inno Setup 6\ISCC.exe'
+```
+
+輸出為 `artifacts\installer\AudioZen.Setup.exe`。建置使用全新的 self-contained `win-x64` publish 目錄，
+排除開發機的 `appsettings.json`、`config/` 與錄音；新安裝只寫入不含 API key 的範例設定。
+已存在的設定不會被升級安裝覆蓋。此流程未設定程式碼簽章，正式散布前應使用自己的簽章憑證簽署安裝檔。
+
+GitHub Actions 的 `installer` workflow 會建置並上傳 `AudioZen-Setup-win-x64` artifact，
+也可在 Actions 手動執行；它不會在 runner 上安裝音訊驅動。
+
+第三方版本與 SHA-256 集中在 `installer/dependencies.json`。來源：
+[Equalizer APO](https://sourceforge.net/projects/equalizerapo/files/)、
+[Voicemeeter Banana](https://vb-audio.com/Voicemeeter/banana.htm)、
+[VB-CABLE](https://vb-audio.com/Cable/)、[Melda](https://www.meldaproduction.com/downloads)。
+升級時需從官方取得新檔、核對內容及 SHA-256，再修改 manifest；不能關閉雜湊驗證或改用未固定版本的 latest URL。
+
+### 從原始碼執行
+
 ```powershell
 dotnet build AudioUI.sln -c Release
 dotnet run --project AudioUI/AudioUI.csproj
 ```
 
-跑起來之後先做兩件事，否則會連不上 Gemini、或是 app 對不到裝置：
-**齒輪 →「設定檔」填 API key**，以及**齒輪 →「一般」看「執行環境」有沒有缺裝置**。
+第一次開啟時會顯示「安裝後設定」，提供 APO 裝置選擇、Voicemeeter 實體輸出、Gemini API key 與自動接線。
+之後可從**齒輪 → 一般 → 開啟安裝後設定**重新開啟，按「重新檢查」更新環境狀態。
+程式內不再提供元件勾選與官方補裝導引；缺少系統元件時，請重新執行 `AudioZen.Setup.exe`。
+安裝驅動後通常需要重新啟動 Windows，再進行安裝後設定。
 
 執行期的資料（情境、錄音、按鍵綁定、偏好、加密後的 key）都寫在建置輸出目錄下的 `config/`，
 不進版控，刪掉會重建——連同 key 一起。
@@ -56,7 +120,7 @@ key 的來源優先序是**環境變數 → 設定頁存的 → `appsettings.jso
 `gemini.model` 預設 `gemini-3.6-flash`。舊的 `gemini-2.5-flash-lite` 已經不對新 key 開放，
 換成新 key 之後沿用舊型號會拿到 404。
 
-**app → 虛擬裝置對應** — 決定哪個程式的聲音走哪張虛擬音效卡，換機器一定要調整。
+**app → 虛擬裝置對應** — 決定哪個程式的聲音走哪張虛擬音效卡。
 改 `appsettings.json` 的 `routes` 一處即可，程式的其他地方都從這裡讀。
 
 | 欄位 | 意義 |
@@ -67,9 +131,12 @@ key 的來源優先序是**環境變數 → 設定頁存的 → `appsettings.jso
 | `matchKeyword` | 讀回設定檔時用來認出這條路由；省略時自動取 `devicePattern` 前兩個字詞 |
 | `processes` | 走這條路由的程式檔名 |
 
-`devicePattern` 每台機器不同，可用 Equalizer APO 的 Configurator 取得。APO 的比對規則是
-「以空白分隔的字詞全部都要出現在 `裝置名稱 連接名稱 GUID` 裡」，所以 `Voicemeeter Input`
-這種短樣式就會中，不一定要寫完整含 GUID 的字串。
+內建與範例設定使用 `Voicemeeter Input`、`Voicemeeter AUX Input`、`CABLE Input` 這些可攜的短名稱。
+環境檢查只比對目前裝置，不會改寫路由或 `matchKeyword`。既有設定若含有別台電腦的 GUID，
+請自行修改 `appsettings.json`，改用對應短名稱或本機的裝置識別。
+
+若使用不在內建三項中的裝置，可用 Equalizer APO Configurator 取得 `devicePattern`。APO 的比對規則是
+「以空白分隔的字詞全部都要出現在 `裝置名稱 連接名稱 GUID` 裡」。
 
 省略整個 `routes` 區塊時採用內建預設值（見 `AudioUI.Core/RouteTable.cs`）。
 
@@ -124,7 +191,7 @@ AudioUI.sln
 | `TonePreset` | 一般模式的音色預設，以及音量百分比 ↔ preamp dB 換算 |
 | `DspPresets` | 壓縮器與殘響的具名 preset |
 | `TuningViewModel` | 手動調參面板的狀態。只需 `INotifyPropertyChanged`，所以測得到 |
-| `DependencyReport` | 執行環境體檢：路由指到的裝置存不存在 |
+| `DependencyReport` | 環境檢查的可測判斷：必要／選用項目與路由是否就緒 |
 | `MmDeviceIds` | 裝置 id 在列舉形式與指定形式之間的轉換 |
 | `Models/` | `AudioIntent`、`Situation`、`AppSettings`、`UserPreferences` 等資料模型 |
 
@@ -137,6 +204,7 @@ AudioUI.sln
 | `JsonConfigStore` / `JsonPreferencesStore` | 情境與偏好的 JSON 存取 |
 | `DpapiApiKeyStore` | API key 的加密儲存 |
 | `AudioPolicyConfigRouter` | 指定單一程式的輸出裝置（Windows 內部介面） |
+| `WindowsDependencyProbe` | 收集 APO、VST、語音、API key 與音訊 endpoint 現況 |
 | `MeldaEncoder` | 把參數編碼成 Melda VST 的 base64 chunk |
 | `NAudioSpeechInput` / `TtsService` / `ToastNotifier` | 錄音、語音回覆、通知 |
 
@@ -163,6 +231,21 @@ dotnet test AudioUI.sln
 CI 在 `windows-latest` 上建置並跑測試，結果寫回 `ci-status` 分支的 `status.md`
 （`git show origin/ci-status:status.md`）。
 
+安裝流程另有不安裝任何元件的 PowerShell 檢查：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\installer\Test-Setup.ps1
+```
+
+檢查涵蓋下載雜湊拒絕、既有元件略過、驅動 → 重開機 → APO 順序、重開機前重跑、取消／失敗與選用項目。
+`Build-Installer.ps1` 會先執行此檢查再封裝。這些測試替換了系統操作，不能取代 Windows 實機驗證。
+發佈前仍需在可重開機的乾淨 Windows x64 VM 驗證：
+
+- 無 .NET／音訊元件時完整安裝、兩階段重開機、原帳號續接與首次開啟。
+- 管理員授權取消、第三方取消、斷線、錯誤 SHA-256，均不應啟動 AudioZen。
+- 取消選用項目、已有 Banana／Potato、既有設定升級後保留與解除安裝保留個人資料。
+- 在首次設定頁確認 APO 目標裝置、API key、A1 輸出與每條路由，實際播放音訊驗證效果。
+
 警告分兩層看：`CS8618` / `CS8625` 是**宣告層**通病（欄位沒初始化、null 當預設值），
 其餘一律列出全文——**新冒出來的警告代碼才是訊號**。判準寫在 `.github/workflows/build.yml`。
 
@@ -182,7 +265,6 @@ CI 在 `windows-latest` 上建置並跑測試，結果寫回 `ci-status` 分支�
 
 - [ ] **Voicemeeter Remote API**：目前只做到「app → 虛擬裝置」，
       **虛擬裝置 → 實體喇叭仍要人手動在 Voicemeeter 裡接**。這塊不做，方案 A 不算完成
-- [ ] 安裝精靈（帶使用者裝完三個外部相依）。散布 VB-Audio 的元件前要先確認其授權條款
 - [ ] 驗證 `AudioPolicyConfigRouter` 真的生效。顯示「已接好」也可能是假的——
       要去 Windows「系統 → 音效 → 音量合成器」確認該 app 的輸出裝置真的變了
 

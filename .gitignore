@@ -14,3 +14,6 @@ AudioUI/config/
 
 # 機密設定（key 不進版控）
 appsettings.json
+
+# Installer output, downloaded prerequisites, and local build tools
+artifacts/

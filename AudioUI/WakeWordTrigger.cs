@@ -25,6 +25,8 @@ namespace AudioUI
         {
             try
             {
+                // 缺少語言套件由環境檢查呈現；其他初始化錯誤仍需通知使用者。
+                if (!SpeechRecognitionEngine.InstalledRecognizers().Any(r => r.Culture.Name == "zh-TW")) return;
                 _recognizer = new SpeechRecognitionEngine(new CultureInfo("zh-TW"));
 
                 // 喚醒詞是偏好，不是常數：hi-fi 的個人化頁要讓使用者自己錄一個。
@@ -44,8 +46,7 @@ namespace AudioUI
             }
             catch (Exception ex)
             {
-                // 使用完整命名空間避免衝突
-                System.Windows.MessageBox.Show($"語音引擎初始化失敗: {ex.Message}\n請確認電腦已安裝對應語言的語音識別套件。");
+                System.Windows.MessageBox.Show($"語音引擎初始化失敗: {ex.Message}\n請確認語音辨識引擎與麥克風可正常使用。");
             }
         }
 

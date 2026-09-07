@@ -26,12 +26,16 @@ namespace AudioUI
         private bool _aiMemoryEnabled = true;
         private bool _selfLearningEnabled;
         private string _wakeWord = DefaultWakeWord;
+        private bool _setupWizardSeen;
 
         [JsonPropertyName("launchAtStartup")]
         public bool LaunchAtStartup { get => _launchAtStartup; set { _launchAtStartup = value; Raise(); } }
 
         [JsonPropertyName("autoUpdate")]
         public bool AutoUpdate { get => _autoUpdate; set { _autoUpdate = value; Raise(); } }
+
+        [JsonPropertyName("setupWizardSeen")]
+        public bool SetupWizardSeen { get => _setupWizardSeen; set { _setupWizardSeen = value; Raise(); } }
 
         // --- 記憶 ---
 

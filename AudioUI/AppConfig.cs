@@ -128,9 +128,13 @@ namespace AudioUI
         /// 主視窗狀態的唯一接線處。<see cref="MainWindowViewModel"/> 的相依沒有預設值，
         /// 所以「用哪個實作」這個決定只在這裡出現一次。
         /// </summary>
-        public static MainWindowViewModel CreateMainWindowViewModel() =>
-            new MainWindowViewModel(
-                new AudioSessionService(),
+        public static MainWindowViewModel CreateMainWindowViewModel()
+        {
+            var sessions = new AudioSessionService();
+            var dependencies = new WindowsDependencyProbe(AudioBackend, sessions, ApiKeyManager, Settings.Apo);
+
+            return new MainWindowViewModel(
+                sessions,
                 CreateSituationManager(),
                 ConfigStore,
                 TextToSpeech,
@@ -142,7 +146,9 @@ namespace AudioUI
                 AudioPreview,
                 AppRouter,
                 Routes,
+                dependencies,
                 ConfigDirectory);
+        }
 
         /// <summary>把人話翻成音訊意圖的模型。</summary>
         public static ILlmClient LlmClient => _llm.Value;

@@ -20,6 +20,7 @@ namespace AudioUI.Tests
             public FakeApiKeyManager ApiKeys { get; } = new();
             public FakeAudioPreview Preview { get; } = new();
             public FakeAppAudioRouter Router { get; } = new();
+            public FakeDependencyProbe Dependencies { get; } = new();
             public FakeSpeechInput Speech { get; } = new();
             public FakeSampleRecorder Recorder { get; } = new();
             public FakeAppStateNotifier AppState { get; } = new();
@@ -38,13 +39,13 @@ namespace AudioUI.Tests
                     Sessions,
                     new SituationManager(Backend, Notifier, Speech, Llm, Store, Tts, Prefs,
                                          Recorder, AppState, Dir.Path, settleDelayMs: 0),
-                    Store, Tts, Notifier, Backend, Llm, Prefs, ApiKeys, Preview, Router, Routes, Dir.Path);
+                    Store, Tts, Notifier, Backend, Llm, Prefs, ApiKeys, Preview, Router, Routes, Dependencies, Dir.Path);
 
             public void Dispose() => Dir.Dispose();
         }
 
         private static AudioAppInfo App(string name, int volume = 50, int pid = 0) =>
-            new AudioAppInfo { Name = name, SystemVolume = volume, ProcessId = pid };
+            new AudioAppInfo { Name = name, ProcessName = name, SystemVolume = volume, ProcessId = pid };
 
         // --- 清單 ---
 
@@ -221,6 +222,23 @@ namespace AudioUI.Tests
 
             Assert.Equal(new[] { (100, (string?)"browser") }, rig.Router.Routed);
             Assert.Equal("已接好 1 個程式。", vm.RoutingStatus);
+        }
+
+        [Fact]
+        public void WireRouting_用執行檔名而不是視窗標題找路由()
+        {
+            using var rig = new Rig();
+            rig.Sessions.Apps.Add(new AudioAppInfo
+            {
+                Name = "AudioZen 文件 - Google Chrome",
+                ProcessName = "chrome.exe",
+                ProcessId = 100,
+            });
+            var vm = rig.Build();
+
+            vm.WireRouting();
+
+            Assert.Equal(new[] { (100, (string?)"browser") }, rig.Router.Routed);
         }
 
         [Fact]
@@ -517,6 +535,43 @@ namespace AudioUI.Tests
             Assert.Equal(before, rig.Prefs.Saves);
         }
 
+        [Fact]
+        public void RefreshDependencies_檢查自訂路由但不改寫樣式與關鍵字()
+        {
+            using var rig = new Rig();
+            const string main = "Voicemeeter Input (VB-Audio Voicemeeter VAIO) {main-guid}";
+            const string aux = "Voicemeeter AUX Input (VB-Audio Voicemeeter AUX VAIO) {aux-guid}";
+            const string cable = "CABLE Input (VB-Audio Virtual Cable) {cable-guid}";
+            rig.Dependencies.Snapshot = new DependencySnapshot
+            {
+                ApoInstalled = true,
+                CompressorInstalled = true,
+                ReverbInstalled = true,
+                ZhTwSpeechInstalled = true,
+                ApiKeyConfigured = true,
+                RenderDevices = new[] { main, aux, cable },
+            };
+            var browser = rig.Routes.ById("browser")!;
+            browser.DevicePattern = "Voicemeeter AUX Input";
+            browser.MatchKeyword = "Custom browser match";
+            var vm = rig.Build();
+
+            vm.RefreshDependencies();
+
+            Assert.True(vm.Dependencies.IsReady);
+            Assert.Equal(7, vm.Dependencies.Items.Count);
+            Assert.Equal("Voicemeeter AUX Input", browser.DevicePattern);
+            Assert.Equal("Custom browser match", browser.MatchKeyword);
+            Assert.Equal(aux, vm.Dependencies.Routes.Single(r => r.RouteId == "browser").MatchedDevice);
+
+            browser.DevicePattern = "Voicemeeter AUX Input {old-guid}";
+            vm.RefreshDependencies();
+
+            Assert.False(vm.Dependencies.IsReady);
+            Assert.Equal("Voicemeeter AUX Input {old-guid}", browser.DevicePattern);
+            Assert.Equal("Custom browser match", browser.MatchKeyword);
+        }
+
         // --- 接線 ---
 
         [Fact]
@@ -527,7 +582,7 @@ namespace AudioUI.Tests
             // 有預設值的話，忘了接線在測試裡看起來會一切正常。
             Assert.Throws<ArgumentNullException>(() => new MainWindowViewModel(
                 null!, null!, rig.Store, rig.Tts, rig.Notifier, rig.Backend, rig.Llm,
-                rig.Prefs, rig.ApiKeys, rig.Preview, rig.Router, rig.Routes, rig.Dir.Path));
+                rig.Prefs, rig.ApiKeys, rig.Preview, rig.Router, rig.Routes, rig.Dependencies, rig.Dir.Path));
         }
     }
 }

@@ -713,6 +713,9 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
+                                <Button Content="開啟安裝後設定" Width="150" Height="34" MinWidth="0" Margin="0,14,0,0"
+                                        HorizontalAlignment="Left" Click="OpenSetupWizard_Click" Style="{StaticResource PresetBtnStyle}"/>
+
                                 <Separator Background="#2A2A2A" Margin="0,14,0,10"/>
                                 <TextBlock Text="把正在播放的程式各自指到該走的虛擬裝置，取代手動去 Voicemeeter 與系統音量設定裡逐個點。"
                                            FontSize="14" Foreground="#777777" TextWrapping="Wrap" Margin="0,0,0,8"/>
@@ -952,6 +955,56 @@
                     </Grid>
                 </Grid>
             </Grid>
+        </Grid>
+
+        <!-- 安裝後設定：同一份畫面也可從設定頁重新開啟。 -->
+        <Grid x:Name="SetupWizardOverlay" Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="2"
+              Panel.ZIndex="100" Background="#E6000000" Visibility="Collapsed"
+              KeyboardNavigation.TabNavigation="Cycle">
+            <Border Width="820" MaxHeight="630" Padding="28" Background="#121212" BorderBrush="#3A3A3A"
+                    BorderThickness="1" CornerRadius="12" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0" Margin="0,0,0,14">
+                        <TextBlock Text="安裝後設定" FontSize="30" FontWeight="Bold" Foreground="White"/>
+                        <TextBlock Text="請完成下方的裝置選擇、API key 與自動接線。若剛安裝驅動，請先重新啟動 Windows。"
+                                   FontSize="15" Foreground="#AAAAAA" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                        <TextBlock Text="{Binding Vm.DependencySummary}" FontSize="17" Foreground="#3399FF" Margin="0,10,0,0"/>
+                    </StackPanel>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Text="1. 在 Equalizer APO Device Selector（舊版 Configurator）勾選 Voicemeeter Input、AUX Input 與 CABLE Input。"
+                                       FontSize="14" Foreground="#BBBBBB" TextWrapping="Wrap" Margin="0,4"/>
+                            <Button Content="開啟 APO 裝置選擇" Click="OpenApoConfigurator_Click" Width="190" Height="34" MinWidth="0"
+                                    HorizontalAlignment="Left" Margin="0,6,0,10" Style="{StaticResource PresetBtnStyle}"/>
+                            <TextBlock Text="2. 在 Voicemeeter Banana 選擇 A1 實體耳機／喇叭，並將 CABLE Output 接入一個 Hardware Input 後送往 A1。"
+                                       FontSize="14" Foreground="#BBBBBB" TextWrapping="Wrap" Margin="0,4"/>
+                            <Button Content="開啟 Voicemeeter" Click="OpenVoicemeeter_Click" Width="170" Height="34" MinWidth="0"
+                                    HorizontalAlignment="Left" Margin="0,6,0,10" Style="{StaticResource PresetBtnStyle}"/>
+                            <TextBlock Text="3. 取得並填入 Gemini API key，再按一次測試連線。"
+                                       FontSize="14" Foreground="#BBBBBB" TextWrapping="Wrap" Margin="0,4"/>
+                            <Button Content="前往 API key 設定" Click="OpenApiKeySettings_Click" Width="180" Height="34" MinWidth="0"
+                                    HorizontalAlignment="Left" Margin="0,6,0,10" Style="{StaticResource PresetBtnStyle}"/>
+                            <TextBlock Text="4. 讓要使用的 app 正在播放音訊，再執行自動接線並到 Windows 音量合成器核對結果。"
+                                       FontSize="14" Foreground="#BBBBBB" TextWrapping="Wrap" Margin="0,4"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <Button Content="自動接線" Click="SetupWireRouting_Click" Width="120" Height="34" MinWidth="0"
+                                        Style="{StaticResource PresetBtnStyle}"/>
+                                <TextBlock Text="{Binding Vm.RoutingStatus}" FontSize="13" Foreground="#3399FF" TextWrapping="Wrap"
+                                           VerticalAlignment="Center" MaxWidth="520"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+                        <Button Content="重新檢查" Click="RefreshSetupWizard_Click" Style="{StaticResource PresetBtnStyle}"/>
+                        <Button Content="完成／稍後繼續" Click="CloseSetupWizard_Click" Style="{StaticResource PresetBtnStyle}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
         </Grid>
     </Grid>
 </Window>

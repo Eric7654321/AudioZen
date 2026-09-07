@@ -36,6 +36,21 @@ namespace AudioUI.Tests
         }
     }
 
+    public sealed class FakeDependencyProbe : IDependencyProbe
+    {
+        public DependencySnapshot Snapshot { get; set; } = new DependencySnapshot
+        {
+            ApoInstalled = true,
+            CompressorInstalled = true,
+            ReverbInstalled = true,
+            ZhTwSpeechInstalled = true,
+            ApiKeyConfigured = true,
+            RenderDevices = new[] { "Voicemeeter Input", "Voicemeeter AUX Input", "CABLE Input" },
+        };
+
+        public DependencySnapshot Inspect() => Snapshot;
+    }
+
     /// <summary>不跑取樣管線。回 null 代表這段錄音產不出試聽檔。</summary>
     public sealed class FakeAudioPreview : IAudioPreview
     {
