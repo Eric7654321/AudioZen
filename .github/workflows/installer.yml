@@ -2,15 +2,10 @@ name: installer
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-  pull_request:
-    paths:
-      - 'installer/**'
-      - 'AudioUI/**'
-      - 'AudioUI.Core/**'
-      - 'AudioUI.Infra/**'
-      - '.github/workflows/installer.yml'
+
+# Packaging runs as the `package` job in build.yml so it can consume the
+# publish artifact from the same workflow run. Keep this manual entry point
+# for debugging the installer workflow on demand.
 
 permissions:
   contents: read

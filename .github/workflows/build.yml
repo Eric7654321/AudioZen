@@ -44,6 +44,27 @@ jobs:
           dotnet test AudioUI.sln -c Release --no-build --nologo 2>&1 | Tee-Object -FilePath test.log
           exit $LASTEXITCODE
 
+      # Publish once here. The installer job consumes this exact output instead of rebuilding.
+      - name: Publish application
+        id: publish
+        if: steps.test.outcome == 'success'
+        shell: pwsh
+        run: |
+          dotnet publish AudioUI/AudioUI.csproj -c Release -r win-x64 --self-contained true `
+            -p:PublishSingleFile=false -p:PublishTrimmed=false -p:AudioZenInstallerBuild=true `
+            -p:Version=1.0.0 -o out/publish --nologo
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (Test-Path out/publish/appsettings.json) { throw 'Publish output contains appsettings.json.' }
+
+      - name: Upload published application
+        if: steps.publish.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: audiozen-publish
+          path: out/publish/
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Write status
         if: always()
         shell: pwsh
@@ -135,3 +156,26 @@ jobs:
         if: steps.build.outcome != 'success' || steps.test.outcome != 'success'
         shell: bash
         run: exit 1
+
+  package:
+    needs: build
+    if: needs.build.result == 'success'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: audiozen-publish
+          path: out/publish
+
+      - name: Check and package installer
+        shell: powershell
+        run: ./installer/Build-Installer.ps1 -PublishDir "$pwd\out\publish"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AudioZen-Setup-win-x64
+          path: artifacts/installer/AudioZen.Setup.exe
+          if-no-files-found: error
+          retention-days: 30
