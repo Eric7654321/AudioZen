@@ -1,14 +1,14 @@
-# 心頻氣和 (AudioZen)
+# 心頻氣和（AudioZen）
 
-用自然語言控制 Windows 的每個 app 的音訊。說「遊戲太吵，把 Discord 講話拉清楚」，
-Gemini 把它翻成 EQ / preamp / 壓縮器參數，寫成 Equalizer APO 設定檔套用下去。
+AudioZen 是 Windows 桌面音訊控制應用。使用者可透過自然語言、手動面板、情境預設或全域快捷鍵，調整個別應用程式的音量與 EQ/DSP 設定。例如「遊戲太吵，把 Discord 講話拉清楚」，會被解析成可預覽、可套用的音訊參數。
 
-Windows 沒有 per-application 的 DSP API，Equalizer APO 只能對「音訊裝置」動手。
-本專案的作法是：**把每個 app 用虛擬音效卡路由到不同裝置，再對裝置套設定**。
-理解這一句，才看得懂下面的裝置對應表為什麼存在。
+## 功能與設計
 
-> 要改這個 repo（人或 agent 都一樣）先看 [CONTRIBUTING.md](CONTRIBUTING.md)：
-> **不 push 到 `main`，開 PR、等 Eric 看過、CI 綠了才合。**
+- **個別應用程式調音**：將應用程式分流至不同虛擬音訊裝置，再由 Equalizer APO 對各裝置套用 EQ、preamp 與外掛效果。這是因為 Equalizer APO 的處理目標是音訊裝置，而非單一應用程式。
+- **多種操作入口**：自然語言指令、手動控制面板、情境預設、語音喚醒與全域快捷鍵。可先預覽設定，再決定是否套用。
+- **可測的分層架構**：以 Core、Infra 與 WPF UI 分離音訊邏輯、Windows 平台功能及介面；測試與 CI 見下方「測試與 CI」。
+
+目前應用程式到虛擬裝置的路由可由程式設定；虛擬裝置到實體輸出仍需在 Voicemeeter 中設定。安裝與操作方式見下文，開發規範見 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 執行需求
 
@@ -272,31 +272,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\installer\Test-Setup.ps1
 改過 XAML 之後開一次視窗、讀那個檔就知道有沒有壞。要注意 collapsed 的分頁
 不會被 measure，樣板繫結不會跑到，所以要切過每個分頁才算驗過。
 
-## 待處理
+## 目前限制
 
-按建議順序，前面的不做後面的做了也難驗。
-
-**方案 A 剩下的**（讓使用者只需要開這一個 app）
-
-- [ ] **Voicemeeter Remote API**：目前只做到「app → 虛擬裝置」，
-      **虛擬裝置 → 實體喇叭仍要人手動在 Voicemeeter 裡接**。這塊不做，方案 A 不算完成
-- [ ] 驗證 `AudioPolicyConfigRouter` 真的生效。顯示「已接好」也可能是假的——
-      要去 Windows「系統 → 音效 → 音量合成器」確認該 app 的輸出裝置真的變了
-
-**已知缺口**
-
-- [ ] 卡片上的「音色調整」永遠顯示「無」。設定檔的回讀解析（`ConfigService.LoadConfig`）
-      沒有任何地方呼叫，所以 `AudioAppInfo.Config` 對真實的 app 一律是 null。
-      通知列走的是另一條路（`ApoConfigSummary`），那條是對的
-- [ ] 「控制」分頁的「調整錄音檔」按鈕沒有接任何動作
-- [ ] `DspPresets` 的數值是照參數範圍推的起點，**沒有實際試聽調過**
-
-**刻意不做**
-
-- 情境 id `"114514"` 維持字串常數。它同時是 `config/file_mapping.json` 的鍵，
-  改成 enum 會讓既有存檔讀不回來
-- 剩下的宣告層 nullable 警告。逐一修需要判斷每個欄位「真的可以是 null 嗎」，
-  改錯會把 null 悄悄變成空字串
+- 個別應用程式分流後，Voicemeeter 的實體輸出仍需手動設定；程式內的自動接線尚未涵蓋這一步。
+- 部分音訊狀態與控制項尚待 Windows 實機驗證；安裝程式與音訊路由的自動化檢查不能取代實際播放測試。
+- 其他已知限制與開發待辦記錄於 [目前狀態](docs/STATUS.md)。
 
 ## 授權
 
